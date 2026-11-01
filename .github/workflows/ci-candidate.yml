@@ -30,7 +30,7 @@ jobs:
 
       - name: Generate semver-compatible audit remediation lockfile
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
-        run: npm audit fix --package-lock-only --omit=dev --no-fund
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Upload audit remediation lockfile
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
