@@ -35,7 +35,7 @@ test('payloadFrom produces canonical numeric payloads', () => {
     traditional: {
       ...emptyForm.traditional,
       medidas: '430 x 460 cm.',
-      caras: '2',
+      caras: 2,
       monthly_impacts: '123',
     },
     pricing: {
