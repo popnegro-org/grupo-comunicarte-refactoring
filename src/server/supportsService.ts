@@ -87,18 +87,30 @@ export async function validateSupportsForRequest(selectedIds: string[]): Promise
     };
   }
 
+  if (selectedIds.some((id) => typeof id !== 'string' || !id.trim())) {
+    return {
+      valid: false,
+      statusCode: 400,
+      message: 'La selección contiene identificadores de soporte inválidos.',
+    };
+  }
+
+  if (new Set(selectedIds).size !== selectedIds.length) {
+    return {
+      valid: false,
+      statusCode: 400,
+      message: 'La selección contiene soportes duplicados.',
+    };
+  }
+
+  // Fetch the catalog once and resolve all requested IDs in memory instead of
+  // issuing one support + technical-metadata query per selected item.
+  const catalog = await getAllSupportsFromDB();
+  const supportsById = new Map(catalog.map((item) => [item.canonical_id, item]));
   const matchedSupports: InventoryItem[] = [];
 
   for (const id of selectedIds) {
-    if (typeof id !== 'string') {
-      return {
-        valid: false,
-        statusCode: 400,
-        message: `Identificador de soporte inválido: ${String(id)}`,
-      };
-    }
-
-    const item = await getSupportByIdFromDB(id);
+    const item = supportsById.get(id);
     if (!item) {
       return {
         valid: false,
