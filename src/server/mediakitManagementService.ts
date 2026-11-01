@@ -39,11 +39,11 @@ async function ensureTables(): Promise<void> {
   // Schema changes belong to reviewed SQL migrations, never to HTTP requests.
   const requiredColumns: Record<string, string[]> = {
     mediakits: [
-      'kit_id', 'tenant_id', 'source_request_id', 'status', 'client_name', 'client_email',
+      'id', 'kit_id', 'tenant_id', 'source_request_id', 'status', 'client_name', 'client_email',
       'client_company', 'client_phone', 'support_ids', 'approved_prices', 'total_amount',
       'currency', 'notes', 'metadata', 'pdf_url', 'ppt_url', 'created_at', 'updated_at',
     ],
-    mediakit_items: ['kit_id', 'support_id', 'tenant_id', 'approved_price', 'sort_order', 'metadata', 'created_at', 'updated_at'],
+    mediakit_items: ['id', 'kit_id', 'support_id', 'tenant_id', 'approved_price', 'sort_order', 'metadata', 'created_at', 'updated_at'],
   };
   const result = await pool.query(
     `SELECT table_name, column_name
@@ -199,9 +199,9 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
     const result = await client.query(
       `INSERT INTO mediakits
-        (kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+        (id, kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
          support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12,$13,$14::jsonb,$15,$16,CURRENT_TIMESTAMP)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16,$17,CURRENT_TIMESTAMP)
        ON CONFLICT (kit_id) DO UPDATE SET
          tenant_id = EXCLUDED.tenant_id,
          source_request_id = EXCLUDED.source_request_id,
@@ -223,6 +223,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
                  support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
                  created_at, updated_at`,
       [
+        kitId,
         kitId,
         tenantId,
         input.sourceRequestId || null,

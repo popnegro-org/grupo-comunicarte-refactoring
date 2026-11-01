@@ -173,7 +173,7 @@ export const mediakitRequestItems = pgTable('mediakit_request_items', {
  * its own lifecycle (draft -> ready -> sent -> archived).
  */
 export const mediakits = pgTable('mediakits', {
-  id: serial('id').primaryKey(),
+  id: text('id').primaryKey(),
   tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
   kitId: text('kit_id').notNull().unique(),
   sourceRequestId: text('source_request_id'),
