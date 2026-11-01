@@ -2,9 +2,9 @@ name: Visual QA
 
 on:
   pull_request:
-    branches: [main, pmv-production-refinement, 'feat/**']
+    branches: [main, pmv-validation-candidate, pmv-production-refinement, 'feat/**']
   push:
-    branches: [main, pmv-production-refinement]
+    branches: [main, pmv-validation-candidate, pmv-production-refinement]
 
 permissions:
   contents: read
