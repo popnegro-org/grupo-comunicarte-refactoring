@@ -32,6 +32,21 @@
 - Tabla auxiliar `admin_login_attempts` definida en `docs/pmv/proposals/20261101_002_admin_login_rate_limit.sql`. La app no ejecuta DDL en una petición; la migración debe revisarse y aplicarse explícitamente antes de activar el limitador.
 - Política: 10 intentos por ventana de 15 minutos por IP seudonimizada. La limpieza/retención de claves antiguas debe monitorizarse.
 
+
+## Auditoría de datos Neon (rama Preview `preview/pmv-validation-candidate`)
+
+Lectura de esquema y agregados en la rama Preview de Neon; no se ejecutaron escrituras:
+
+- Existen los tenants `tenant-ba` y `tenant-default`, ambos activos.
+- `supports`: 46 filas; 29 activas y 17 inactivas; 10 filas sin ciudad y 10 sin `canonical_id` (no se asumió que sean el mismo conjunto).
+- `supports` no tiene `tenant_id` en el esquema actual. No existe coincidencia entre `supports.canonical_id` y `screens.id` en el snapshot consultado.
+- La tabla legacy `screens` sí tiene `tenant_id`: 6 registros `tenant-ba` y 11 `tenant-default`; esto no demuestra ownership de las filas de `supports` porque no hay join por ID.
+- `mediakits` ya tiene `tenant_id` y 3 registros (1 `tenant-ba`, 2 `tenant-default`), pero la tabla `mediakit_items` estaba vacía en el snapshot. No permite asignar ownership a `supports`.
+- `mediakit_request_items` contiene 32 ítems en 18 solicitudes y no tiene `tenant_id`; las cabeceras `mediakit_requests` tampoco tienen scope.
+- La tabla legacy `users` contiene 2 registros sin `tenant_id`; no se modificó ni se usó para alterar el acceso compartido actual.
+
+**Conclusión:** hay una tabla de tenants y ownership en parte del modelo legacy, pero la tabla de inventario operativa `supports` permanece sin vínculo verificable. Las tablas `screens` y `supports` no comparten identificadores en este snapshot. No existe una base segura para backfill automático. La propuesta SQL ahora declara FKs a `public.tenants(id)` y mantiene todos los ownerships históricos en NULL.
+
 ## Límites deliberados
 
 No se conectan aún los resolvers tenant a rutas de negocio porque no existe una fuente verificada de ownership para todos los registros. No se ejecuta SQL, migración, backfill, activación RLS, cambio de credenciales, despliegue, ni modificación de main o datos productivos.
