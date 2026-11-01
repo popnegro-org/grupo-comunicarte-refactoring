@@ -22,6 +22,7 @@ import {
   updateSupportMediaByAdmin,
   removeSupportMediaByAdmin,
   getSupportPricingByAdmin,
+  listSupportPricingByAdmin,
   patchSupportPricingByAdmin,
   getSupportRouteByAdmin,
   patchSupportRouteByAdmin,
@@ -317,6 +318,16 @@ export async function createApp() {
       const msg = err.message || '';
       const status = msg.includes('no encontrada') ? 404 : 500;
       res.status(status).json({ status: 'error', message: msg || 'Error al eliminar media.' });
+    }
+  });
+
+  app.get('/api/admin/support-pricing', requireAdmin, async (_req, res) => {
+    try {
+      const pricing = await listSupportPricingByAdmin();
+      res.status(200).json({ status: 'success', data: pricing });
+    } catch (err) {
+      console.error('Error fetching admin support pricing catalog:', err);
+      res.status(500).json({ status: 'error', message: 'Error al obtener las tarifas internas.' });
     }
   });
 
