@@ -1,41 +1,46 @@
 # Estado del bloqueante P0 — aislamiento multi-tenant
 
-> El contrato normativo vigente y los criterios de aceptación están en [PMV-CONTRACT-AND-ACCEPTANCE.md](../PMV-CONTRACT-AND-ACCEPTANCE.md). Este archivo reemplaza el informe inicial, que contenía decisiones pendientes ya resueltas.
+> Contrato normativo: [PMV-CONTRACT-AND-ACCEPTANCE.md](../PMV-CONTRACT-AND-ACCEPTANCE.md). Conciliación documental y de datos: [TENANT-OWNERSHIP-MAPPING.md](../inventario/processed/TENANT-OWNERSHIP-MAPPING.md).
 
-**Estado: BLOCKED para liberar; implementación técnica aún pendiente.**
+**Estado: P0 parcialmente resuelto en Preview; aislamiento de runtime aún bloquea el PMV.**
 
 ## Decisiones vigentes
 - Conservar el único administrador/credencial existente; no crear usuarios ni invitaciones.
 - El administrador autenticado tiene alcance global sobre `tenant-ba` y `tenant-default`.
 - Solicitudes mixtas: cabecera global, ítems tenant-scoped.
-- Soportes sin evidencia autoritativa: `tenant_id = NULL`, en cuarentena.
-- Solicitudes históricas mixtas no se dividen ni atribuyen retroactivamente.
+- Ownership solo se asigna por correspondencia inequívoca con los PDFs fuente versionados.
+- Registros no conciliados conservan `tenant_id = NULL` y deben permanecer en cuarentena.
 - `main` y Neon Production permanecen intactos hasta aprobación explícita.
 
-## Evidencia de la auditoría Preview (instantánea histórica)
-- `supports`: 46 registros sin ownership asignado en la instantánea.
-- `mediakit_request_items`: 32 ítems sin tenant.
-- `mediakit_requests`: 18 cabeceras sin scope.
-- Tres solicitudes históricas contienen soportes de ambos tenants.
-- Diez soportes inactivos carecen de ciudad; no se puede inferir ownership.
-- La tabla legacy `screens` no proporciona un join fiable para atribuir las filas de `supports`.
+## Fuente autoritativa localizada
+Los PDFs de `docs/inventario/source/` son la fuente primaria. La matriz de conciliación está en `docs/inventario/processed/TENANT-OWNERSHIP-MAPPING.md`.
 
-Revalidar estos conteos antes de cualquier migración; no son una consulta en vivo.
+Mapeo:
+- 10 `bue-trad-01..10` → `tenant-ba`.
+- 15 `mza-trad-01..15`, 2 `mza-led-01..02`, 1 `mza-led-movil-01` → `tenant-default`.
+- `mza-trad-16`, registros de prueba y legacy sin correspondencia → sin asignar.
+
+## Estado Neon Preview posterior a conciliación
+- `supports`: 46 filas; 10 tenant-ba, 18 tenant-default, 18 NULL (17 inactivas y 1 activa sin fuente).
+- `mediakit_request_items`: 32 filas; 5 tenant-ba, 25 tenant-default, 2 NULL.
+- `mediakit_requests`: 18 cabeceras; 3 mixtas con scope global, 14 homogéneas con scope tenant y 1 sin scope por ítem pendiente.
+- No se modificaron importes, disponibilidad ni contenido comercial.
+- No se modificó Production.
 
 ## Incorporado
 - Primitivas fail-closed en `src/server/tenantAccess.ts` y tests unitarios en `tests/unit/tenant-access.test.ts`.
-- Propuestas de migración aditiva documentadas en `docs/pmv/proposals/`; no equivalen a migración en Production.
-- Limitador de login distribuido validado previamente en Preview.
+- Conciliación exacta por `canonical_id` con PDFs maestros.
+- Asignación de 28 soportes y 30 ítems históricos únicamente en Neon Preview.
+- Clasificación de solicitudes mixtas globales y homogéneas tenant-scoped.
 
-## Bloqueantes pendientes
-1. Ownership autoritativo de soportes; no hacer backfill por ciudad, nombre, coordenadas o IDs legacy.
-2. Filtros tenant-safe en todos los servicios y rutas de negocio.
-3. Aislamiento de pricing, Media Kits, solicitudes, estadísticas, media, rutas, CRUD y exportaciones.
-4. Tratamiento seguro de solicitudes mixtas e idempotencia.
-5. Pruebas negativas cross-tenant con el rol/contexto DB real de runtime y decisión documentada de RLS.
-6. Cuarentena efectiva de registros pendientes en catálogo y flujo comercial.
+## Bloqueantes P0 pendientes
+1. Filtros tenant-safe en todos los servicios y rutas de negocio.
+2. Aislamiento de pricing, Media Kits, solicitudes, estadísticas, media, rutas, CRUD y exportaciones.
+3. Cuarentena efectiva de las 18 filas de soporte sin tenant y 2 ítems sin tenant en catálogo y operaciones comerciales.
+4. Pruebas negativas cross-tenant con el rol/contexto DB real de runtime y decisión documentada de RLS.
+5. Verificar que las solicitudes con ítems pendientes no puedan cotizarse ni exportarse hasta su conciliación.
 
 ## Condición para desbloquear
-Implementar acceso comercial denegado por defecto para registros sin ownership, asignación manual auditada y pruebas de aislamiento por tenant. Asignar cada soporte solo cuando exista evidencia comercial. No inferir ni inventar esa evidencia.
+Implementar acceso comercial denegado por defecto para registros sin ownership, aplicar filtros de tenant en backend y probar aislamiento por tenant. La evidencia documental ya permite conciliar 28 soportes; los demás requieren una fuente comercial adicional o deben permanecer en cuarentena.
 
 **No ejecutar** backfill, DDL ni cambios de datos en Production; no cambiar credenciales; no crear usuarios; no mergear a `main` sin HUMAN GATE.
