@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { mediakitRequests, supports, supportPricing } from '../db/schema.ts';
+import { mediakitRequests, mediakitRequestItems, supports, supportPricing } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
   createSupportMediaRecord,
@@ -104,7 +104,7 @@ export function verifyAdminToken(authHeader?: string): boolean {
 }
 
 export async function getAdminStats() {
-  const allSupports = await getAllSupportsFromDB({ includeInactive: true });
+  const allSupports = await getAllSupportsFromDB({ includeInactive: true, includeUnassigned: true });
   const allRequests = await getAllMediakitRequestsFromDB();
 
   const total = allSupports.filter((s: any) => s.active !== false).length;
@@ -147,11 +147,11 @@ export async function getAdminStats() {
 }
 
 export async function listAdminSupports() {
-  return getAllSupportsFromDB({ includeInactive: true });
+  return getAllSupportsFromDB({ includeInactive: true, includeUnassigned: true });
 }
 
 export async function getAdminSupportById(canonicalId: string) {
-  const support = await getSupportByIdFromDB(canonicalId, { includeInactive: true });
+  const support = await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true });
   if (!support) {
     throw new Error(`Soporte con ID '${canonicalId}' no encontrado.`);
   }
@@ -160,7 +160,7 @@ export async function getAdminSupportById(canonicalId: string) {
 
 async function assertFeaturedCapacity(canonicalId: string | null, data: SupportWritePayload) {
   const current = canonicalId
-    ? await getSupportByIdFromDB(canonicalId, { includeInactive: true })
+    ? await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true })
     : null;
 
   const nextFeatured = data.isFeatured === undefined ? current?.isFeatured === true : data.isFeatured === true;
@@ -191,7 +191,7 @@ export async function createAdminSupport(data: SupportWritePayload & { canonical
 
   if (canonicalData.canonical_id?.trim()) {
     const canonicalId = canonicalData.canonical_id.trim();
-    const existing = await getSupportByIdFromDB(canonicalId, { includeInactive: true });
+    const existing = await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true });
     if (existing) {
       throw new Error(`canonical_id duplicado: ${canonicalId}`);
     }
@@ -270,6 +270,16 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
   const validStatuses = ['pending', 'nuevo', 'contacted', 'contactado', 'quoted', 'enviado', 'closed', 'cerrado', 'cancelled'];
   if (!validStatuses.includes(status)) {
     throw new Error(`Estado comercial inválido: ${status}`);
+  }
+
+  if (['quoted', 'enviado', 'closed', 'cerrado'].includes(status)) {
+    const items = await db
+      .select({ tenantId: mediakitRequestItems.tenantId })
+      .from(mediakitRequestItems)
+      .where(eq(mediakitRequestItems.requestId, requestId));
+    if (items.length === 0 || items.some((item) => !item.tenantId)) {
+      throw new Error('La solicitud no puede avanzar comercialmente: contiene soportes sin ownership conciliado.');
+    }
   }
 
   const result = await db

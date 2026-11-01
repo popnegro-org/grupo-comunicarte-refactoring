@@ -119,7 +119,9 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [ ] RLS/rol runtime probados con el principal real o decisión segura documentada.
 - [ ] Cero filtraciones de precios internos en API y exportaciones.
 - [ ] Flujo de solicitud persistente, gestionable e idempotente.
+- [x] Fuente documental y asignación de ownership de 28 soportes conciliados en Neon Preview.
 - [ ] Soportes e ítems sin ownership excluidos efectivamente del catálogo y del flujo comercial.
+- [ ] Media Kits y sus líneas persisten tenant_id por soporte; los kits multi-tenant se identifican como globales.
 
 ### P1 — cierre comercial
 - [ ] Duraciones iguales en UI, API, persistencia y documentación.
@@ -144,7 +146,8 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - Se conciliaron 28 soportes: 10 Buenos Aires y 18 Mendoza.
 - Preview: 46 soportes; 10 tenant-ba, 18 tenant-default, 18 NULL (17 inactivos y 1 activo sin fuente).
 - Preview: 32 ítems de solicitudes; 5 tenant-ba, 25 tenant-default, 2 NULL.
-- Preview: 18 solicitudes; 3 mixtas con scope global, 14 homogéneas con scope tenant y 1 sin scope por ítem pendiente.
+- Preview: 18 solicitudes; 2 mixtas conciliadas con scope global, 14 homogéneas con scope tenant y 2 sin scope. Una de estas últimas contiene ítems de ambos tenants y un ítem pendiente; no se la debe clasificar automáticamente.
+- Preview: se añadió `mediakit_items.tenant_id` con FK e índice; la tabla tenía 0 filas al aplicar la migración, por lo que no hubo backfill de líneas.
 - Runtime todavía requiere filtros tenant-safe en servicios de negocio; primitivas tenantAccess y tests no acreditan aislamiento efectivo.
 - CI/Visual QA verdes no acreditan ownership ni aislamiento.
 - HubSpot, Resend/email transaccional y WhatsApp API no acreditados.

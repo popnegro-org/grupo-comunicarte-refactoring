@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import {
   supportFaces,
@@ -10,6 +10,7 @@ import {
   supportRoutes,
   supportTechnical,
 } from '../db/schema.ts';
+import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
 import {
   Disponibilidad,
   InventoryItem,
@@ -393,23 +394,27 @@ function rowToInventoryItem(
   } as LocationRecord;
 }
 
-export async function getSupportCatalog(options?: { includeInactive?: boolean }): Promise<InventoryItem[]> {
-  const rows = await db.select().from(supports);
+export async function getSupportCatalog(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
+  const rows = options?.includeUnassigned
+    ? await db.select().from(supports)
+    : await db.select().from(supports).where(isNotNull(supports.tenantId));
   const filtered = rows.filter((row) => {
     const isComplete = Boolean(row.canonicalId && row.name && row.ciudad && row.tipoSoporte);
     const isActive = options?.includeInactive ? true : row.active !== false;
-    return isComplete && isActive;
+    const hasTenant = options?.includeUnassigned ? true : isSupportEligibleForPublicCatalog(row.tenantId, row.active !== false);
+    return isComplete && isActive && hasTenant;
   });
   const canonicalIds = filtered.map((row) => row.canonicalId);
   const related = await loadRelatedRecords(canonicalIds);
   return filtered.map((row) => rowToInventoryItem(row, related));
 }
 
-export async function getSupportDetail(canonicalId: string, options?: { includeInactive?: boolean }): Promise<InventoryItem | null> {
+export async function getSupportDetail(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const rows = await db.select().from(supports).where(eq(supports.canonicalId, canonicalId));
   if (rows.length === 0) return null;
   const row = rows[0];
   if (!(row.canonicalId && row.name && row.ciudad && row.tipoSoporte)) return null;
+  if (!options?.includeUnassigned && !row.tenantId) return null;
   if (!options?.includeInactive && row.active === false) return null;
   const related = await loadRelatedRecords([canonicalId]);
   return rowToInventoryItem(row, related);

@@ -2,6 +2,7 @@ import { db, pool } from '../db/index.ts';
 import { mediakitRequests, mediakitRequestItems } from '../db/schema.ts';
 import { validateSupportsForRequest, getSupportByIdFromDB } from './supportsService.ts';
 import { eq, desc } from 'drizzle-orm';
+import { deriveRequestScope } from './tenantAccess.ts';
 
 export interface LeadPayload {
   name: string;
@@ -25,6 +26,9 @@ export interface MediakitRecord {
   requesterPhone: string;
   message: string;
   status: string;
+  requestScope: string | null;
+  pendingOwnershipCount: number;
+  tenantIds: string[];
   supportIds: string[];
   supportNames: string[];
   lead: {
@@ -93,13 +97,32 @@ export async function handleMediakitRequest(body: any): Promise<{
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query(
-        `INSERT INTO mediakit_requests (request_id, requester_name, requester_email, requester_company, requester_phone, message, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [requestId, name, email, typeof lead.company === 'string' ? lead.company.trim() : '', typeof lead.phone === 'string' ? lead.phone.trim() : '', typeof lead.message === 'string' ? lead.message.trim() : '', 'pending'],
+      const lockedSupports = await client.query(
+        `SELECT canonical_id, tenant_id, active, disponibilidad
+           FROM supports
+          WHERE canonical_id = ANY($1::text[])
+          FOR UPDATE`,
+        [uniqueSelectedIds],
       );
-      for (const supportId of uniqueSelectedIds) {
-        await client.query('INSERT INTO mediakit_request_items (request_id, support_id) VALUES ($1, $2)', [requestId, supportId]);
+      if (lockedSupports.rows.length !== uniqueSelectedIds.length) {
+        throw new Error('La selección cambió mientras se procesaba. Actualizá el catálogo e intentá nuevamente.');
+      }
+      if (lockedSupports.rows.some((support) => !support.tenant_id || support.active !== true || support.disponibilidad !== 'disponible')) {
+        throw new Error('La selección contiene soportes pendientes de ownership o que ya no están disponibles.');
+      }
+      const tenantIds = [...new Set(lockedSupports.rows.map((support) => String(support.tenant_id)))];
+      const requestScope = deriveRequestScope(tenantIds, false);
+      if (!requestScope) throw new Error('No se pudo determinar el alcance comercial de la solicitud.');
+      await client.query(
+        `INSERT INTO mediakit_requests (request_id, request_scope, requester_name, requester_email, requester_company, requester_phone, message, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [requestId, requestScope, name, email, typeof lead.company === 'string' ? lead.company.trim() : '', typeof lead.phone === 'string' ? lead.phone.trim() : '', typeof lead.message === 'string' ? lead.message.trim() : '', 'pending'],
+      );
+      for (const support of lockedSupports.rows) {
+        await client.query(
+          'INSERT INTO mediakit_request_items (request_id, support_id, tenant_id) VALUES ($1, $2, $3)',
+          [requestId, support.canonical_id, support.tenant_id],
+        );
       }
       await client.query('COMMIT');
     } catch (error) {
@@ -138,7 +161,7 @@ export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> 
     const selectedSupports = [];
 
     for (const sId of selectedIds) {
-      const sup = await getSupportByIdFromDB(sId);
+      const sup = await getSupportByIdFromDB(sId, { includeInactive: true, includeUnassigned: true });
       if (sup) selectedSupports.push({
         canonical_id: sup.canonical_id,
         name: sup.name,
@@ -163,6 +186,9 @@ export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> 
       requesterPhone,
       message,
       status,
+      requestScope: req.requestScope ?? null,
+      pendingOwnershipCount: itemRows.filter((item) => !item.tenantId).length,
+      tenantIds: [...new Set(itemRows.map((item) => item.tenantId).filter((tenantId): tenantId is string => Boolean(tenantId)))],
       supportIds: selectedIds,
       supportNames,
       lead: { name: req.requesterName, email: req.requesterEmail, company: requesterCompany, phone: requesterPhone, message },

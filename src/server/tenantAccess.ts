@@ -56,3 +56,23 @@ export function canManageGlobalRequest(access: TenantAccessDecision): boolean {
 export function getSupportTenantState(tenantId: string | null | undefined): 'assigned' | 'pending' {
   return typeof tenantId === 'string' && tenantId.trim().length > 0 ? 'assigned' : 'pending';
 }
+
+
+/** Public catalog eligibility is fail-closed: an active support needs an assigned tenant. */
+export function isSupportEligibleForPublicCatalog(tenantId: string | null | undefined, active: boolean): boolean {
+  return active && getSupportTenantState(tenantId) === 'assigned';
+}
+
+
+/** A mixed request is global; any pending ownership keeps the scope unclassified. */
+export function deriveRequestScope(tenantIds: Array<string | null | undefined>, hasPendingOwnership = false): 'tenant' | 'global' | null {
+  const assigned = [...new Set(tenantIds.filter((tenantId): tenantId is string => typeof tenantId === 'string' && tenantId.trim().length > 0))];
+  if (hasPendingOwnership || assigned.length === 0) return null;
+  return assigned.length > 1 ? 'global' : 'tenant';
+}
+
+/** Media Kits belong to one tenant or are global when they contain multiple tenants. */
+export function resolveMediaKitTenantId(tenantIds: Array<string | null | undefined>): string | null {
+  const assigned = [...new Set(tenantIds.filter((tenantId): tenantId is string => typeof tenantId === 'string' && tenantId.trim().length > 0))];
+  return assigned.length === 1 ? assigned[0] : null;
+}

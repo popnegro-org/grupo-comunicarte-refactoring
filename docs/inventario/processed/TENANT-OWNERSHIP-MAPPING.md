@@ -57,7 +57,7 @@ Se asignó también `tenant_id` a ítems históricos de solicitudes cuando su `s
 
 - 30 de 32 ítems quedaron asociados a su tenant.
 - 2 ítems permanecen sin tenant porque apuntan a soportes no conciliados.
-- Las tres solicitudes históricas mixtas conservan cabecera de alcance `global`; las solicitudes homogéneas con ítems conciliados tienen scope `tenant`; una solicitud con ítem pendiente conserva scope NULL.
+- Dos solicitudes históricas mixtas tienen scope `global`; las solicitudes homogéneas con ítems conciliados tienen scope `tenant`. Una solicitud adicional contiene ítems de ambos tenants y un ítem pendiente, por lo que conserva scope NULL junto con otra solicitud legacy con ownership pendiente.
 - No se modificaron importes, disponibilidad, contenido, nombres ni datos de contacto.
 
 ## 5. Verificación posterior
@@ -68,7 +68,7 @@ Consultas ejecutadas en Preview tras la asignación:
 |---|---|
 | `supports` | 46 total; 10 `tenant-ba`; 18 `tenant-default`; 18 NULL |
 | `mediakit_request_items` | 32 total; 5 `tenant-ba`; 25 `tenant-default`; 2 NULL |
-| `mediakit_requests` | 18 total; scope global para las 3 mixtas; tenant para 14 homogéneas; 1 sin scope por ítem pendiente |
+| `mediakit_requests` | 18 total; scope global para 2 mixtas conciliadas; tenant para 14 homogéneas; 2 sin scope (una contiene ítems de ambos tenants y un ítem pendiente; la otra conserva ownership pendiente) |
 
 La suma de scopes se deriva del estado de los ítems y puede cambiar si se corrige un soporte pendiente. Revalidar antes de futuras migraciones.
 

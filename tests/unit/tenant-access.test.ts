@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canManageGlobalRequest, getSupportTenantState, resolveExistingSingleAdminAccess, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
+import { canManageGlobalRequest, deriveRequestScope, getSupportTenantState, isSupportEligibleForPublicCatalog, resolveMediaKitTenantId, resolveExistingSingleAdminAccess, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
 
 test('rejects missing identity and users without active memberships', () => {
   assert.deepEqual(resolveTenantAccess(null), { allowed: false, reason: 'missing_identity' });
@@ -39,4 +39,27 @@ test('preserves the one existing admin as global operator without requiring a ne
   const currentAdmin = resolveExistingSingleAdminAccess(true);
   assert.equal(canManageGlobalRequest(currentAdmin), true);
   assert.deepEqual(resolveExistingSingleAdminAccess(false), { allowed: false, reason: 'missing_identity' });
+});
+
+
+test('public catalog excludes unassigned supports even when they are active and available', () => {
+  assert.equal(isSupportEligibleForPublicCatalog(null, true), false);
+  assert.equal(isSupportEligibleForPublicCatalog(undefined, true), false);
+  assert.equal(isSupportEligibleForPublicCatalog('tenant-ba', true), true);
+  assert.equal(isSupportEligibleForPublicCatalog('tenant-default', false), false);
+});
+
+
+test('derives request scope from verified item ownership and keeps pending items unclassified', () => {
+  assert.equal(deriveRequestScope(['tenant-ba']), 'tenant');
+  assert.equal(deriveRequestScope(['tenant-ba', 'tenant-default']), 'global');
+  assert.equal(deriveRequestScope(['tenant-ba', null], true), null);
+  assert.equal(deriveRequestScope([null], true), null);
+});
+
+test('Media Kits are tenant-scoped only when all selected supports belong to one tenant', () => {
+  assert.equal(resolveMediaKitTenantId(['tenant-ba', 'tenant-ba']), 'tenant-ba');
+  assert.equal(resolveMediaKitTenantId(['tenant-ba', 'tenant-default']), null);
+  assert.equal(resolveMediaKitTenantId(['tenant-default', null]), 'tenant-default');
+  assert.equal(resolveMediaKitTenantId([]), null);
 });

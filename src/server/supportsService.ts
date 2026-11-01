@@ -60,13 +60,13 @@ async function enrichTechnicalMetadata(items: InventoryItem[]): Promise<Inventor
   }
 }
 
-export async function getAllSupportsFromDB(options?: { includeInactive?: boolean }): Promise<InventoryItem[]> {
+export async function getAllSupportsFromDB(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
   const supports = await getSupportCatalog(options);
   const enriched = await enrichTechnicalMetadata(supports);
   return enriched.map(sanitizePublicSupport);
 }
 
-export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean }): Promise<InventoryItem | null> {
+export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const support = await getSupportDetail(canonicalId, options);
   if (!support) return null;
   const [enriched] = await enrichTechnicalMetadata([support]);

@@ -23,7 +23,7 @@ Mapeo:
 ## Estado Neon Preview posterior a conciliación
 - `supports`: 46 filas; 10 tenant-ba, 18 tenant-default, 18 NULL (17 inactivas y 1 activa sin fuente).
 - `mediakit_request_items`: 32 filas; 5 tenant-ba, 25 tenant-default, 2 NULL.
-- `mediakit_requests`: 18 cabeceras; 3 mixtas con scope global, 14 homogéneas con scope tenant y 1 sin scope por ítem pendiente.
+- `mediakit_requests`: 18 cabeceras; 2 mixtas conciliadas con scope global, 14 homogéneas con scope tenant y 2 sin scope. Una de estas últimas combina ítems de ambos tenants y un ítem pendiente.
 - No se modificaron importes, disponibilidad ni contenido comercial.
 - No se modificó Production.
 
@@ -31,7 +31,7 @@ Mapeo:
 - Primitivas fail-closed en `src/server/tenantAccess.ts` y tests unitarios en `tests/unit/tenant-access.test.ts`.
 - Conciliación exacta por `canonical_id` con PDFs maestros.
 - Asignación de 28 soportes y 30 ítems históricos únicamente en Neon Preview.
-- Clasificación de solicitudes mixtas globales y homogéneas tenant-scoped.
+- Clasificación de solicitudes mixtas conciliadas globales y homogéneas tenant-scoped; las solicitudes mixtas con ítems pendientes permanecen sin scope.
 
 ## Bloqueantes P0 pendientes
 1. Filtros tenant-safe en todos los servicios y rutas de negocio.
