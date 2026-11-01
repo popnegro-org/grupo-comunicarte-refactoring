@@ -53,5 +53,25 @@ export default function Dashboard() {
       </Card>
     </div>
 
+    <Card>
+      <CardHeader className="border-b border-slate-100">
+        <CardTitle>Inventario por tipología</CardTitle>
+        <p className="mt-1 text-xs text-slate-500">Distribución del inventario activo por tipo de soporte.</p>
+      </CardHeader>
+      <CardContent className="grid gap-5 pt-5 sm:grid-cols-3">
+        {([
+          ['Tradicional', stats.tradicionalCount],
+          ['Pantallas LED', stats.ledCount],
+          ['LED móvil', stats.movilCount],
+        ] as const).map(([name, total]) => (
+          <div key={name} className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
+            <p className="text-xs font-medium text-slate-500">{name}</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{total}</p>
+            <p className="mt-1 text-[10px] text-slate-500">soportes activos</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+
   </div></DashboardShell>;
 }
