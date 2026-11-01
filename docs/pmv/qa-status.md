@@ -1,7 +1,7 @@
 # PMV candidate QA status
 
 **Candidate:** pmv-validation-candidate
-**Latest verified commit:** 67585d4d45a51ccc97a4eaede308c1204f1ab773
+**Latest verified commit:** 606138d52abd3d1e88c45820b3c5307bf7a5ddaa
 **Documentation updated:** 2026-11-01
 **Main:** unchanged. No merge or Production deployment performed.
 
@@ -9,13 +9,13 @@
 
 | Check | Result | Evidence |
 |---|---|---|
-| TypeScript / npm run lint | PASS | CI Candidate run 41362963755 |
-| Unit tests | PASS | 32/32 locally on 67585d4 |
-| Build | PASS | CI Candidate run 41362963755 and local build |
+| TypeScript / npm run lint | PASS | CI Candidate run 41363881108 |
+| Unit tests | PASS | 32/32 locally on 67585d4; latest candidate CI passed on 606138d |
+| Build | PASS | CI Candidate run 41363881108 and local build |
 | Production dependency audit | PASS | 0 vulnerabilities; CI run 41362963755 |
-| Playwright functional + visual suite | PASS | Visual QA run 41362963754: 26 passed, 2 skipped of 28 |
-| Visual baseline regression | PASS | Restored trusted candidate baseline from c3aae39685851218f7355b72d484f7089cd7fd85 |
-| Vercel Preview / Neon runtime | PASS | Deployment dpl_DQGxATwWXUQzotwqz69cV61dVqCK READY; /api/health connected; /api/supports 200 |
+| Playwright functional + visual suite | PASS | Visual QA run 41363881134: 28 passed, 2 skipped of 30 |
+| Visual baseline regression | PASS | Restored trusted candidate baseline from 67585d4d45a51ccc97a4eaede308c1204f1ab773 |
+| Vercel Preview / Neon runtime | PASS | Deployment dpl_44gREfFKbMJDgKAAhKaV8tLPwSPy READY; /api/health connected; /api/supports 200 |
 
 The repository's lint script runs TypeScript checking (tsc --noEmit); a separate ESLint configuration/script is not present.
 
@@ -54,9 +54,9 @@ Do not declare the PMV complete or merge to main until tenant isolation is imple
 ## QA addendum — latest candidate and live Preview (2026-11-01)
 
 **Branch:** pmv-validation-candidate
-**Commit:** 67585d4d45a51ccc97a4eaede308c1204f1ab773
-**Preview:** https://grupo-comunicarte-refactoring-k491ktv2n-popnegros-projects.vercel.app
-**Deployment:** dpl_DQGxATwWXUQzotwqz69cV61dVqCK — READY.
+**Commit:** 606138d52abd3d1e88c45820b3c5307bf7a5ddaa
+**Preview:** https://grupo-comunicarte-refactoring-2rzgv1sm9-popnegros-projects.vercel.app
+**Deployment:** dpl_44gREfFKbMJDgKAAhKaV8tLPwSPy — READY.
 
 ### Fresh verification
 
@@ -65,8 +65,8 @@ Do not declare the PMV complete or merge to main until tenant isolation is imple
 - npm run test:unit: PASS, 32/32.
 - npm run build: PASS. Route-level chunks are split; no chunk above 500 kB warning.
 - npm audit --omit=dev --audit-level=high: PASS, 0 vulnerabilities.
-- GitHub CI Candidate run 41362963755: PASS.
-- GitHub Visual QA run 41362963754: PASS, 26 passed and 2 skipped out of 28. It restored the trusted candidate baseline from c3aae39685851218f7355b72d484f7089cd7fd85 and compared against it.
+- GitHub CI Candidate run 41363881108: PASS.
+- GitHub Visual QA run 41362963754: PASS, 28 passed and 2 skipped out of 30. It restored the trusted candidate baseline from 67585d4d45a51ccc97a4eaede308c1204f1ab773 and compared against it.
 - Preview routes /, /inventario, /contacto and /mediakits: HTTP 200.
 - /api/health: HTTP 200, database=connected.
 - /api/supports: HTTP 200; public inventory UI renders 28 results. Unassigned supports remain excluded from public inventory.
@@ -82,3 +82,13 @@ Do not declare the PMV complete or merge to main until tenant isolation is imple
 - The two skipped Visual QA cases remain unresolved and are not counted as passed.
 
 No SQL migration was executed, no Production data or deployment was changed, and main remains untouched.
+
+
+### QA addendum — visual regression selector correction (2026-11-01)
+
+The first Visual QA run after the latest persistence/schema correction failed in the new pending-ownership quarantine test on a Playwright strict-mode selector: two elements correctly had role=alert (the amber quarantine notice and the separate duration validation message). The test assertion was narrowed to the quarantine notice text rather than selecting all alerts. No application behavior was weakened.
+
+- Fix commit: 606138d52abd3d1e88c45820b3c5307bf7a5ddaa.
+- CI Candidate run 41363881108: PASS (dependency audit, TypeScript, 32 unit tests and build).
+- Visual QA run 41363881134: PASS, 28 passed and 2 skipped of 30, with the trusted baseline restored from 67585d4d45a51ccc97a4eaede308c1204f1ab773.
+- Vercel Preview deployment dpl_44gREfFKbMJDgKAAhKaV8tLPwSPy: READY for the same SHA.
