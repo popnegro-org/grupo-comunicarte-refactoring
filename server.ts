@@ -31,12 +31,8 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
-function clientIp(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.socket?.remoteAddress || 'unknown';
+function clientIp(req: express.Request): string {
+  return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
 function allowLoginAttempt(ip: string): boolean {
@@ -77,6 +73,8 @@ function adminAuthHeader(req: { headers: Record<string, unknown> }): string | un
 
 export async function createApp() {
   const app = express();
+  // Trust only the single Vercel ingress hop; never trust arbitrary client-supplied X-Forwarded-For values.
+  app.set('trust proxy', process.env.VERCEL ? 1 : false);
 
   const allowedOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
     .split(',')
