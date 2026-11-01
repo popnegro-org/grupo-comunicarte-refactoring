@@ -334,7 +334,11 @@ export default function DashboardMediaKitWorkflow() {
 
   // Public deliverables carry only the explicitly agreed global amount. Never
   // pass per-support internal/base prices into PDF or PPT generation.
-  const exportSupports: ExportSupport[] = supports.map((s) => ({ ...s } as ExportSupport));
+  const exportSupports: ExportSupport[] = supports.map((support) => {
+    const publicSupport = { ...support };
+    delete publicSupport.pricing;
+    return publicSupport;
+  });
 
   const prepareDelivery = async () => {
     if (!lead || !selected || !approvalsReady) return;
