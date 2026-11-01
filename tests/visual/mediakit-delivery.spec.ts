@@ -4,7 +4,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   let requestStatus = 'pending';
   let savedKit: Record<string, unknown> | null = null;
   let kitStatus = '';
-  let requestPatchStatus = '';
+  const requestPatchStatuses: string[] = [];
 
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'canShare', {
@@ -63,7 +63,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   await page.route('**/api/admin/requests/REQ-001', async (route) => {
     if (route.request().method() === 'PATCH') {
       const body = route.request().postDataJSON();
-      requestPatchStatus = body.status;
+      requestPatchStatuses.push(body.status);
       requestStatus = body.status;
       await route.fulfill({
         status: 200,
@@ -143,6 +143,8 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Cliente Demo' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Marcar en proceso' }).click();
+  await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeVisible();
 
   const panel = dialog.locator('div').first();
   const panelBox = await panel.boundingBox();
@@ -172,5 +174,5 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   expect(savedKit).not.toBeNull();
   expect((savedKit as Record<string, unknown>).totalAmount).toBe(25000);
   expect(kitStatus).toBe('sent');
-  expect(requestPatchStatus).toBe('enviado');
+  expect(requestPatchStatuses).toEqual(['contactado', 'enviado']);
 });
