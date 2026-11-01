@@ -49,3 +49,16 @@ Do not declare the PMV complete or merge to `main` until tenant ownership rules 
 - PR #86 and PR #87 remain open Draft PRs and are non-mergeable against their original feature bases.
 - Their selected UI, Media Kit delivery/export, inventory accessibility, and responsive request-table changes have been ported into `pmv-validation-candidate`.
 - Do not merge #85–#88 independently. The intended release artifact remains one final PR from the candidate to `main`, after the blockers above are resolved.
+
+
+## QA addendum — filter pipeline coverage (2026-11-01)
+
+**Latest implementation commit:** `a03fc20c4368595ff5191dde263800cf47f8df58`
+
+The administrative support-list filter pipeline was extracted as the pure function `filterAndSortSupports()` in `src/hooks/useSupportListFilters.ts`. The React hook delegates to this function, preserving the existing filter semantics. Added `tests/unit/support-list-filters.test.ts` covering neutral filters, trimmed/case-insensitive search, AND composition, active/archive behavior, price sorting and input immutability.
+
+- CI Candidate [run 41279271866](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41279271866): **PASS** — production dependency audit (0 vulnerabilities), TypeScript, unit tests and build.
+- Unit suite: **19 passed, 0 failed** on the successful run. An initial test expectation was corrected to match the documented alphabetical sort order; the corrected suite passed.
+- Visual QA [run 41279271863](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41279271863): last observed still executing the trusted-baseline Playwright comparison. Do not infer a result until the workflow completes.
+
+This addendum documents the implementation evidence; it does not change the tenant isolation, distributed rate-limit, or Vercel Preview release blockers above.
