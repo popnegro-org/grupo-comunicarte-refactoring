@@ -67,10 +67,19 @@ export default function DashboardMediaKitBuilder() {
 
     (async () => {
       try {
-        const supportsResponse = await apiFetch('/api/supports');
-        const supportsJson = await supportsResponse.json();
+        const [supportsResponse, pricingResponse] = await Promise.all([
+          apiFetch('/api/supports'),
+          apiFetch('/api/admin/support-pricing'),
+        ]);
+        const [supportsJson, pricingJson] = await Promise.all([supportsResponse.json(), pricingResponse.json()]);
         if (!supportsResponse.ok || supportsJson.status !== 'success') throw new Error(supportsJson.message || 'No pudimos cargar el inventario.');
-        setAllSupports(Array.isArray(supportsJson.data) ? supportsJson.data : []);
+        if (!pricingResponse.ok || pricingJson.status !== 'success') throw new Error(pricingJson.message || 'No pudimos cargar las tarifas internas.');
+        const pricingById = pricingJson.data || {};
+        const inventory = Array.isArray(supportsJson.data) ? supportsJson.data : [];
+        setAllSupports(inventory.map((support: Support) => ({
+          ...support,
+          pricing: pricingById[support.canonical_id] || null,
+        })));
 
         if (kitIdParam) {
           const kitResponse = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(kitIdParam)}`);
