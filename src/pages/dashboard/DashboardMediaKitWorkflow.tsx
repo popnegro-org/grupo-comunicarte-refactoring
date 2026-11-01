@@ -290,11 +290,16 @@ export default function DashboardMediaKitWorkflow() {
     setProposalCurrency('ARS');
     setLoading(true);
     try {
-      const r = await apiFetch('/api/supports');
-      const j = await r.json();
-      if (!r.ok || j.status !== 'success') throw new Error('No pudimos cargar los datos del inventario.');
+      const [inventoryResponse, pricingResponse] = await Promise.all([
+        apiFetch('/api/supports'),
+        apiFetch('/api/admin/support-pricing'),
+      ]);
+      const [inventoryJson, pricingJson] = await Promise.all([inventoryResponse.json(), pricingResponse.json()]);
+      if (!inventoryResponse.ok || inventoryJson.status !== 'success') throw new Error('No pudimos cargar los datos del inventario.');
+      if (!pricingResponse.ok || pricingJson.status !== 'success') throw new Error('No pudimos cargar las tarifas internas.');
       const ids = new Set(lead.supportIds);
-      const filtered = (j.data || [])
+      const pricingById = pricingJson.data || {};
+      const filtered = (inventoryJson.data || [])
         .filter((x: any) => ids.has(x.canonical_id))
         .map((x: any) => ({
           canonical_id: x.canonical_id,
@@ -304,7 +309,7 @@ export default function DashboardMediaKitWorkflow() {
           address: x.address,
           description: x.description,
           characteristics: x.characteristics,
-          pricing: x.pricing || null,
+          pricing: pricingById[x.canonical_id] || null,
         }));
       if (filtered.length !== lead.supportIds.length) {
         const loadedIds = new Set(filtered.map((support: SupportForKit) => support.canonical_id));
