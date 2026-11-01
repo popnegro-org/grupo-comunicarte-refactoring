@@ -40,11 +40,12 @@ Mapeo:
 - Los constructores limitan duraciones a 7, 15, 21 días y mensual; metadatos legacy no estándar quedan sin seleccionar y requieren revisión.
 
 ## Bloqueantes P0/P1 pendientes
+
+La idempotencia de solicitudes ya está implementada y verificada con dos POST concurrentes (201 + 200 duplicate), una cabecera y un ítem; los datos de prueba fueron eliminados.
 1. Pruebas negativas de tenant spoofing, IDOR y acceso no autenticado a endpoints admin.
 2. QA funcional autenticada de Media Kit: persistencia `tenant_id` en cabecera/líneas y selección multi-tenant.
 3. Confirmar que solicitudes con ítems pendientes no puedan cotizarse, exportarse ni marcarse entregadas (UI + API).
 4. Pruebas de privacidad de pricing en API, PDF, PPT y rutas de recuperación.
-5. QA autenticada de Media Kit y exportaciones de solicitudes.
 
 ## Condición de desbloqueo
 Los 28 soportes con correspondencia inequívoca ya están conciliados. Los 18 sin fuente (17 inactivos y 1 activo) permanecen `tenant_id = NULL`, excluidos del catálogo público y de nuevas solicitudes. No se debe inventar ownership. El administrador es global en esta versión; RLS se difiere porque el rol runtime Preview tiene BYPASSRLS y no existen identidades tenant-scoped.
