@@ -1,3 +1,7 @@
+> **ACTUALIZACIÓN 2026-11-01:** este informe refleja una conciliación histórica del 2026-08-31 y su conclusión sobre Mendoza quedó obsoleta frente al inventario actual de la rama candidata. Los PDFs versionados en `docs/inventario/source/` se tomaron como fuente primaria y se conciliaron los canonical_id actuales. Ver [TENANT-OWNERSHIP-MAPPING.md](TENANT-OWNERSHIP-MAPPING.md) para el mapeo vigente y la asignación verificada en Neon Preview. No utilizar los veredictos históricos de este documento para negar las correspondencias actuales ni para autorizar una carga masiva de multimedia.
+
+---
+
 # Matriz de conciliación del inventario — FASE 1
 
 Fecha de auditoría: 2026-08-31
