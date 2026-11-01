@@ -74,7 +74,7 @@ Decisions confirmed: preserve the one existing admin/login; that authenticated a
 - `npm run lint` (TypeScript): PASS.
 - `npm run test:unit`: PASS, 25/25.
 - `npm run build`: PASS; existing >500 kB JS chunk warning remains.
-- `npm run test:visual`: BLOCKED in this ephemeral runner because Playwright Chromium executable is not installed; 28 tests could not launch a browser. This is an environment limitation, not a visual QA pass.
+- Visual QA GitHub Actions run [41349229900](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41349229900): **PASS**. Build, preview server, trusted-baseline comparison and baseline save completed successfully. The report upload also completed and the workflow concluded successfully. The local ephemeral runner lacked Chromium, but the canonical CI visual workflow ran successfully.
 
 **Runtime audit finding (P0):** `requireAdmin` verifies the shared admin token but has no tenant context. All `/api/admin/supports`, `/api/admin/support-pricing`, `/api/admin/mediakits`, and `/api/admin/requests` routes currently operate across the full dataset. `supports` has no persisted tenant ownership field in the runtime schema; city-based dashboard grouping is not a valid ownership control. The single administrator can continue operating both tenants, but effective tenant isolation and ownership-safe cross-tenant reporting are not implemented. Do not pretend this foundation enforces isolation.
 
