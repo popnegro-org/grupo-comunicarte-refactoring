@@ -158,6 +158,8 @@ export default function Inventario() {
           locating={locating}
           nearMeActive={Boolean(userLocation)}
           onClearNearMe={() => setUserLocation(null)}
+          hasActiveFilters={selectedPlaza !== 'todos' || selectedTipo !== 'todos' || selectedDisponibilidad !== 'todos' || Boolean(searchText.trim())}
+          onClearFilters={handleResetFilters}
         />
         <div className="relative min-h-0 flex-1">
           {allFilteredItems.length === 0 ? (
