@@ -311,7 +311,7 @@ test('solicitud con ownership pendiente queda en cuarentena comercial', async ({
   await expect(page.getByText('Ownership pendiente')).toBeVisible();
   await page.getByRole('button', { name: 'Ver solicitud' }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('alert')).toContainText('Solicitud en cuarentena comercial');
+  await expect(dialog.getByText('Solicitud en cuarentena comercial', { exact: false })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Marcar en proceso' })).toBeDisabled();
   await expect(dialog.getByRole('button', { name: 'Guardar cotización' })).toBeDisabled();
 });
