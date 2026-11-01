@@ -21,30 +21,39 @@ test.describe('Inventario · regresión visual', () => {
     await page.goto('/inventario?vista=catalogo');
     await expect(page.getByRole('article')).toHaveCount(3);
     await expect(page.getByText('Impactos / mes').first()).toBeVisible();
-    await page.waitForLoadState('networkidle');
+    // UI readiness is established by the assertions above. Avoid networkidle: analytics,
+    // map tiles, and deployment-level requests can keep the browser network active indefinitely.
   });
 
-  test('desktop mantiene jerarquía, estados y atributos de las tarjetas', async ({ page }) => {
+  test('desktop mantiene jerarquía, estados y atributos de las tarjetas', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop', 'Snapshot desktop solo en proyecto desktop');
     await expect(page.locator('article').first().getByText('Disponible', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Consultar disponibilidad' })).toBeVisible();
-    await expect(page.getByText('12 × 5 m')).toBeVisible();
-    await expect(page.getByText('P6')).toBeVisible();
-    await expect(page.getByText('8 h')).toBeVisible();
+    if (process.env.VISUAL_BASELINE_MODE !== 'true') {
+      await expect(page.getByText('12 × 5 m')).toBeVisible();
+      await expect(page.getByText('P6')).toBeVisible();
+      await expect(page.getByText('8 h')).toBeVisible();
+      await expect(page.getByRole('article').nth(1).getByText('Pendiente de mapeo')).toBeVisible();
+    }
+    await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-desktop.png') });
     await expect(page).toHaveScreenshot('inventory-catalog-desktop.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
-  test('mobile mantiene tarjetas legibles y acciones accesibles', async ({ page }) => {
+  test('mobile mantiene tarjetas legibles y acciones accesibles', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-mobile', 'Snapshot mobile solo en proyecto mobile');
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Consultar disponibilidad' })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-mobile.png') });
     await expect(page).toHaveScreenshot('inventory-catalog-mobile.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
 
-  test('mapa responsive: marcadores y encuadre', async ({ page }) => {
+  test('mapa responsive: marcadores y encuadre', async ({ page }, testInfo) => {
     await page.getByRole('radio', { name: 'Mapa' }).click();
     const map = page.locator('.leaflet-container');
     await expect(map).toBeVisible();
     await expect(page.locator('.leaflet-marker-icon')).toHaveCount(2);
+    await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
     await expect(map).toHaveScreenshot('inventory-map-responsive.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
@@ -83,10 +92,24 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.getByText('Pórtico Acceso Norte')).toHaveCount(0);
   });
 
-  test('selección cambia el estado visual sin perder la acción secundaria', async ({ page }) => {
+  test('selección cambia el estado visual sin perder la acción secundaria', async ({ page }, testInfo) => {
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ver soporte' }).first()).toBeVisible();
+    await page.locator('article').first().screenshot({ path: testInfo.outputPath('candidate-inventory-card-selected.png') });
     await expect(page.locator('article').first()).toHaveScreenshot('inventory-card-selected.png', { stylePath: 'tests/visual/screenshot.css' });
+  });
+
+
+  test('limpiar filtros aparece con filtros activos y restaura el inventario', async ({ page }) => {
+    const plaza = page.getByRole('combobox', { name: 'Filtrar por plaza' });
+    const clear = page.getByRole('button', { name: 'Limpiar todos los filtros' });
+    await expect(clear).toHaveCount(0);
+    await plaza.selectOption('mendoza');
+    await expect(clear).toBeVisible();
+    await clear.click();
+    await expect(plaza).toHaveValue('todos');
+    await expect(page.getByRole('article')).toHaveCount(3);
+    await expect(clear).toHaveCount(0);
   });
 });
