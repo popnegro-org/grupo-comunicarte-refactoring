@@ -130,7 +130,7 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [ ] Cotización, PDF/PPT, entrega y registro trazables.
 - [ ] Exportación y recuperación probadas en desktop y móvil.
 - [ ] Integraciones incluidas en el alcance verificadas end-to-end; las no contratadas quedan fuera de alcance.
-- [ ] Reintentos, errores e idempotencia cubiertos.
+- [x] Solicitudes públicas idempotentes: clave estable por payload, conflicto concurrente resuelto por `UNIQUE(request_id)` y prueba Preview concurrente 201/200 sin duplicados.
 
 ### P2 — calidad y release
 - [ ] Typecheck, unit tests, build y Playwright en el SHA exacto.
