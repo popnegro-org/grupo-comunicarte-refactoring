@@ -1,5 +1,5 @@
--- PROPOSAL ONLY — NOT EXECUTED.
--- Required before enabling the distributed login limiter in any environment.
+-- Historical proposal. The matching table, primary key, CHECK constraint and index are verified in Neon Preview.
+-- Do not apply to Production without separate migration review and HUMAN GATE.
 -- IP addresses are stored only as keyed HMAC-SHA256 digests, never in clear text.
 CREATE TABLE IF NOT EXISTS admin_login_attempts (
   ip_hash TEXT PRIMARY KEY,

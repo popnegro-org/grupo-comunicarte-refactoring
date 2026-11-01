@@ -74,6 +74,8 @@ La suma de scopes se deriva del estado de los ítems y puede cambiar si se corri
 
 ## 6. Límites de esta conciliación
 
-Esta asignación de ownership **no cierra el P0 de aislamiento multi-tenant**. Todavía deben implementarse y probarse los filtros tenant-safe en servicios y endpoints, pricing, Media Kits, solicitudes, estadísticas, medios, CRUD y exportaciones. Las filas pendientes deben quedar efectivamente excluidas del catálogo público y de operaciones comerciales. No activar RLS hasta probar el rol real de runtime.
+Esta conciliación cierra la identificación documental de los 28 soportes elegibles. La implementación posterior excluye los 18 soportes sin ownership del catálogo y de nuevas solicitudes, persiste tenant por ítem de solicitud y Media Kit, y bloquea el avance comercial de solicitudes pendientes. El smoke test Preview devolvió 28 soportes, 404 para `mza-trad-16` y rechazó su solicitud pública.
 
-No se hicieron cambios en Production, no se creó ningún usuario y no se modificó `main`.
+El administrador de este PMV es global y no existen usuarios tenant-scoped. `tenant_id` funciona como ownership/partición operativa y comercial, no como autorización entre usuarios. El rol runtime Preview `neondb_owner` tiene `rolbypassrls=true`; RLS no se declara activo y queda diferido hasta que se incorpore autenticación tenant-scoped y un rol DB sin BYPASSRLS.
+
+La QA autenticada de Media Kit, exportaciones y R2 sigue pendiente. No se hicieron cambios en Production, no se creó ningún usuario y no se modificó `main`.
