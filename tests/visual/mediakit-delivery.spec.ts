@@ -136,7 +136,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   });
 
   await page.goto('/dashboard/solicitudes');
-  const request = page.getByRole('button', { name: /Cliente Demo/ });
+  const request = page.getByRole('button', { name: 'Ver solicitud' });
   await expect(request).toBeVisible();
   await request.click();
 
