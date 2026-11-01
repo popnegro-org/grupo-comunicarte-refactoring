@@ -163,6 +163,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Cliente Demo' })).toBeVisible();
+  await dialog.getByLabel('Duración contratada').selectOption('7:días');
   await dialog.getByRole('button', { name: 'Marcar en proceso' }).click();
   await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeVisible();
 
@@ -173,7 +174,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
 
   const numberInputs = dialog.locator('input[type="number"]');
   await numberInputs.nth(0).fill('25000');
-  await numberInputs.nth(2).fill('25000');
+  await numberInputs.nth(1).fill('25000');
 
   await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeEnabled();
   await dialog.getByRole('button', { name: 'Preparar entrega' }).click();
@@ -265,6 +266,7 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
   await page.goto('/dashboard/mediakits/nuevo?kitId=KIT-TEST');
   await expect(page.getByRole('heading', { name: 'Constructor de Media Kit' })).toBeVisible();
   await page.getByPlaceholder('Nombre *').fill('Cliente Demo');
+  await page.getByLabel('Duración contratada').selectOption('15:días');
   await page.getByRole('button', { name: /Soporte Demo/ }).click();
 
   const downloadPromise = page.waitForEvent('download');
@@ -278,4 +280,38 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
   expect(savedPayload?.metadata?.proposalAmount?.amount).toBeNull();
   expect(pdfText).toContain('sujeta a');
   expect(pdfText).not.toContain('99999');
+});
+
+test('solicitud con ownership pendiente queda en cuarentena comercial', async ({ page }) => {
+  await page.route('**/api/admin/stats', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'success', data: [{
+        id: 99,
+        requestId: 'REQ-PENDING-OWNERSHIP',
+        requesterName: 'Cliente en revisión',
+        requesterEmail: 'review@example.com',
+        requesterCompany: 'Campaña en revisión',
+        status: 'pending',
+        supportIds: ['mza-trad-16'],
+        supportNames: ['Soporte sin conciliar'],
+        requestScope: null,
+        tenantIds: [],
+        pendingOwnershipCount: 1,
+        createdAt: '2026-11-01T10:00:00.000Z',
+      }] }),
+    });
+  });
+
+  await page.goto('/dashboard/solicitudes');
+  await expect(page.getByText('Ownership pendiente')).toBeVisible();
+  await page.getByRole('button', { name: 'Ver solicitud' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('alert')).toContainText('Solicitud en cuarentena comercial');
+  await expect(dialog.getByRole('button', { name: 'Marcar en proceso' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Guardar cotización' })).toBeDisabled();
 });

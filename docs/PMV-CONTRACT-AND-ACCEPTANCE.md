@@ -24,7 +24,9 @@ El PMV permite al equipo interno administrar inventario OOH de dos tenants, prep
 ## 3. Acceso y tenancy
 
 - Conservar el único administrador/credencial existente. No crear usuarios ni invitaciones.
-- El administrador autenticado tiene alcance global sobre `tenant-ba` y `tenant-default`.
+- El administrador autenticado tiene alcance global sobre `tenant-ba` y `tenant-default`; no existen usuarios con membresía tenant-scoped en este PMV.
+- El catálogo público también es global y puede mostrar soportes asignados de ambos tenants; no es un panel privado de cada tenant.
+- `tenant_id` es ownership/partición operativa y comercial, no una frontera de autorización entre usuarios en esta versión.
 - Cada soporte elegible debe tener exactamente un `tenant_id` válido.
 - `tenant_id = NULL` significa pendiente/cuarentena, nunca tenant por defecto.
 - Un soporte pendiente no puede publicarse comercialmente, reservarse, cotizarse, incluirse en Media Kit ni exportarse como oferta.
@@ -106,7 +108,7 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - Validar input, tenant y autorización en cada endpoint; evitar IDOR y mass assignment.
 - Archivos: MIME real, extensión, tamaño, autorización y rutas.
 - Revisar CORS, CSRF cuando aplique, headers, errores y dependencias.
-- No ejecutar DDL desde peticiones web.
+- No ejecutar DDL desde peticiones web; el runtime verifica el esquema y falla cerrado si falta una migración.
 
 ## 8. Criterios de aceptación
 
@@ -124,7 +126,7 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [ ] Media Kits y sus líneas persisten tenant_id por soporte; los kits multi-tenant se identifican como globales.
 
 ### P1 — cierre comercial
-- [ ] Duraciones iguales en UI, API, persistencia y documentación.
+- [x] Duraciones estándar (7, 15, 21 días y mensual) alineadas en ambos constructores y validadas también en backend; valores legacy no estándar requieren revisión explícita.
 - [ ] Cotización, PDF/PPT, entrega y registro trazables.
 - [ ] Exportación y recuperación probadas en desktop y móvil.
 - [ ] Integraciones incluidas en el alcance verificadas end-to-end; las no contratadas quedan fuera de alcance.
@@ -147,9 +149,10 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - Preview: 46 soportes; 10 tenant-ba, 18 tenant-default, 18 NULL (17 inactivos y 1 activo sin fuente).
 - Preview: 32 ítems de solicitudes; 5 tenant-ba, 25 tenant-default, 2 NULL.
 - Preview: 18 solicitudes; 2 mixtas conciliadas con scope global, 14 homogéneas con scope tenant y 2 sin scope. Una de estas últimas contiene ítems de ambos tenants y un ítem pendiente; no se la debe clasificar automáticamente.
-- Preview: se añadió `mediakit_items.tenant_id` con FK e índice; la tabla tenía 0 filas al aplicar la migración, por lo que no hubo backfill de líneas.
-- Runtime todavía requiere filtros tenant-safe en servicios de negocio; primitivas tenantAccess y tests no acreditan aislamiento efectivo.
-- CI/Visual QA verdes no acreditan ownership ni aislamiento.
+- Preview: se añadió `mediakit_items.tenant_id` con FK e índice; la tabla tenía 0 filas al aplicar la migración, por lo que no hubo backfill de líneas. El runtime ahora valida columnas requeridas y no ejecuta DDL en requests.
+- Runtime Preview usa `neondb_owner` con `rolbypassrls = true`; RLS no se considera activo. Los endpoints admin están protegidos por `requireAdmin`; no hay usuarios tenant-scoped.
+- En SHA `67585d4d45a51ccc97a4eaede308c1204f1ab773`, `/api/health` respondió 200 con DB conectada; `/api/supports` devolvió 28 soportes; el soporte activo no asignado `mza-trad-16` devolvió 404 y una solicitud pública con ese ID fue rechazada (404). Conteos de solicitudes permanecieron 18 cabeceras y 32 ítems.
+- CI Candidate y Visual QA de ese SHA concluyeron success; Visual QA ejecutó Playwright contra baseline confiable. La verificación funcional autenticada de Media Kit sigue pendiente.
 - HubSpot, Resend/email transaccional y WhatsApp API no acreditados.
 - UI Media Kit presentaba unidades adicionales a las modalidades estándar; debe alinearse.
 - Login limiter y deployment Preview habían sido validados previamente; repetir en el SHA liberable.

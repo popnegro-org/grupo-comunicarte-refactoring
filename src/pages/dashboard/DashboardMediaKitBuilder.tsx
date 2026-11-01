@@ -6,11 +6,11 @@ import { Input } from '../../components/ui/Input';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
 import { downloadMediaKitPdf, downloadMediaKitPpt, ExportSupport } from '../../lib/adminMediaKitExport';
 import { apiFetch } from '../../lib/api';
+import { formatProposalDuration, isProposalDurationValid, normalizeProposalDuration, proposalDurationFromOption, proposalDurationOption, ProposalDurationUnit } from '../../lib/mediakitDuration';
 
 type Pricing = { exhibition_price?: number | string | null; installation_price?: number | string | null; printing_price?: number | string | null; currency?: string | null };
 type Support = ExportSupport & { disponibilidad?: 'disponible' | 'reservado' | 'inactivo'; pricing?: Pricing | null; imageUrls?: string[]; media?: Array<{ url?: string; media_type?: string; active?: boolean }> };
 type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
-type ProposalDurationUnit = 'días' | 'semanas' | 'meses' | 'quincenas' | 'otros' | 'indefinido';
 type ProposalCurrency = 'ARS' | 'USD' | 'Por definir';
 type ProposalPeriod = { fechaInicio: string; fechaFin: string; duracionValor: string; duracionUnidad: ProposalDurationUnit };
 type PersistedKit = {
@@ -33,13 +33,7 @@ function formatProposalPeriod(period: ProposalPeriod): string | undefined {
   const dates = period.fechaInicio || period.fechaFin
     ? [period.fechaInicio, period.fechaFin].filter(Boolean).join(' – ')
     : '';
-  const duration = period.duracionUnidad === 'indefinido'
-    ? 'Duración indefinida'
-    : period.duracionUnidad === 'otros'
-      ? (period.duracionValor ? `Período: ${period.duracionValor}` : 'Período: otros (a definir)')
-      : period.duracionValor
-        ? `${period.duracionValor} ${period.duracionUnidad}`
-        : '';
+  const duration = formatProposalDuration(period);
   return [dates, duration].filter(Boolean).join(' · ') || undefined;
 }
 
@@ -52,7 +46,7 @@ export default function DashboardMediaKitBuilder() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [client, setClient] = useState({ name: '', company: '', email: '', phone: '' });
-  const [period, setPeriod] = useState<ProposalPeriod>({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'meses' });
+  const [period, setPeriod] = useState<ProposalPeriod>({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
   const [proposalAmount, setProposalAmount] = useState('');
   const [proposalCurrency, setProposalCurrency] = useState<ProposalCurrency>('ARS');
   const [loading, setLoading] = useState(true);
@@ -111,8 +105,7 @@ export default function DashboardMediaKitBuilder() {
               setPeriod({
                 fechaInicio: typeof p.fechaInicio === 'string' ? p.fechaInicio : '',
                 fechaFin: typeof p.fechaFin === 'string' ? p.fechaFin : '',
-                duracionValor: p.duracionValor == null ? '' : String(p.duracionValor),
-                duracionUnidad: p.duracionUnidad === 'días' || p.duracionUnidad === 'semanas' || p.duracionUnidad === 'meses' || p.duracionUnidad === 'quincenas' || p.duracionUnidad === 'otros' || p.duracionUnidad === 'indefinido' ? p.duracionUnidad : 'meses',
+                ...normalizeProposalDuration(p.duracionValor, p.duracionUnidad),
               });
             }
             setRequestId(kit.kitId || kitIdParam);
@@ -137,12 +130,10 @@ export default function DashboardMediaKitBuilder() {
   const selected = useMemo(() => allSupports.filter((s) => selectedIds.includes(s.canonical_id)), [allSupports, selectedIds]);
   const total = useMemo(() => selected.reduce((sum, s) => sum + (Number(prices[s.canonical_id]) || 0), 0), [selected, prices]);
   const periodInvalid = Boolean(period.fechaInicio && period.fechaFin && period.fechaFin < period.fechaInicio);
-  const durationInvalid = period.duracionUnidad !== 'indefinido' && period.duracionUnidad !== 'otros' && Boolean(period.duracionValor) &&
-    (!Number.isInteger(Number(period.duracionValor)) || Number(period.duracionValor) <= 0);
-  const otherDurationMissing = period.duracionUnidad === 'otros' && !period.duracionValor.trim();
+  const durationInvalid = !isProposalDurationValid(period);
   const proposalAmountInvalid = proposalCurrency !== 'Por definir' && Boolean(proposalAmount.trim()) &&
     (!Number.isFinite(Number(proposalAmount)) || Number(proposalAmount) < 0);
-  const canExport = selected.length > 0 && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !otherDurationMissing && !proposalAmountInvalid;
+  const canExport = selected.length > 0 && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !proposalAmountInvalid;
   const toggle = (support: Support) => {
     if (support.disponibilidad !== 'disponible' && !selectedIds.includes(support.canonical_id)) {
       notify('Solo se pueden agregar soportes disponibles al Media Kit.');
@@ -178,8 +169,7 @@ export default function DashboardMediaKitBuilder() {
 
   const persist = async (status: MediaKitStatus = 'draft'): Promise<PersistedKit> => {
     if (periodInvalid) throw new Error('La fecha de finalización no puede ser anterior al inicio.');
-    if (durationInvalid) throw new Error('La duración debe ser un número entero mayor que cero.');
-    if (otherDurationMissing) throw new Error('Describí el período acordado en “Otros”.');
+    if (durationInvalid && status !== 'draft') throw new Error('Seleccioná una duración comercial estándar: 7, 15, 21 días o mensual.');
     if (proposalAmountInvalid) throw new Error('El monto global debe ser un número válido igual o mayor que cero.');
     const response = await apiFetch('/api/admin/mediakits', {
       method: 'POST',
@@ -199,7 +189,7 @@ export default function DashboardMediaKitBuilder() {
           proposalPeriod: {
             fechaInicio: period.fechaInicio || null,
             fechaFin: period.fechaFin || null,
-            duracionValor: period.duracionValor ? (period.duracionUnidad === 'otros' ? period.duracionValor.trim() : Number(period.duracionValor)) : null,
+            duracionValor: period.duracionValor ? Number(period.duracionValor) : null,
             duracionUnidad: period.duracionUnidad,
           },
           proposalAmount: {
@@ -316,24 +306,19 @@ export default function DashboardMediaKitBuilder() {
                     Fecha de finalización
                     <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
                   </label>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-xs font-medium text-gray-600 sm:col-span-2">
                     Duración contratada
-                    <input type={period.duracionUnidad === 'otros' ? 'text' : 'number'} min={period.duracionUnidad === 'otros' ? undefined : 1} step={period.duracionUnidad === 'otros' ? undefined : 1} value={period.duracionValor} onChange={(e) => setPeriod((p) => ({ ...p, duracionValor: e.target.value }))} disabled={period.duracionUnidad === 'indefinido'} placeholder={period.duracionUnidad === 'otros' ? 'Describir período acordado' : 'Cantidad'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
-                  </label>
-                  <label className="block text-xs font-medium text-gray-600">
-                    Unidad de duración
-                    <select value={period.duracionUnidad} onChange={(e) => setPeriod((p) => ({ ...p, duracionUnidad: e.target.value as ProposalDurationUnit, duracionValor: e.target.value === 'indefinido' || e.target.value === 'otros' ? '' : p.duracionValor }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
-                      <option value="meses">Mensual (meses)</option>
-                      <option value="quincenas">Quincenal</option>
-                      <option value="otros">Otros</option>
-                      <option value="días">Días (legado)</option>
-                      <option value="semanas">Semanas (legado)</option>
-                      <option value="indefinido">Indefinido (legado)</option>
+                    <select value={proposalDurationOption(period)} onChange={(e) => setPeriod((p) => ({ ...p, ...proposalDurationFromOption(e.target.value) }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                      <option value="">Seleccionar duración</option>
+                      <option value="7:días">7 días</option>
+                      <option value="15:días">15 días</option>
+                      <option value="21:días">21 días</option>
+                      <option value="1:meses">Mensual</option>
                     </select>
                   </label>
                 </div>
                 {periodInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La fecha de finalización no puede ser anterior al inicio.</p>}
-                {durationInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La duración debe ser un número entero mayor que cero.</p>}
+                {durationInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">Seleccioná 7, 15, 21 días o mensual. Los períodos históricos no estándar requieren revisión.</p>}
                 <p className="mt-2 text-[11px] text-gray-500">El período se guarda como metadato de la propuesta; no modifica reservas ni disponibilidad.</p>
               </div>
 

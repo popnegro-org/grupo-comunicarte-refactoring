@@ -1,5 +1,6 @@
 import { pool, isDatabaseConfigured } from '../db/index.ts';
 import { resolveMediaKitTenantId } from './tenantAccess.ts';
+import { isProposalDurationValid } from '../lib/mediakitDuration.ts';
 
 
 export type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
@@ -35,80 +36,29 @@ let tableReady = false;
 async function ensureTables(): Promise<void> {
   if (!isDatabaseConfigured || tableReady) return;
 
-  // P1 persistence is initialized lazily on first management operation.
-  // This deliberately avoids adding DDL to the application cold-start path.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS mediakits (
-      id SERIAL PRIMARY KEY,
-      tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-      kit_id TEXT UNIQUE NOT NULL,
-      source_request_id TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      client_name TEXT NOT NULL,
-      client_email TEXT,
-      client_company TEXT,
-      client_phone TEXT,
-      support_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-      approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb,
-      total_amount NUMERIC,
-      currency TEXT NOT NULL DEFAULT 'ARS',
-      notes TEXT,
-      metadata JSONB,
-      pdf_url TEXT,
-      ppt_url TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS mediakit_items (
-      id SERIAL PRIMARY KEY,
-      tenant_id TEXT REFERENCES tenants(id) ON DELETE RESTRICT,
-      kit_id TEXT NOT NULL,
-      support_id TEXT NOT NULL,
-      approved_price NUMERIC,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      metadata JSONB,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Existing databases may contain an older mediakits table created before
-    -- the management schema was introduced. Keep the runtime bootstrap
-    -- additive/idempotent so those databases are upgraded without dropping
-    -- existing data.
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS tenant_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS source_request_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_name TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_email TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_company TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_phone TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS support_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS total_amount NUMERIC;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'ARS';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS notes TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS pdf_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS ppt_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS support_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS approved_price NUMERIC;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_mediakits_kit_id ON mediakits(kit_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_status ON mediakits(status);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_source_request ON mediakits(source_request_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakit_items_kit_id ON mediakit_items(kit_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakit_items_tenant_id ON mediakit_items(tenant_id);
-  `);
+  // Schema changes belong to reviewed SQL migrations, never to HTTP requests.
+  const requiredColumns: Record<string, string[]> = {
+    mediakits: [
+      'kit_id', 'tenant_id', 'source_request_id', 'status', 'client_name', 'client_email',
+      'client_company', 'client_phone', 'support_ids', 'approved_prices', 'total_amount',
+      'currency', 'notes', 'metadata', 'pdf_url', 'ppt_url', 'created_at', 'updated_at',
+    ],
+    mediakit_items: ['kit_id', 'support_id', 'tenant_id', 'approved_price', 'sort_order', 'metadata', 'created_at', 'updated_at'],
+  };
+  const result = await pool.query(
+    `SELECT table_name, column_name
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = ANY($1::text[])`,
+    [Object.keys(requiredColumns)],
+  );
+  const available = new Set(result.rows.map((row) => `${row.table_name}.${row.column_name}`));
+  const missing = Object.entries(requiredColumns).flatMap(([table, columns]) =>
+    columns.filter((column) => !available.has(`${table}.${column}`)).map((column) => `${table}.${column}`),
+  );
+  if (missing.length > 0) {
+    throw new Error(`Falta aplicar la migración de Media Kits en esta base: ${missing.join(', ')}`);
+  }
   tableReady = true;
 }
 
@@ -133,6 +83,14 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
   if (clientName.length < 2) throw new Error('El nombre del cliente es obligatorio.');
 
   const supportIds = normalizeSupportIds(input.supportIds);
+  const status = normalizeStatus(input.status);
+  const proposalPeriod = input.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
+  if ((status === 'ready' || status === 'sent') && !isProposalDurationValid({
+    duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
+    duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
+  })) {
+    throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
+  }
   let tenantId: string | null = null;
   const tenantBySupportId = new Map<string, string>();
 
@@ -190,7 +148,6 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     throw new Error('La moneda del Media Kit no está permitida.');
   }
 
-  const status = normalizeStatus(input.status);
   if ((status === 'ready' || status === 'sent') && supportIds.length === 0) {
     throw new Error('Un Media Kit listo o enviado debe incluir al menos un soporte conciliado.');
   }
@@ -396,22 +353,29 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
     throw new Error('Estado de Media Kit inválido.');
   }
+  const existing = await pool.query(
+    'SELECT metadata, support_ids FROM mediakits WHERE kit_id = $1 LIMIT 1',
+    [kitId],
+  );
+  if (!existing.rows[0]) return null;
   if (status === 'ready' || status === 'sent') {
+    const proposalPeriod = existing.rows[0].metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
+    if (!isProposalDurationValid({
+      duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
+      duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
+    })) {
+      throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
+    }
     const ownership = await pool.query(
-      `SELECT m.kit_id
-         FROM mediakits m
-        WHERE m.kit_id = $1
-          AND (jsonb_array_length(m.support_ids) = 0 OR EXISTS (
-            SELECT 1
-              FROM jsonb_array_elements_text(m.support_ids) AS item(support_id)
-              LEFT JOIN supports s ON s.canonical_id = item.support_id
-             WHERE s.canonical_id IS NULL OR s.tenant_id IS NULL
-          ))
+      `SELECT 1
+         FROM jsonb_array_elements_text($1::jsonb) AS item(support_id)
+         LEFT JOIN supports s ON s.canonical_id = item.support_id
+        WHERE s.canonical_id IS NULL OR s.tenant_id IS NULL
         LIMIT 1`,
-      [kitId],
+      [JSON.stringify(existing.rows[0].support_ids || [])],
     );
-    if (ownership.rows.length > 0) {
-      throw new Error('El Media Kit no puede marcarse como listo o enviado: contiene soportes sin ownership conciliado.');
+    if ((existing.rows[0].support_ids || []).length === 0 || ownership.rows.length > 0) {
+      throw new Error('El Media Kit no puede marcarse como listo o enviado: requiere soportes con ownership conciliado.');
     }
   }
   const result = await pool.query(
