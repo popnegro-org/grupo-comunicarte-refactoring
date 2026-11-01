@@ -14,8 +14,13 @@ export const numeric = (v: unknown): NumericFieldValue => {
   return Number.isFinite(n) ? n : '';
 };
 
-const numberOrZero = (v: NumericFieldValue) => (v === '' ? 0 : v);
-const numberOrNull = (v: NumericFieldValue) => (v === '' ? null : v);
+const toFiniteNumber = (v: NumericFieldValue): number | null => {
+  if (v === '' || v == null) return null;
+  const value = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(value) ? value : null;
+};
+const numberOrZero = (v: NumericFieldValue) => toFiniteNumber(v) ?? 0;
+const numberOrNull = (v: NumericFieldValue) => toFiniteNumber(v);
 
 export const splitPeriod = (v: unknown) => {
   if (typeof v !== 'string' || !v) return { from: '', until: '' };
