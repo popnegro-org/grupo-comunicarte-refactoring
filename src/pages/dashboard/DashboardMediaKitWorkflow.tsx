@@ -52,9 +52,9 @@ type LeadRequest = {
 type SupportForKit = ExportSupport & { pricing?: Pricing | null };
 
 const labels: Record<WorkflowStatus, string> = {
-  request: 'REQUEST',
-  in_progress: 'IN PROGRESS',
-  done: 'DONE',
+  request: 'Pendiente',
+  in_progress: 'En proceso',
+  done: 'Entregada',
 };
 
 function formatRequestDate(value: string) {
