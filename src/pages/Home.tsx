@@ -30,7 +30,7 @@ export default function Home() {
   return (
     <div className="flex w-full flex-col">
       {/* Hero */}
-      <section className="relative flex h-[calc(100vh-5rem)] min-h-0 w-full items-center overflow-hidden border-b border-gray-100">
+      <section className="relative flex min-h-[620px] w-full items-center overflow-hidden border-b border-gray-100 sm:min-h-[680px] lg:min-h-[calc(100svh-5rem)]">
         <div className="absolute inset-0 z-0">
           <img src="/images/home.webp" alt="Vía Pública" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-black/35" />
@@ -47,6 +47,14 @@ export default function Home() {
             <p className="mx-auto max-w-lg text-base leading-7 text-white/90 md:text-lg md:leading-7">
               Espacios publicitarios estratégicos en Mendoza y Buenos Aires.
             </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link to="/inventario" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-gray-950 shadow-sm transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                Explorar inventario <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link to="/contacto" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/70 bg-black/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                Hablar con ventas
+              </Link>
+            </div>
           </div>
 
           <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-1/2 md:right-auto md:w-[min(700px,calc(100%-3rem))] md:-translate-x-1/2">
