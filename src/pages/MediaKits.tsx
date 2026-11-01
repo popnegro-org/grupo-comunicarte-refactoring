@@ -52,7 +52,7 @@ export default function MediaKits() {
               <h1 className="mt-1 text-2xl font-semibold tracking-tight text-gray-950 sm:text-3xl">
                 Revisá tu selección
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-sm text-gray-600" aria-live="polite">
                 {selectedCount === 0
                   ? 'Todavía no hay soportes en tu Media Kit. Explorá el inventario y agregá los que te interesen.'
                   : `${selectedCount} ${selectedCount === 1 ? 'soporte listo' : 'soportes listos'} para solicitar propuesta comercial.`}
@@ -60,13 +60,13 @@ export default function MediaKits() {
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedCount > 0 && (
-                <button type="button" onClick={clearSelection} className={buttonStyles({ variant: 'outline', className: 'min-h-10' })}>
+                <button type="button" onClick={clearSelection} className={buttonStyles({ variant: 'outline', className: 'min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-950' })}>
                   Vaciar selección
                 </button>
               )}
               <Link
                 to={selectedCount > 0 ? '/contacto?origen=mediakit' : '/inventario'}
-                className={buttonStyles({ className: 'min-h-10 inline-flex items-center gap-2' })}
+                className={buttonStyles({ className: 'min-h-11 inline-flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-950' })}
               >
                 {selectedCount > 0 ? (
                   <>
@@ -93,7 +93,7 @@ export default function MediaKits() {
             <p className="mt-2 max-w-sm text-sm text-gray-600">
               En el inventario podés filtrar por plaza, tipo y disponibilidad, y agregar soportes a esta selección.
             </p>
-            <Link to="/inventario" className={buttonStyles({ className: 'mt-6 inline-flex items-center gap-2' })}>
+            <Link to="/inventario" className={buttonStyles({ className: 'mt-6 min-h-11 inline-flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-950' })}>
               Ir al inventario
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
