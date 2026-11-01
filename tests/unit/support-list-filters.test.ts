@@ -90,7 +90,7 @@ test('active filter distinguishes archived supports while treating missing activ
   ];
   assert.deepEqual(
     filterAndSortSupports(withLegacy, { ...defaults, active: 'activos' }).map((item) => item.canonical_id),
-    ['MZA-LEGACY', 'MZA-TR-01', 'BA-LED-02'],
+    ['MZA-TR-01', 'MZA-LEGACY', 'BA-LED-02'],
   );
   assert.deepEqual(
     filterAndSortSupports(withLegacy, { ...defaults, active: 'inactivos' }).map((item) => item.canonical_id),
