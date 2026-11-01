@@ -120,7 +120,7 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [ ] Pruebas negativas cross-tenant, spoofing e IDOR.
 - [ ] RLS/rol runtime probados con el principal real o decisión segura documentada.
 - [ ] Cero filtraciones de precios internos en API y exportaciones.
-- [ ] Flujo de solicitud persistente, gestionable e idempotente.
+- [x] Flujo de solicitud persistente e idempotente; pruebas secuencial y concurrente en Preview sin duplicados.
 - [x] Fuente documental y asignación de ownership de 28 soportes conciliados en Neon Preview.
 - [ ] Soportes e ítems sin ownership excluidos efectivamente del catálogo y del flujo comercial.
 - [ ] Media Kits y sus líneas persisten tenant_id por soporte; los kits multi-tenant se identifican como globales.
