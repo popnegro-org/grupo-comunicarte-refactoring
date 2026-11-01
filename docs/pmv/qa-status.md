@@ -39,3 +39,11 @@ Playwright tests run against the CI Vite preview with mocked API responses. They
 ## Release gate
 
 Do not create the final PR as PMV-complete or merge to `main` until tenant ownership rules are confirmed, tenant isolation is implemented and tested, distributed rate limiting is addressed, and the candidate is verified against a Vercel Preview with Neon integration. Production data and `main` remain untouched.
+
+
+## PR consolidation
+
+- PR #85 and PR #88 remain open Draft PRs and are currently marked mergeable against their original feature bases.
+- PR #86 and PR #87 remain open Draft PRs and are currently marked non-mergeable against their original feature bases.
+- Their selected UI, Media Kit delivery/export, inventory accessibility, and responsive request-table changes have been ported into `pmv-validation-candidate`.
+- Do not merge #85–#88 independently. The intended release artifact remains one final PR from the candidate to `main`, after the blockers above are resolved.
