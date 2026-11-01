@@ -1,7 +1,7 @@
 import { Search, SlidersHorizontal, LocateFixed, X } from 'lucide-react';
 import { Plaza, TipoSoporte, Disponibilidad } from '../../types';
 
-export type InventoryTypeFilter = TipoSoporte | 'pantallas_led' | 'outdoor' | 'indoor' | 'pendiente_mapeo' | 'todos';
+export type InventoryTypeFilter = TipoSoporte | 'pantallas_led' | 'pendiente_mapeo' | 'todos';
 import { Input } from '../ui/Input';
 import { ViewModeToggle, ViewMode } from './ViewModeToggle';
 
@@ -94,8 +94,6 @@ export function InventoryToolbar({
         <option value="tradicional">Tradicionales</option>
         <option value="pantallas_led">Pantallas LED</option>
         <option value="led_movil">LED móvil</option>
-        <option value="outdoor">Outdoor</option>
-        <option value="indoor">Indoor</option>
         <option value="pendiente_mapeo">Pendiente de mapeo (clasificación interna)</option>
       </select>
 
