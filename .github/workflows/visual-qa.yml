@@ -120,14 +120,23 @@ jobs:
           path: tests/visual/__snapshots__
           key: visual-baseline-${{ github.event.pull_request.head.ref }}-${{ github.sha }}
 
-      - name: Refresh baseline and execute Playwright on trusted branch
-        if: github.event_name == 'push'
+      - name: Bootstrap trusted baseline and validate Playwright
+        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key == ''
         run: |
           npx playwright test --update-snapshots=all
           npx playwright test
           {
-            echo "## Visual QA: trusted-branch functional run"
-            echo "Playwright was executed after refreshing the trusted branch snapshots. This validates browser tests and screenshot generation, but is not a regression comparison against the previous baseline."
+            echo "## Visual QA: trusted baseline bootstrap"
+            echo "No previous trusted-branch baseline was available. Playwright tests passed against newly generated snapshots; this run establishes a baseline but is not a regression comparison."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compare against previous trusted baseline
+        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != ''
+        run: |
+          npx playwright test
+          {
+            echo "## Visual QA: trusted baseline regression"
+            echo "Playwright passed against the previously cached trusted-branch baseline: ${{ steps.baseline.outputs.cache-matched-key }}."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save trusted baseline
