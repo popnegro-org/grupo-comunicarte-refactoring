@@ -56,6 +56,15 @@ Lectura de esquema y agregados en la rama Preview de Neon; no se ejecutaron escr
 - La migración es idempotente y la comprobación de columnas/constraints confirmó la estructura resultante.
 - El runtime de negocio aún no consume estos campos ni filtra consultas por tenant; la migración por sí sola no habilita aislamiento.
 
+
+### Validación de login y conexión Preview
+
+- El primer smoke test de `/api/admin/login` devolvió 503 porque el deployment Preview todavía no apuntaba al branch Neon donde se había preparado la tabla de rate limit.
+- Se creó una variable `DATABASE_URL` **solo para Preview y limitada a la rama Git `pmv-validation-candidate`**, usando la conexión de `preview/pmv-validation-candidate`. No se modificó la variable de Production ni se expuso el secreto.
+- Se ejecutó la migración `20261101_002_admin_login_rate_limit.sql` únicamente en el branch Neon Preview. El endpoint volvió a responder 401 ante credenciales de prueba inválidas (comportamiento esperado); el registro de rate limit confirmó una clave HMAC y un intento persistido. El 503 inicial quedó resuelto en Preview.
+- `/api/health` respondió 200 con `database: connected`; `/api/supports` respondió 200 y devolvió el catálogo. No se probaron credenciales reales ni se inició sesión con el administrador.
+- Esta validación no aplica las migraciones ni cambia la conexión de Production.
+
 ## Límites deliberados
 
 No se conectan aún los resolvers tenant a rutas de negocio porque no existe una fuente verificada de ownership para todos los registros. No se ejecuta SQL, migración, backfill, activación RLS, cambio de credenciales, despliegue, ni modificación de main o datos productivos.
