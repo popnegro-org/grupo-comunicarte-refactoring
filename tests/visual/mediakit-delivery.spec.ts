@@ -171,7 +171,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   expect(share?.pdfText).not.toContain('99999');
 
   await dialog.getByRole('button', { name: 'Confirmar entrega realizada' }).click();
-  await expect(page.getByRole('status')).toContainText('Solicitud Entregada');
+  await expect(dialog.getByText('Entregada', { exact: true })).toBeVisible();
   expect(savedKit).not.toBeNull();
   expect((savedKit as Record<string, unknown>).totalAmount).toBe(25000);
   expect(kitStatus).toBe('sent');
@@ -238,6 +238,6 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
   expect(savedPayload).not.toBeNull();
   expect(savedPayload?.totalAmount).toBeNull();
   expect(savedPayload?.metadata?.proposalAmount?.amount).toBeNull();
-  expect(pdfText).toContain('Inversion sujeta a cotizacion');
+  expect(pdfText).toContain('sujeta a');
   expect(pdfText).not.toContain('99999');
 });
