@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
@@ -19,6 +19,7 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [requestId, setRequestId] = useState('');
+  const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   useEffect(() => {
     if (!isMediaKit || selectedCount > 0) return;
@@ -36,7 +37,7 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
 
     const normalizedName = name.trim();
     const normalizedEmail = email.trim();
-    const selectedSupportIds = Array.from(selectedIds);
+    const selectedSupportIds = Array.from(selectedIds).sort();
 
     if (normalizedName.length < 2 || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       setError('Completá tu nombre y un email válido.');
@@ -46,6 +47,11 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
     if (isMediaKit && selectedSupportIds.length === 0) {
       setError('Seleccioná al menos un soporte antes de solicitar el Media Kit.');
       return;
+    }
+
+    const payloadFingerprint = JSON.stringify({ name: normalizedName, email: normalizedEmail, company: company.trim(), phone: phone.trim(), message: message.trim(), selectedSupportIds });
+    if (!idempotencyRef.current || idempotencyRef.current.fingerprint !== payloadFingerprint) {
+      idempotencyRef.current = { fingerprint: payloadFingerprint, key: crypto.randomUUID() };
     }
 
     setLoading(true);
@@ -62,6 +68,7 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
             message: message.trim(),
           },
           selectedIds: selectedSupportIds,
+          idempotencyKey: idempotencyRef.current.key,
         }),
       });
       const data = await response.json().catch(() => null);
