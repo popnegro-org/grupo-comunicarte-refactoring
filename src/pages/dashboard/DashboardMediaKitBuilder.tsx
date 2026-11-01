@@ -239,21 +239,21 @@ export default function DashboardMediaKitBuilder() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <button type="button" onClick={() => navigate('/dashboard/mediakits')} className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-950">
+            <button type="button" onClick={() => navigate('/dashboard/mediakits')} className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900">
               <ArrowLeft className="h-3.5 w-3.5" /> Media Kits
             </button>
-            <h1 className="text-xl font-semibold tracking-tight text-gray-950">Constructor de Media Kit</h1>
-            <p className="mt-1 text-xs text-gray-500">ID: {requestId}</p>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">Constructor de Media Kit</h1>
+            <p className="mt-1 text-xs text-slate-500">ID: {requestId}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={saving} onClick={saveDraft} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            <button type="button" disabled={saving} onClick={saveDraft} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               Guardar borrador
             </button>
-            <button type="button" disabled={busy || !canExport} onClick={exportPdf} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            <button type="button" disabled={busy || !canExport} onClick={exportPdf} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               <Download className="h-3.5 w-3.5" /> PDF
             </button>
-            <button type="button" disabled={busy || !canExport} onClick={exportPpt} className="inline-flex items-center gap-2 rounded-lg bg-gray-950 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50">
+            <button type="button" disabled={busy || !canExport} onClick={exportPpt} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
               <Download className="h-3.5 w-3.5" /> PPT
             </button>
           </div>
@@ -262,12 +262,12 @@ export default function DashboardMediaKitBuilder() {
         {toast && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">{toast}</div>}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
+          <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
             <div className="space-y-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cliente</p>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <Input value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} placeholder="Nombre *" />
                   <Input value={client.company} onChange={(e) => setClient((c) => ({ ...c, company: e.target.value }))} placeholder="Empresa" />
@@ -276,40 +276,40 @@ export default function DashboardMediaKitBuilder() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Monto global acordado</p>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Monto global acordado</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="block text-xs font-medium text-gray-600">Monto total
-                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : String(total)} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                  <label className="block text-xs font-medium text-slate-600">Monto total
+                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : String(total)} className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-slate-800 disabled:bg-slate-100" />
                   </label>
-                  <label className="block text-xs font-medium text-gray-600">Moneda
-                    <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                  <label className="block text-xs font-medium text-slate-600">Moneda
+                    <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-800">
                       <option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option><option value="Por definir">Por definir</option>
                     </select>
                   </label>
                 </div>
                 {proposalAmountInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">El monto global debe ser un número válido igual o mayor que cero.</p>}
-                <p className="mt-2 text-[11px] text-gray-500">El documento para el cliente muestra únicamente el monto global acordado. Si aún no está definido, se indicará “Inversión sujeta a cotización”; las tarifas por soporte son internas.</p>
+                <p className="mt-2 text-[11px] text-slate-500">El documento para el cliente muestra únicamente el monto global acordado. Si aún no está definido, se indicará “Inversión sujeta a cotización”; las tarifas por soporte son internas.</p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Período de la propuesta</p>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Período de la propuesta</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-xs font-medium text-slate-600">
                     Fecha de inicio
-                    <input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                    <input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-slate-800" />
                   </label>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-xs font-medium text-slate-600">
                     Fecha de finalización
-                    <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                    <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-slate-800" />
                   </label>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-xs font-medium text-slate-600">
                     Duración contratada
-                    <input type={period.duracionUnidad === 'otros' ? 'text' : 'number'} min={period.duracionUnidad === 'otros' ? undefined : 1} step={period.duracionUnidad === 'otros' ? undefined : 1} value={period.duracionValor} onChange={(e) => setPeriod((p) => ({ ...p, duracionValor: e.target.value }))} disabled={period.duracionUnidad === 'indefinido'} placeholder={period.duracionUnidad === 'otros' ? 'Describir período acordado' : 'Cantidad'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                    <input type={period.duracionUnidad === 'otros' ? 'text' : 'number'} min={period.duracionUnidad === 'otros' ? undefined : 1} step={period.duracionUnidad === 'otros' ? undefined : 1} value={period.duracionValor} onChange={(e) => setPeriod((p) => ({ ...p, duracionValor: e.target.value }))} disabled={period.duracionUnidad === 'indefinido'} placeholder={period.duracionUnidad === 'otros' ? 'Describir período acordado' : 'Cantidad'} className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-slate-800 disabled:bg-slate-100" />
                   </label>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-xs font-medium text-slate-600">
                     Unidad de duración
-                    <select value={period.duracionUnidad} onChange={(e) => setPeriod((p) => ({ ...p, duracionUnidad: e.target.value as ProposalDurationUnit, duracionValor: e.target.value === 'indefinido' || e.target.value === 'otros' ? '' : p.duracionValor }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                    <select value={period.duracionUnidad} onChange={(e) => setPeriod((p) => ({ ...p, duracionUnidad: e.target.value as ProposalDurationUnit, duracionValor: e.target.value === 'indefinido' || e.target.value === 'otros' ? '' : p.duracionValor }))} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-800">
                       <option value="meses">Mensual (meses)</option>
                       <option value="quincenas">Quincenal</option>
                       <option value="otros">Otros</option>
@@ -321,15 +321,15 @@ export default function DashboardMediaKitBuilder() {
                 </div>
                 {periodInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La fecha de finalización no puede ser anterior al inicio.</p>}
                 {durationInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La duración debe ser un número entero mayor que cero.</p>}
-                <p className="mt-2 text-[11px] text-gray-500">El período se guarda como metadato de la propuesta; no modifica reservas ni disponibilidad.</p>
+                <p className="mt-2 text-[11px] text-slate-500">El período se guarda como metadato de la propuesta; no modifica reservas ni disponibilidad.</p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inventario</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Inventario</p>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-9 rounded-lg border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-gray-900" />
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-9 rounded-lg border border-slate-200 pl-8 pr-3 text-xs outline-none focus:border-slate-800" />
                   </div>
                 </div>
                 <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
@@ -337,12 +337,12 @@ export default function DashboardMediaKitBuilder() {
                     const on = selectedIds.includes(s.canonical_id);
                     const available = s.disponibilidad === 'disponible';
                     return (
-                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-gray-200 hover:bg-gray-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
+                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-slate-200 hover:bg-slate-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
                         <span className="min-w-0">
-                          <span className="block truncate font-semibold text-gray-950">{s.name}</span>
-                          <span className="text-gray-500">{s.ciudad} · {s.tipo_soporte}{available ? '' : ` · ${s.disponibilidad === 'reservado' ? 'Reservado' : 'Inactivo'}`}</span>
+                          <span className="block truncate font-semibold text-slate-900">{s.name}</span>
+                          <span className="text-slate-500">{s.ciudad} · {s.tipo_soporte}{available ? '' : ` · ${s.disponibilidad === 'reservado' ? 'Reservado' : 'Inactivo'}`}</span>
                         </span>
-                        {on ? <Check className="h-4 w-4 shrink-0 text-emerald-600" /> : available ? <span className="text-gray-400">+</span> : <span className="text-amber-700">—</span>}
+                        {on ? <Check className="h-4 w-4 shrink-0 text-emerald-600" /> : available ? <span className="text-slate-400">+</span> : <span className="text-amber-700">—</span>}
                       </button>
                     );
                   })}
@@ -351,32 +351,32 @@ export default function DashboardMediaKitBuilder() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selección ({selected.length})</p>
-                  <button type="button" onClick={applyBasePrices} className="text-[11px] font-semibold text-gray-600 hover:text-gray-950">Aplicar tarifas base</button>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selección ({selected.length})</p>
+                  <button type="button" onClick={applyBasePrices} className="text-[11px] font-semibold text-slate-600 hover:text-slate-900">Aplicar tarifas base</button>
                 </div>
                 <div className="mt-3 space-y-2">
-                  {selected.length === 0 && <p className="text-xs text-gray-500">Elegí soportes del inventario.</p>}
+                  {selected.length === 0 && <p className="text-xs text-slate-500">Elegí soportes del inventario.</p>}
                   {selected.map((s) => (
-                    <div key={s.canonical_id} className="rounded-lg border border-gray-100 bg-gray-50/60 p-2.5">
+                    <div key={s.canonical_id} className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs font-semibold text-gray-950">{s.name}</p>
-                        <button type="button" onClick={() => toggle(s)} className="text-gray-400 hover:text-red-600" aria-label="Quitar"><X className="h-3.5 w-3.5" /></button>
+                        <p className="text-xs font-semibold text-slate-900">{s.name}</p>
+                        <button type="button" onClick={() => toggle(s)} className="text-slate-400 hover:text-red-600" aria-label="Quitar"><X className="h-3.5 w-3.5" /></button>
                       </div>
-                      <label className="mt-2 block text-[10px] font-medium text-gray-500">Precio aprobado</label>
+                      <label className="mt-2 block text-[10px] font-medium text-slate-500">Precio aprobado</label>
                       <input
                         type="number"
                         min={0}
                         value={prices[s.canonical_id] || ''}
                         onChange={(e) => setPrices((p) => ({ ...p, [s.canonical_id]: e.target.value }))}
-                        className="mt-1 h-8 w-full rounded-md border border-gray-200 px-2 text-xs outline-none focus:border-gray-900"
+                        className="mt-1 h-8 w-full rounded-md border border-slate-200 px-2 text-xs outline-none focus:border-slate-800"
                       />
-                      <p className="mt-1 text-[10px] text-gray-500">Base: {formatSupportCurrency(calculateSupportTotal(s.pricing))}</p>
+                      <p className="mt-1 text-[10px] text-slate-500">Base: {formatSupportCurrency(calculateSupportTotal(s.pricing))}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 border-t border-gray-100 pt-3 text-sm font-semibold text-gray-950">
+                <div className="mt-4 border-t border-slate-100 pt-3 text-sm font-semibold text-slate-900">
                   Total: {formatSupportCurrency(total)}
                 </div>
               </div>

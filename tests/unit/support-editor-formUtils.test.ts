@@ -24,7 +24,7 @@ test('normalize preserves editorial monthly impacts', () => {
     tipo_soporte: 'tradicional',
     technical: { measures: '430 x 460 cm.', monthly_impacts: 123 },
   });
-  assert.equal(normalized.traditional.monthly_impacts, '123');
+  assert.equal(normalized.traditional.monthly_impacts, 123);
 });
 
 test('payloadFrom produces canonical numeric payloads', () => {

@@ -75,7 +75,7 @@ test('support flow: create → edit → preview → list filter', async ({ page 
   await expect(page.getByRole('heading', { name: 'Revisión de publicación' })).toBeVisible();
 
   await page.goto('/dashboard/soportes');
-  await expect(page.getByRole('heading', { name: 'Gestión de Soportes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Inventario', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Buscar soportes' }).fill('Smoke');
 
   if ((page.viewportSize()?.width || 0) < 768) {

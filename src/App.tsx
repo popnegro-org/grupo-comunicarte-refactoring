@@ -23,6 +23,7 @@ import DashboardSupportPreview from './pages/dashboard/DashboardSupportPreview';
 import DashboardSupportReservation from './pages/dashboard/DashboardSupportReservation';
 import DashboardMediaKitWorkflow from './pages/dashboard/DashboardMediaKitWorkflow';
 import DashboardMediaKitBuilder from './pages/dashboard/DashboardMediaKitBuilder';
+import DashboardClients from './pages/dashboard/DashboardClients';
 
 function PublicRoutes() {
   const location = useLocation();
@@ -58,6 +59,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/clientes" element={<DashboardClients />} />
           <Route path="/dashboard/soportes" element={<DashboardSupportList />} />
           <Route path="/dashboard/soportes/new" element={<DashboardSupportProductEditor mode="create" />} />
           <Route path="/dashboard/soportes/:canonicalId/edit" element={<DashboardSupportProductEditor mode="edit" />} />
@@ -74,3 +76,4 @@ export default function App() {
     </SelectionProvider>
   );
 }
+
