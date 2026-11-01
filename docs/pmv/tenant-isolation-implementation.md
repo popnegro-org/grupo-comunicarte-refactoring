@@ -47,6 +47,15 @@ Lectura de esquema y agregados en la rama Preview de Neon; no se ejecutaron escr
 
 **Conclusión:** hay una tabla de tenants y ownership en parte del modelo legacy, pero la tabla de inventario operativa `supports` permanece sin vínculo verificable. Las tablas `screens` y `supports` no comparten identificadores en este snapshot. No existe una base segura para backfill automático. La propuesta SQL ahora declara FKs a `public.tenants(id)` y mantiene todos los ownerships históricos en NULL.
 
+
+### Validación de migración en Neon Preview
+
+- Se ejecutó la propuesta aditiva únicamente en la rama Neon `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`), no en `main` de Neon ni en producción.
+- La transacción creó `supports.tenant_id` y `mediakit_request_items.tenant_id` con FK a `tenants(id)`, además de `mediakit_requests.request_scope`, su CHECK e índices.
+- Verificación posterior: 46/46 soportes siguen con `tenant_id IS NULL`; 32/32 ítems de solicitudes siguen sin tenant; 18/18 cabeceras siguen sin clasificar. No hubo backfill ni cambios de registros.
+- La migración es idempotente y la comprobación de columnas/constraints confirmó la estructura resultante.
+- El runtime de negocio aún no consume estos campos ni filtra consultas por tenant; la migración por sí sola no habilita aislamiento.
+
 ## Límites deliberados
 
 No se conectan aún los resolvers tenant a rutas de negocio porque no existe una fuente verificada de ownership para todos los registros. No se ejecuta SQL, migración, backfill, activación RLS, cambio de credenciales, despliegue, ni modificación de main o datos productivos.
