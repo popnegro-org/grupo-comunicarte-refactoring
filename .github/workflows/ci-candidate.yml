@@ -28,6 +28,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Generate semver-compatible audit remediation lockfile
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
+        run: npm audit fix --package-lock-only --omit=dev --no-fund
+
+      - name: Upload audit remediation lockfile
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-remediation-lockfile
+          path: package-lock.json
+          retention-days: 1
+
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high
 
