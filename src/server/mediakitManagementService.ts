@@ -154,12 +154,36 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     }
   }
 
-  const approvedPrices = Object.fromEntries(
-    Object.entries(input.approvedPrices || {}).map(([key, value]) => [key, String(value)])
-  );
+  const rawApprovedPrices = input.approvedPrices ?? {};
+  if (!rawApprovedPrices || typeof rawApprovedPrices !== 'object' || Array.isArray(rawApprovedPrices)) {
+    throw new Error('Los precios aprobados deben tener un formato válido.');
+  }
+  const approvedPrices: Record<string, string> = {};
+  for (const [supportId, rawPrice] of Object.entries(rawApprovedPrices)) {
+    if (!supportIds.includes(supportId)) {
+      throw new Error(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`);
+    }
+    const price = Number(rawPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      throw new Error(`El precio aprobado para '${supportId}' debe ser un número válido mayor o igual a cero.`);
+    }
+    approvedPrices[supportId] = String(price);
+  }
+
+  const currency = String(input.currency || 'ARS').trim().toUpperCase();
+  if (!['ARS', 'USD', 'POR DEFINIR'].includes(currency)) {
+    throw new Error('La moneda del Media Kit no está permitida.');
+  }
+
   const status = normalizeStatus(input.status);
   const kitId = input.kitId?.trim() || makeKitId();
   const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
+  if (totalAmount !== null && (!Number.isFinite(totalAmount) || totalAmount < 0)) {
+    throw new Error('El monto comercial global debe ser un número válido mayor o igual a cero.');
+  }
+  if (currency === 'POR DEFINIR' && totalAmount !== null) {
+    throw new Error('No se puede asignar un monto global cuando la moneda está definida como Por definir.');
+  }
 
   await ensureTables();
   const client = await pool.connect();
@@ -201,7 +225,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         JSON.stringify(supportIds),
         JSON.stringify(approvedPrices),
         Number.isFinite(totalAmount as number) ? totalAmount : null,
-        input.currency || 'ARS',
+        currency === 'POR DEFINIR' ? 'Por definir' : currency,
         input.notes || null,
         JSON.stringify(input.metadata || {}),
         input.pdfUrl || null,
