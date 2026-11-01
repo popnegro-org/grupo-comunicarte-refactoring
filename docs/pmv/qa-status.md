@@ -1,23 +1,24 @@
 # PMV candidate QA status
 
 **Candidate:** `pmv-validation-candidate`  
-**Verified commit:** `0a078ff5b694f55792cbb9ccec4b13f68bf8e81c`  
+**Verified source commit:** `27604cf15e81edb82c06fbe7ad3b5ebb5745c935`  
+**Current candidate head:** `9ad5c58cb2540de5aeb25ec0d286217c0a7ef08e` (includes CI-generated patched `package-lock.json`)  
 **Main:** unchanged. No merge or production deployment performed.
 
 ## Automated verification
 
 | Check | Result | Evidence |
 |---|---|---|
-| TypeScript / current `npm run lint` script | PASS | CI Candidate, Typecheck step |
-| Unit tests | PASS | CI Candidate, Unit tests step |
-| Build | PASS | CI Candidate, Build step |
-| Playwright functional + visual suite | PASS | Visual QA: 26 passed, 2 skipped |
-| Visual baseline comparison | PASS | Compared with reviewed baseline; saved current candidate baseline |
-| Vercel Preview | BLOCKED | Vercel Git status reports `build-rate-limit`; no Preview deployment exists for the verified candidate SHA |
+| TypeScript / current `npm run lint` script | PASS | CI Candidate `41274545834`, Typecheck step |
+| Unit tests | PASS | CI Candidate `41274545834`, Unit tests step |
+| Build | PASS | CI Candidate `41274545834`, Build step |
+| Playwright functional + visual suite | PASS | Visual QA `41274545831`: 28 tests, 26 passed, 2 skipped (21.7s) |
+| Visual baseline comparison | PASS | Compared against cached candidate baseline `e0ad60ceea5c4a5a84d2a1443815f93803e80408`; saved baseline for `27604cf15e81edb82c06fbe7ad3b5ebb5745c935` |
+| Production dependency audit | PASS | `npm audit --omit=dev --audit-level=high`: 0 production vulnerabilities |\n| Vercel Preview | BLOCKED | GitHub commit status for current head reports Vercel failure with `build-rate-limit`; no candidate Preview available for runtime/Neon integration QA |
 
 The repository's `lint` script currently runs TypeScript checking (`tsc --noEmit`); a separate ESLint configuration/script is not present. Do not describe this as an independent ESLint pass.
 
-Playwright tests run against the CI Vite preview with mocked API responses. They validate browser flows, layout and export behavior, but do not replace a deployed API/Neon integration test.
+Playwright tests run against the CI Vite preview with mocked API responses. The CI job tests source commit `27604cf...`; the subsequent bot commit `9ad5c58...` only persists the generated lockfile from that same successful audited build. The two skipped Playwright cases are explicitly reported by the test runner. They validate browser flows, layout and export behavior, but do not replace a deployed API/Neon integration test.
 
 ## Implemented hardening
 
@@ -34,7 +35,7 @@ Playwright tests run against the CI Vite preview with mocked API responses. They
 1. **Tenant isolation:** see [tenant-isolation-blocker.md](./tenant-isolation-blocker.md). The server has no tenant context or tenant predicates for support/request operations; key tables have RLS disabled. Three existing requests contain supports from both tenants, and ten inactive supports have no city. No ownership backfill or production schema changes were made.
 2. **Distributed login rate limiting:** the current attempt counter remains process-local in a Vercel serverless environment. Trusted proxy IP extraction is fixed, but the limiter is not shared across instances.
 3. **Vercel Preview:** deployment is blocked by the team's build rate limit. Runtime API checks against the candidate deployment cannot be completed until Vercel permits a Preview build.
-4. **Independent lint:** ESLint is not configured; current CI typechecks but does not run a separate lint engine.
+4. **Independent lint:** ESLint is not configured; current CI `npm run lint` performs TypeScript checking but does not run a separate lint engine.\n5. **Bundle size:** the production build still emits the existing warning for a JavaScript chunk above 500 kB; splitting/lazy-loading should be addressed before performance sign-off.
 
 ## Release gate
 
