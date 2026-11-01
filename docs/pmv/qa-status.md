@@ -1,7 +1,8 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**Último commit del branch verificado:** `3b1f64ccc6784ed68508fc0dc3c1b1ae82c27b2c`  
+**Último commit de documentación verificado:** `fb21535528bd0b7bcdfaf357779c0d145d3e18cc`  
+**Último commit de código desplegado y validado:** `606138d52abd3d1e88c45820b3c5307bf7a5ddaa`  
 **Código desplegado:** `606138d52abd3d1e88c45820b3c5307bf7a5ddaa`  
 **Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-2rzgv1sm9-popnegros-projects.vercel.app)  
 **Deployment:** `dpl_44gREfFKbMJDgKAAhKaV8tLPwSPy`  
@@ -11,11 +12,11 @@
 
 | Control | Resultado | Evidencia |
 |---|---|---|
-| TypeScript (`npm run lint`) | PASS | CI Candidate [41363881108](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41363881108) |
+| TypeScript (`npm run lint`) | PASS | CI Candidate [41364138488](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364138488) |
 | Unit tests | PASS — 35/35 | CI Candidate |
 | Build | PASS | CI Candidate |
 | Auditoría de dependencias Production | PASS — 0 vulnerabilidades | CI Candidate |
-| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41363881134](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41363881134) |
+| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41364138523](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364138523) |
 | Baseline visual | PASS | comparación contra baseline confiable del branch candidato |
 | Vercel Preview / Neon | PASS | deployment READY; `/api/health` database connected |
 
