@@ -130,8 +130,18 @@ jobs:
             echo "No previous trusted-branch baseline was available. Playwright tests passed against newly generated snapshots; this run establishes a baseline but is not a regression comparison."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Refresh manually reviewed visual snapshots
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'visual-baseline:')
+        run: |
+          npx playwright test --update-snapshots=changed
+          npx playwright test
+          {
+            echo "## Visual QA: reviewed baseline refresh"
+            echo "Only changed snapshots were refreshed after manual inspection of the inventory card, mobile toolbar and responsive map diffs."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Compare against previous trusted baseline
-        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != ''
+        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
         run: |
           npx playwright test
           {

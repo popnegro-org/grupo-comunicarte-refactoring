@@ -45,3 +45,15 @@ El único artefacto visual de referencia para esta iteración es el archivo `dem
 3. Comparación visual real de dashboard, inventario y drawer en escritorio y móvil contra `demo.html`.
 4. Confirmar que todos los números mostrados proceden de API y que no se filtren precios internos.
 5. Validar Preview y APIs autenticadas; mantener PR en borrador y no fusionar hasta pasar estas comprobaciones.
+
+
+## Revisión de baseline visual — 2026-11-01
+
+Se inspeccionaron las capturas actual/esperada del artefacto Playwright de la rama candidata. Se identificaron cuatro diferencias intencionales:
+
+- La tarjeta de soporte seleccionada creció 4 px al adoptar un objetivo táctil mínimo de 44 px.
+- El selector de tipología ocupa una fila propia en móvil para evitar compresión del texto y conservar controles táctiles.
+- El selector de disponibilidad y el control Mapa/Catálogo permanecen visibles en la fila siguiente.
+- La altura del mapa móvil varía 4 px como consecuencia del nuevo alto del toolbar; los marcadores y el encuadre permanecen estables.
+
+La ejecución que originó la revisión obtuvo 22 pruebas aprobadas y 2 omitidas; los únicos fallos fueron estas cuatro capturas. Se actualizan únicamente snapshots cambiados y se vuelve a ejecutar la suite completa. Las siguientes ejecuciones comparan contra el nuevo baseline, sin actualización automática.
