@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { mediakitRequests, supports } from '../db/schema.ts';
+import { mediakitRequests, supports, supportPricing } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
   createSupportMediaRecord,
@@ -231,6 +231,27 @@ export async function getSupportMediaByAdmin(canonicalId: string) {
 
 export async function getSupportPricingByAdmin(canonicalId: string) {
   return getSupportPricingRecord(canonicalId);
+}
+
+export async function listSupportPricingByAdmin(): Promise<Record<string, {
+  exhibition_price: string | null;
+  installation_price: string | null;
+  printing_price: string | null;
+  monthly_price: string | null;
+  exclusive_price: string | null;
+  currency: string;
+  tax_included: boolean;
+}>> {
+  const rows = await db.select().from(supportPricing);
+  return Object.fromEntries(rows.map((row) => [row.supportCanonicalId, {
+    exhibition_price: row.exhibitionPrice,
+    installation_price: row.installationPrice,
+    printing_price: row.printingPrice,
+    monthly_price: row.monthlyPrice,
+    exclusive_price: row.exclusivePrice,
+    currency: row.currency,
+    tax_included: row.taxIncluded,
+  }]));
 }
 
 export async function patchSupportPricingByAdmin(canonicalId: string, pricing: any) {
