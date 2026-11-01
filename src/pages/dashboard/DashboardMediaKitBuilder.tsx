@@ -10,7 +10,7 @@ import { apiFetch } from '../../lib/api';
 type Pricing = { exhibition_price?: number | string | null; installation_price?: number | string | null; printing_price?: number | string | null; currency?: string | null };
 type Support = ExportSupport & { disponibilidad?: 'disponible' | 'reservado' | 'inactivo'; pricing?: Pricing | null; imageUrls?: string[]; media?: Array<{ url?: string; media_type?: string; active?: boolean }> };
 type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
-type ProposalDurationUnit = 'días' | 'semanas' | 'meses' | 'indefinido';
+type ProposalDurationUnit = 'días' | 'semanas' | 'meses' | 'quincenas' | 'otros' | 'indefinido';
 type ProposalCurrency = 'ARS' | 'USD' | 'Por definir';
 type ProposalPeriod = { fechaInicio: string; fechaFin: string; duracionValor: string; duracionUnidad: ProposalDurationUnit };
 type PersistedKit = {
@@ -35,9 +35,11 @@ function formatProposalPeriod(period: ProposalPeriod): string | undefined {
     : '';
   const duration = period.duracionUnidad === 'indefinido'
     ? 'Duración indefinida'
-    : period.duracionValor
-      ? `${period.duracionValor} ${period.duracionUnidad}`
-      : '';
+    : period.duracionUnidad === 'otros'
+      ? (period.duracionValor ? `Período: ${period.duracionValor}` : 'Período: otros (a definir)')
+      : period.duracionValor
+        ? `${period.duracionValor} ${period.duracionUnidad}`
+        : '';
   return [dates, duration].filter(Boolean).join(' · ') || undefined;
 }
 
@@ -101,7 +103,7 @@ export default function DashboardMediaKitBuilder() {
                 fechaInicio: typeof p.fechaInicio === 'string' ? p.fechaInicio : '',
                 fechaFin: typeof p.fechaFin === 'string' ? p.fechaFin : '',
                 duracionValor: p.duracionValor == null ? '' : String(p.duracionValor),
-                duracionUnidad: p.duracionUnidad === 'días' || p.duracionUnidad === 'semanas' || p.duracionUnidad === 'meses' || p.duracionUnidad === 'indefinido' ? p.duracionUnidad : 'meses',
+                duracionUnidad: p.duracionUnidad === 'días' || p.duracionUnidad === 'semanas' || p.duracionUnidad === 'meses' || p.duracionUnidad === 'quincenas' || p.duracionUnidad === 'otros' || p.duracionUnidad === 'indefinido' ? p.duracionUnidad : 'meses',
               });
             }
             setRequestId(kit.kitId || kitIdParam);
@@ -126,11 +128,12 @@ export default function DashboardMediaKitBuilder() {
   const selected = useMemo(() => allSupports.filter((s) => selectedIds.includes(s.canonical_id)), [allSupports, selectedIds]);
   const total = useMemo(() => selected.reduce((sum, s) => sum + (Number(prices[s.canonical_id]) || 0), 0), [selected, prices]);
   const periodInvalid = Boolean(period.fechaInicio && period.fechaFin && period.fechaFin < period.fechaInicio);
-  const durationInvalid = period.duracionUnidad !== 'indefinido' && Boolean(period.duracionValor) &&
+  const durationInvalid = period.duracionUnidad !== 'indefinido' && period.duracionUnidad !== 'otros' && Boolean(period.duracionValor) &&
     (!Number.isInteger(Number(period.duracionValor)) || Number(period.duracionValor) <= 0);
+  const otherDurationMissing = period.duracionUnidad === 'otros' && !period.duracionValor.trim();
   const proposalAmountInvalid = proposalCurrency !== 'Por definir' && Boolean(proposalAmount.trim()) &&
     (!Number.isFinite(Number(proposalAmount)) || Number(proposalAmount) < 0);
-  const canExport = selected.length > 0 && selected.every(s => Number(prices[s.canonical_id]) > 0) && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !proposalAmountInvalid;
+  const canExport = selected.length > 0 && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !otherDurationMissing && !proposalAmountInvalid;
   const toggle = (support: Support) => {
     if (support.disponibilidad !== 'disponible' && !selectedIds.includes(support.canonical_id)) {
       notify('Solo se pueden agregar soportes disponibles al Media Kit.');
@@ -157,12 +160,13 @@ export default function DashboardMediaKitBuilder() {
     email: client.email,
     phone: client.phone,
     proposalPeriod: formatProposalPeriod(period),
-    proposalAmount: proposalCurrency === 'Por definir' ? 'Por definir' : proposalAmount.trim() ? `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}` : `${proposalCurrency} ${total.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`,
+    proposalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? '' : `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}`,
   };
 
   const persist = async (status: MediaKitStatus = 'draft'): Promise<PersistedKit> => {
     if (periodInvalid) throw new Error('La fecha de finalización no puede ser anterior al inicio.');
     if (durationInvalid) throw new Error('La duración debe ser un número entero mayor que cero.');
+    if (otherDurationMissing) throw new Error('Describí el período acordado en “Otros”.');
     if (proposalAmountInvalid) throw new Error('El monto global debe ser un número válido igual o mayor que cero.');
     const response = await apiFetch('/api/admin/mediakits', {
       method: 'POST',
@@ -175,18 +179,18 @@ export default function DashboardMediaKitBuilder() {
         clientPhone: client.phone || null,
         supportIds: selectedIds,
         approvedPrices: prices,
-        totalAmount: proposalCurrency === 'Por definir' ? null : proposalAmount.trim() ? Number(proposalAmount) : total,
+        totalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
         currency: proposalCurrency,
         status,
         metadata: {
           proposalPeriod: {
             fechaInicio: period.fechaInicio || null,
             fechaFin: period.fechaFin || null,
-            duracionValor: period.duracionValor ? Number(period.duracionValor) : null,
+            duracionValor: period.duracionValor ? (period.duracionUnidad === 'otros' ? period.duracionValor.trim() : Number(period.duracionValor)) : null,
             duracionUnidad: period.duracionUnidad,
           },
           proposalAmount: {
-            amount: proposalCurrency === 'Por definir' ? null : proposalAmount.trim() ? Number(proposalAmount) : total,
+            amount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
             currency: proposalCurrency,
           },
         },
@@ -209,7 +213,7 @@ export default function DashboardMediaKitBuilder() {
   };
 
   const exportPdf = async () => {
-    if (!canExport) { notify('Completá cliente, soportes y precios.'); return; }
+    if (!canExport) { notify('Completá el cliente, seleccioná al menos un soporte y revisá el monto global acordado.'); return; }
     setBusy(true);
     try {
       await persist('ready');
@@ -276,7 +280,7 @@ export default function DashboardMediaKitBuilder() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Monto global acordado</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="block text-xs font-medium text-gray-600">Monto total
-                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : String(total)} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
                   </label>
                   <label className="block text-xs font-medium text-gray-600">Moneda
                     <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
@@ -285,7 +289,7 @@ export default function DashboardMediaKitBuilder() {
                   </label>
                 </div>
                 {proposalAmountInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">El monto global debe ser un número válido igual o mayor que cero.</p>}
-                <p className="mt-2 text-[11px] text-gray-500">Si el monto queda vacío, se usa la suma de los precios aprobados por soporte. El monto global se distingue de las tarifas base internas.</p>
+                <p className="mt-2 text-[11px] text-gray-500">El documento para el cliente muestra únicamente el monto global acordado. Si aún no está definido, se indicará “Inversión sujeta a cotización”; las tarifas por soporte son internas.</p>
               </div>
 
               <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -301,15 +305,17 @@ export default function DashboardMediaKitBuilder() {
                   </label>
                   <label className="block text-xs font-medium text-gray-600">
                     Duración contratada
-                    <input type="number" min={1} step={1} value={period.duracionValor} onChange={(e) => setPeriod((p) => ({ ...p, duracionValor: e.target.value }))} disabled={period.duracionUnidad === 'indefinido'} placeholder="Cantidad" className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                    <input type={period.duracionUnidad === 'otros' ? 'text' : 'number'} min={period.duracionUnidad === 'otros' ? undefined : 1} step={period.duracionUnidad === 'otros' ? undefined : 1} value={period.duracionValor} onChange={(e) => setPeriod((p) => ({ ...p, duracionValor: e.target.value }))} disabled={period.duracionUnidad === 'indefinido'} placeholder={period.duracionUnidad === 'otros' ? 'Describir período acordado' : 'Cantidad'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
                   </label>
                   <label className="block text-xs font-medium text-gray-600">
                     Unidad de duración
-                    <select value={period.duracionUnidad} onChange={(e) => setPeriod((p) => ({ ...p, duracionUnidad: e.target.value as ProposalDurationUnit, duracionValor: e.target.value === 'indefinido' ? '' : p.duracionValor }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
-                      <option value="días">Días</option>
-                      <option value="semanas">Semanas</option>
-                      <option value="meses">Meses</option>
-                      <option value="indefinido">Indefinido</option>
+                    <select value={period.duracionUnidad} onChange={(e) => setPeriod((p) => ({ ...p, duracionUnidad: e.target.value as ProposalDurationUnit, duracionValor: e.target.value === 'indefinido' || e.target.value === 'otros' ? '' : p.duracionValor }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                      <option value="meses">Mensual (meses)</option>
+                      <option value="quincenas">Quincenal</option>
+                      <option value="otros">Otros</option>
+                      <option value="días">Días (legado)</option>
+                      <option value="semanas">Semanas (legado)</option>
+                      <option value="indefinido">Indefinido (legado)</option>
                     </select>
                   </label>
                 </div>
