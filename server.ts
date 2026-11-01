@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { allowLoginAttempt } from './src/server/loginRateLimit.ts';
 import { initDatabase, pool } from './src/db/index.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/supportsService.ts';
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
@@ -28,24 +29,8 @@ import {
   patchSupportRouteByAdmin,
 } from './src/server/adminService.ts';
 
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 10;
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-
 function clientIp(req: express.Request): string {
   return req.ip || req.socket.remoteAddress || 'unknown';
-}
-
-function allowLoginAttempt(ip: string): boolean {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= LOGIN_MAX_ATTEMPTS) return false;
-  entry.count += 1;
-  return true;
 }
 
 const ADMIN_COOKIE = 'gc_admin_token';
@@ -159,13 +144,18 @@ export async function createApp() {
     }
   });
 
-  app.post('/api/admin/login', (req, res) => {
-    const ip = clientIp(req);
-    if (!allowLoginAttempt(ip)) {
-      return res.status(429).json({
-        status: 'error',
-        message: 'Demasiados intentos de acceso. Probá de nuevo en unos minutos.',
-      });
+  app.post('/api/admin/login', async (req, res) => {
+    try {
+      const allowed = await allowLoginAttempt(pool, clientIp(req), process.env.JWT_SECRET || process.env.ADMIN_SECRET || '');
+      if (!allowed) {
+        return res.status(429).json({
+          status: 'error',
+          message: 'Demasiados intentos de acceso. Probá de nuevo en unos minutos.',
+        });
+      }
+    } catch (error) {
+      console.error('Admin login rate limiter unavailable:', error);
+      return res.status(503).json({ status: 'error', message: 'El acceso no está disponible temporalmente.' });
     }
     const { username, password } = req.body || {};
     const result = authenticateAdmin(username, password);

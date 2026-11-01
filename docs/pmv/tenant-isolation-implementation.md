@@ -24,6 +24,14 @@
 - Las tres solicitudes históricas mixtas no pueden atribuirse a un único tenant. Los diez soportes inactivos sin ciudad permanecen sin asignación.
 - La autenticación actual usa un principal compartido; no existe atribución individual por usuario.
 
+## Protección distribuida del login
+
+- Se sustituye el Map en memoria por un limitador atómico en Neon, compartido entre instancias serverless.
+- Las claves IP se almacenan como HMAC-SHA256; no se persisten IPs en claro.
+- Si Neon no está disponible, el endpoint responde 503 y no autentica: no existe fallback fail-open.
+- Tabla auxiliar `admin_login_attempts` creada de forma idempotente al primer intento. No requiere servicio externo ni credenciales adicionales.
+- Política: 10 intentos por ventana de 15 minutos por IP seudonimizada. La limpieza/retención de claves antiguas debe monitorizarse.
+
 ## Límites deliberados
 
 No se conectan aún los resolvers tenant a rutas de negocio porque no existe una fuente verificada de ownership para todos los registros. No se ejecuta SQL, migración, backfill, activación RLS, cambio de credenciales, despliegue, ni modificación de main o datos productivos.
