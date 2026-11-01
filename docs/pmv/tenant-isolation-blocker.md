@@ -1,29 +1,41 @@
-# PMV blocker: tenant isolation
+# Estado del bloqueante P0 — aislamiento multi-tenant
 
-**Status: BLOCKED — implementation requires a product/data decision.**
+> El contrato normativo vigente y los criterios de aceptación están en [PMV-CONTRACT-AND-ACCEPTANCE.md](../PMV-CONTRACT-AND-ACCEPTANCE.md). Este archivo reemplaza el informe inicial, que contenía decisiones pendientes ya resueltas.
 
-## Verified state
+**Estado: BLOCKED para liberar; implementación técnica aún pendiente.**
 
-Read-only inspection of the Neon preview branch showed:
+## Decisiones vigentes
+- Conservar el único administrador/credencial existente; no crear usuarios ni invitaciones.
+- El administrador autenticado tiene alcance global sobre `tenant-ba` y `tenant-default`.
+- Solicitudes mixtas: cabecera global, ítems tenant-scoped.
+- Soportes sin evidencia autoritativa: `tenant_id = NULL`, en cuarentena.
+- Solicitudes históricas mixtas no se dividen ni atribuyen retroactivamente.
+- `main` y Neon Production permanecen intactos hasta aprobación explícita.
 
-- `tenants` contains `tenant-ba` (Buenos Aires OOH Premium) and `tenant-default` (LeadMóvil Mendoza OOH).
-- `supports` has no `tenant_id` column; `mediakit_requests` and `mediakit_request_items` also have no tenant ownership column.
-- `mediakits` has a nullable `tenant_id` and its three existing records are assigned (one to Buenos Aires, two to Mendoza).
-- PostgreSQL row-level security is disabled on `supports`, `mediakit_requests`, `mediakit_request_items`, `mediakits`, `support_media` and `support_pricing`.
-- Current backend services list/read/write supports and Media Kit requests without a tenant predicate or tenant context.
-- Existing support inventory can be mapped by city for active records (10 Buenos Aires, 19 Mendoza); 10 inactive records have no city.
-- Of 18 existing Media Kit requests, 15 reference supports from one tenant and 3 contain supports from both tenants. Assigning those 3 to either tenant would be an unsupported data decision.
+## Evidencia de la auditoría Preview (instantánea histórica)
+- `supports`: 46 registros sin ownership asignado en la instantánea.
+- `mediakit_request_items`: 32 ítems sin tenant.
+- `mediakit_requests`: 18 cabeceras sin scope.
+- Tres solicitudes históricas contienen soportes de ambos tenants.
+- Diez soportes inactivos carecen de ciudad; no se puede inferir ownership.
+- La tabla legacy `screens` no proporciona un join fiable para atribuir las filas de `supports`.
 
-## Required decision
+Revalidar estos conteos antes de cualquier migración; no son una consulta en vivo.
 
-Before implementing tenant isolation, confirm:
+## Incorporado
+- Primitivas fail-closed en `src/server/tenantAccess.ts` y tests unitarios en `tests/unit/tenant-access.test.ts`.
+- Propuestas de migración aditiva documentadas en `docs/pmv/proposals/`; no equivalen a migración en Production.
+- Limitador de login distribuido validado previamente en Preview.
 
-1. Whether tenant context is selected at login or resolved from the request hostname/domain.
-2. Whether the 3 mixed-tenant requests should remain unassigned, be split, or be assigned by a business rule.
-3. Whether the 10 inactive supports without city remain unassigned or belong to a tenant.
+## Bloqueantes pendientes
+1. Ownership autoritativo de soportes; no hacer backfill por ciudad, nombre, coordenadas o IDs legacy.
+2. Filtros tenant-safe en todos los servicios y rutas de negocio.
+3. Aislamiento de pricing, Media Kits, solicitudes, estadísticas, media, rutas, CRUD y exportaciones.
+4. Tratamiento seguro de solicitudes mixtas e idempotencia.
+5. Pruebas negativas cross-tenant con el rol/contexto DB real de runtime y decisión documentada de RLS.
+6. Cuarentena efectiva de registros pendientes en catálogo y flujo comercial.
 
-## Safety
+## Condición para desbloquear
+Implementar acceso comercial denegado por defecto para registros sin ownership, asignación manual auditada y pruebas de aislamiento por tenant. Asignar cada soporte solo cuando exista evidencia comercial. No inferir ni inventar esa evidencia.
 
-No database writes or schema changes were performed during this audit. The preview and main Neon branches were queried read-only. Production data remains unchanged.
-
-Tenant isolation is a PMV acceptance blocker; it must not be declared complete based only on the existing `mediakits.tenant_id` column.
+**No ejecutar** backfill, DDL ni cambios de datos en Production; no cambiar credenciales; no crear usuarios; no mergear a `main` sin HUMAN GATE.
