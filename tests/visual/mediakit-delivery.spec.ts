@@ -101,6 +101,25 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
     });
   });
 
+  await page.route('**/api/admin/support-pricing', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'success',
+        data: {
+          'SUP-001': {
+            exhibition_price: '99999',
+            installation_price: '0',
+            printing_price: '0',
+            currency: 'ARS',
+            tax_included: false,
+          },
+        },
+      }),
+    });
+  });
+
   await page.route('**/api/admin/mediakits/KIT-REQ-001', async (route) => {
     await route.fulfill({
       status: 404,
@@ -208,6 +227,25 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
       }),
     });
   });
+  await page.route('**/api/admin/support-pricing', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'success',
+        data: {
+          'SUP-001': {
+            exhibition_price: '99999',
+            installation_price: '0',
+            printing_price: '0',
+            currency: 'ARS',
+            tax_included: false,
+          },
+        },
+      }),
+    });
+  });
+
   await page.route('**/api/admin/mediakits/KIT-TEST', async (route) => {
     await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error' }) });
   });
