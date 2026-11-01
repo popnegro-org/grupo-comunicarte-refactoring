@@ -498,18 +498,18 @@ export default function DashboardMediaKitWorkflow() {
         </div>
 
         {selected && (
-          <div className="fixed inset-0 z-[4000] flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
-            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl">
-              <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3">
+          <div className="fixed inset-0 z-[4000] flex justify-end bg-slate-900/35" role="dialog" aria-modal="true" aria-labelledby="mediakit-request-title">
+            <div className="h-full max-h-screen w-full max-w-[460px] overflow-y-auto border-l border-slate-200 bg-[#f8fafc] shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{labels[selected.status]}</p>
-                  <h2 className="text-base font-semibold text-slate-900">{selected.clientName}</h2>
+                  <h2 id="mediakit-request-title" className="text-base font-semibold text-slate-900">{selected.clientName}</h2>
                 </div>
                 <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Cerrar">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-5">
                 <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
                   <p><span className="font-semibold text-slate-800">Email:</span> {selected.email || '—'}</p>
                   <p><span className="font-semibold text-slate-800">Tel:</span> {selected.phone || '—'}</p>
