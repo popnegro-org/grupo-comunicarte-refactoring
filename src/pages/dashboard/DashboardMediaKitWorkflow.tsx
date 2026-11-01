@@ -200,7 +200,7 @@ export default function DashboardMediaKitWorkflow() {
         clientPhone: selected.phone,
         supportIds: selected.supportIds,
         approvedPrices,
-        totalAmount: proposalCurrency === 'Por definir' ? null : proposalAmount.trim() ? Number(proposalAmount) : totalApprovedQuote,
+        totalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
         currency: proposalCurrency,
         metadata: {
           proposalPeriod: {
@@ -210,7 +210,7 @@ export default function DashboardMediaKitWorkflow() {
             duracionUnidad: period.duracionUnidad,
           },
           proposalAmount: {
-            amount: proposalCurrency === 'Por definir' ? null : proposalAmount.trim() ? Number(proposalAmount) : totalApprovedQuote,
+            amount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
             currency: proposalCurrency,
           },
         },
@@ -357,7 +357,7 @@ export default function DashboardMediaKitWorkflow() {
   };
 
   const lead = selected
-    ? { name: selected.clientName, email: selected.email, company: selected.company, phone: selected.phone, proposalPeriod: proposalPeriodLabel, proposalAmount: proposalCurrency === 'Por definir' ? 'Por definir' : proposalAmount.trim() ? `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}` : `${proposalCurrency} ${totalApprovedQuote.toLocaleString('es-AR', { maximumFractionDigits: 2 })}` }
+    ? { name: selected.clientName, email: selected.email, company: selected.company, phone: selected.phone, proposalPeriod: proposalPeriodLabel, proposalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? '' : `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}` }
     : null;
 
   const approvedCount = supports.filter((s) => {
@@ -527,7 +527,7 @@ export default function DashboardMediaKitWorkflow() {
                 <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Monto global acordado</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="block text-xs font-medium text-slate-600">Monto total<input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : String(totalApprovedQuote)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:bg-slate-100" /></label>
+                    <label className="block text-xs font-medium text-slate-600">Monto total<input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:bg-slate-100" /></label>
                     <label className="block text-xs font-medium text-slate-600">Moneda<select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs"><option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option><option value="Por definir">Por definir</option></select></label>
                   </div>
                   {proposalAmountInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">El monto global debe ser un número válido igual o mayor que cero.</p>}
