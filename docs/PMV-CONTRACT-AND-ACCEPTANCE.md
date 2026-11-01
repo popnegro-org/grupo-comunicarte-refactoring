@@ -1,0 +1,1 @@
+[Contrato PMV completo] pendiente de sincronización desde commit local 1922c18. Este marcador no es el documento definitivo.
