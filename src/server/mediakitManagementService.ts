@@ -160,6 +160,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
   }
   const approvedPrices: Record<string, string> = {};
   for (const [supportId, rawPrice] of Object.entries(rawApprovedPrices)) {
+    if (rawPrice === '') continue;
     if (!supportIds.includes(supportId)) {
       throw new Error(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`);
     }
