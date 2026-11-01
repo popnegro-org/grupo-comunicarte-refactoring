@@ -153,7 +153,11 @@ export default function DashboardMediaKitBuilder() {
   };
   // Public deliverables carry only the explicitly agreed global amount. Never
   // pass per-support internal/base prices into PDF or PPT generation.
-  const exportSupports: ExportSupport[] = selected.map((s) => ({ ...s }));
+  const exportSupports: ExportSupport[] = selected.map((support) => {
+    const publicSupport = { ...support };
+    delete publicSupport.pricing;
+    return publicSupport;
+  });
   const lead = {
     name: client.name || 'Cliente',
     company: client.company,
