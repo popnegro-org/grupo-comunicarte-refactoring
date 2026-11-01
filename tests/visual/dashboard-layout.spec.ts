@@ -45,6 +45,10 @@ test.describe('Dashboard · estructura responsive', () => {
     await expect(page.getByRole('link', { name: 'Crear Media Kit' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Inventario público' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Clientes' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Inventario por tipología' })).toBeVisible();
+    await expect(page.getByText('Tradicional', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pantallas LED', { exact: true })).toBeVisible();
+    await expect(page.getByText('LED móvil', { exact: true })).toBeVisible();
 
     const viewportWidth = page.viewportSize()?.width ?? 0;
     const sidebar = page.locator('aside');
