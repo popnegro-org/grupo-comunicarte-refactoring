@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', async ({ page }) => {
   let requestStatus = 'pending';
@@ -175,4 +176,68 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   expect((savedKit as Record<string, unknown>).totalAmount).toBe(25000);
   expect(kitStatus).toBe('sent');
   expect(requestPatchStatuses).toEqual(['contactado', 'enviado']);
+});
+
+
+test('Media Kit constructor: el PDF no expone tarifas base si el monto global no fue definido', async ({ page }) => {
+  let savedPayload: Record<string, any> | null = null;
+
+  await page.route('**/api/admin/stats', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [] }) });
+  });
+  await page.route('**/api/supports', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'success',
+        data: [{
+          canonical_id: 'SUP-001',
+          name: 'Soporte Demo',
+          ciudad: 'mendoza',
+          tipo_soporte: 'tradicional',
+          disponibilidad: 'disponible',
+          address: 'Mendoza',
+          description: 'Soporte de prueba',
+          characteristics: 'Tradicional',
+          pricing: { exhibition_price: 99999, installation_price: 0, printing_price: 0, currency: 'ARS' },
+        }],
+      }),
+    });
+  });
+  await page.route('**/api/admin/mediakits/KIT-TEST', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error' }) });
+  });
+  await page.route('**/api/admin/mediakits', async (route) => {
+    if (route.request().method() === 'POST') {
+      savedPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'success', data: { kitId: 'KIT-TEST' } }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto('/dashboard/mediakits/nuevo?kitId=KIT-TEST');
+  await expect(page.getByRole('heading', { name: 'Constructor de Media Kit' })).toBeVisible();
+  await page.getByPlaceholder('Nombre *').fill('Cliente Demo');
+  await page.getByRole('button', { name: /Soporte Demo/ }).click();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF', exact: true }).click();
+  const download = await downloadPromise;
+  const pdf = await readFile((await download.path())!);
+  const pdfText = pdf.toString('latin1');
+
+  expect(savedPayload).not.toBeNull();
+  expect(savedPayload?.totalAmount).toBeNull();
+  expect(savedPayload?.metadata?.proposalAmount?.amount).toBeNull();
+  expect(pdfText).toContain('Inversion sujeta a cotizacion');
+  expect(pdfText).not.toContain('99999');
 });
