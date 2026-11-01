@@ -6,28 +6,10 @@ const MAX_ATTEMPTS = 10;
 type QueryResult = { rows: Array<{ attempt_count: number | string }> };
 type Queryable = { query: (sql: string, values?: unknown[]) => Promise<QueryResult> };
 
-let tableReady: Promise<void> | null = null;
-
-async function ensureRateLimitTable(database: Queryable): Promise<void> {
-  if (!tableReady) {
-    tableReady = database.query(`
-      CREATE TABLE IF NOT EXISTS admin_login_attempts (
-        ip_hash TEXT PRIMARY KEY,
-        attempt_count INTEGER NOT NULL,
-        window_started_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-      )
-    `).then(() => undefined).catch((error) => {
-      tableReady = null;
-      throw error;
-    });
-  }
-  await tableReady;
-}
-
 /**
- * Distributed, atomic login limiter. IPs are HMACed before persistence.
- * Database errors deliberately propagate: authentication must not fail open.
+ * Distributed, atomic login limiter. The table is provisioned only by the
+ * reviewed SQL migration; request handling never performs schema changes.
+ * IPs are HMACed before persistence. Database errors deliberately propagate.
  */
 export async function allowLoginAttempt(
   database: Queryable,
@@ -36,8 +18,6 @@ export async function allowLoginAttempt(
   now = Date.now(),
 ): Promise<boolean> {
   if (!secret) throw new Error('A secret is required to hash login rate-limit keys.');
-  await ensureRateLimitTable(database);
-
   const ipHash = createHmac('sha256', secret).update(ip || 'unknown').digest('hex');
   const result = await database.query(
     `INSERT INTO admin_login_attempts (ip_hash, attempt_count, window_started_at, updated_at)

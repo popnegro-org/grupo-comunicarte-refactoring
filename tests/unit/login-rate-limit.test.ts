@@ -6,8 +6,7 @@ function fakeDatabase() {
   const attempts = new Map<string, { count: number; startedAt: number }>();
   return {
     attempts,
-    async query(sql: string, values: unknown[] = []) {
-      if (sql.includes('CREATE TABLE')) return { rows: [] };
+    async query(_sql: string, values: unknown[] = []) {
       const [hash, now, windowMs] = values as [string, number, number];
       const current = attempts.get(hash);
       const expired = !current || current.startedAt <= now - windowMs;
@@ -42,4 +41,9 @@ test('does not persist the raw client IP and refuses a missing HMAC secret', asy
   assert.equal(storedKeys.includes('203.0.113.12'), false);
   assert.match(storedKeys[0], /^[a-f0-9]{64}$/);
   await assert.rejects(() => allowLoginAttempt(database, '203.0.113.12', '', 1000), /secret is required/);
+});
+
+test('fails closed when the persistent store is unavailable', async () => {
+  const database = { async query() { throw new Error('database unavailable'); } };
+  await assert.rejects(() => allowLoginAttempt(database, '203.0.113.13', 'test-secret'), /database unavailable/);
 });

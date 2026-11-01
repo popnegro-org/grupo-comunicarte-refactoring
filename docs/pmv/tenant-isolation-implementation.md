@@ -29,7 +29,7 @@
 - Se sustituye el Map en memoria por un limitador atómico en Neon, compartido entre instancias serverless.
 - Las claves IP se almacenan como HMAC-SHA256; no se persisten IPs en claro.
 - Si Neon no está disponible, el endpoint responde 503 y no autentica: no existe fallback fail-open.
-- Tabla auxiliar `admin_login_attempts` creada de forma idempotente al primer intento. No requiere servicio externo ni credenciales adicionales.
+- Tabla auxiliar `admin_login_attempts` definida en `docs/pmv/proposals/20261101_002_admin_login_rate_limit.sql`. La app no ejecuta DDL en una petición; la migración debe revisarse y aplicarse explícitamente antes de activar el limitador.
 - Política: 10 intentos por ventana de 15 minutos por IP seudonimizada. La limpieza/retención de claves antiguas debe monitorizarse.
 
 ## Límites deliberados
