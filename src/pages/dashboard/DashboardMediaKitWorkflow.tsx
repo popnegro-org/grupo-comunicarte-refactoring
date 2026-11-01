@@ -466,36 +466,43 @@ export default function DashboardMediaKitWorkflow() {
           </div>
         </section>
 
-        <div className="space-y-3">
-          {isFetchingLeads && leads.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" /> Cargando solicitudes…
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Tabla de solicitudes de Media Kit">
+          {isFetchingLeads && leads.length === 0 ? (
+            <div className="flex items-center gap-2 p-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando solicitudes…</div>
+          ) : !visible.length ? (
+            <div className="p-10 text-center text-sm text-slate-500"><Inbox className="mx-auto mb-2 h-8 w-8 text-slate-300" />No hay solicitudes para este filtro.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] border-collapse text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-4 py-3">ID</th>
+                    <th scope="col" className="px-4 py-3">Cliente</th>
+                    <th scope="col" className="px-4 py-3">Campaña / empresa</th>
+                    <th scope="col" className="px-4 py-3">Media Kit</th>
+                    <th scope="col" className="px-4 py-3">Fecha solicitud</th>
+                    <th scope="col" className="px-4 py-3">Estado</th>
+                    <th scope="col" className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visible.map((lead) => (
+                    <tr key={lead.requestId} className="transition-colors hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-700">{lead.requestId}</td>
+                      <td className="px-4 py-3.5"><p className="max-w-[150px] truncate font-semibold text-slate-900">{lead.clientName}</p><p className="mt-0.5 max-w-[150px] truncate text-[10px] text-slate-500">{lead.email || 'Sin correo'}</p></td>
+                      <td className="px-4 py-3.5"><p className="max-w-[170px] truncate font-medium text-slate-800">{lead.company}</p><p className="mt-0.5 text-[10px] text-slate-500">{lead.supportNames.length} {lead.supportNames.length === 1 ? 'soporte' : 'soportes'}</p></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-slate-700">{lead.supportNames.length ? 'Kit personalizado' : 'Pendiente'}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{formatRequestDate(lead.createdAt)}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5"><StatusBadge status={labels[lead.status]} /></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-right"><button type="button" onClick={() => open(lead)} className="inline-flex min-h-9 items-center rounded-md border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-600">Ver solicitud</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-          {!isFetchingLeads && visible.length === 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-              <Inbox className="mx-auto mb-2 h-8 w-8 text-slate-300" />
-              No hay solicitudes para este filtro.
-            </div>
-          )}
-          {visible.map((lead) => (
-            <button
-              key={lead.requestId}
-              type="button"
-              onClick={() => open(lead)}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{lead.clientName}</p>
-                <p className="truncate text-xs text-slate-500">{lead.company} · {lead.requestId}</p>
-                <p className="mt-1 truncate text-[11px] text-slate-500">
-                  {lead.supportNames.length} {lead.supportNames.length === 1 ? 'soporte' : 'soportes'} · {formatRequestDate(lead.createdAt)}
-                </p>
-              </div>
-              <StatusBadge status={labels[lead.status]} />
-            </button>
-          ))}
-        </div>
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500"><span>{visible.length} solicitudes visibles</span><span>Grupo Comunicarte · Gestión comercial</span></div>
+        </section>
 
         {selected && (
           <div className="fixed inset-0 z-[4000] flex justify-end bg-slate-900/35" role="dialog" aria-modal="true" aria-labelledby="mediakit-request-title">
