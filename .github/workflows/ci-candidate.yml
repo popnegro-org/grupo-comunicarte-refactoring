@@ -2,9 +2,10 @@ name: CI Candidate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, pmv-validation-candidate]
   push:
     branches:
+      - pmv-validation-candidate
       - canonical-candidate
       - canonical-refinement
 
@@ -30,8 +31,8 @@ jobs:
       - name: Typecheck
         run: npm run lint
 
+      - name: Unit tests
+        run: npm run test:unit
+
       - name: Build
         run: npm run build
-
-      - name: Tests (if configured)
-        run: npm test --if-present
