@@ -50,7 +50,6 @@ Do not declare the PMV complete or merge to `main` until tenant ownership rules 
 - Their selected UI, Media Kit delivery/export, inventory accessibility, and responsive request-table changes have been ported into `pmv-validation-candidate`.
 - Do not merge #85–#88 independently. The intended release artifact remains one final PR from the candidate to `main`, after the blockers above are resolved.
 
-
 ## QA addendum — filter pipeline coverage (2026-11-01)
 
 **Latest implementation commit:** `a03fc20c4368595ff5191dde263800cf47f8df58`
@@ -62,3 +61,21 @@ The administrative support-list filter pipeline was extracted as the pure functi
 - Visual QA [run 41279271863](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41279271863): last observed still executing the trusted-baseline Playwright comparison. Do not infer a result until the workflow completes.
 
 This addendum documents the implementation evidence; it does not change the tenant isolation, distributed rate-limit, or Vercel Preview release blockers above.
+
+## QA addendum — tenant isolation foundation (2026-11-01)
+
+Decisions confirmed: preserve the one existing admin/login; that authenticated admin operates both tenants; global commercial requests are allowed; supports without city remain quarantined. Individual-user memberships are future compatibility only, not a prerequisite for the current account.
+
+- Added fail-closed authorization primitives in `src/server/tenantAccess.ts`, including a single-admin compatibility resolver that must only be called from backend-authenticated `requireAdmin` context.
+- Added six unit tests for missing identity, inactive membership, client tenant spoofing, multi-membership selection, global-admin scope, single-admin compatibility and pending ownership.
+- Added proposed additive SQL migration `db/migrations/20261101_001_tenant_foundation.sql`; it is versioned only and has **not** been executed. User/membership tables are future optional infrastructure.
+- Added implementation and activation plan in `docs/pmv/tenant-isolation-implementation.md`.
+- `npm ci`: PASS, 0 reported vulnerabilities.
+- `npm run lint` (TypeScript): PASS.
+- `npm run test:unit`: PASS, 25/25.
+- `npm run build`: PASS; existing >500 kB JS chunk warning remains.
+- `npm run test:visual`: BLOCKED in this ephemeral runner because Playwright Chromium executable is not installed; 28 tests could not launch a browser. This is an environment limitation, not a visual QA pass.
+
+**Runtime audit finding (P0):** `requireAdmin` verifies the shared admin token but has no tenant context. All `/api/admin/supports`, `/api/admin/support-pricing`, `/api/admin/mediakits`, and `/api/admin/requests` routes currently operate across the full dataset. `supports` has no persisted tenant ownership field in the runtime schema; city-based dashboard grouping is not a valid ownership control. The single administrator can continue operating both tenants, but effective tenant isolation and ownership-safe cross-tenant reporting are not implemented. Do not pretend this foundation enforces isolation.
+
+**Remaining activation work:** introduce verified support/operation ownership without guessing; keep the ten supports without city pending; model global requests as a parent with tenant-scoped child items; audit and scope each endpoint and export; test tenant boundary behavior; then run migration only after isolated staging validation. Distributed rate limiting, Vercel Preview/Neon runtime validation, independent ESLint and bundle splitting remain separate release blockers listed above. No SQL was run; no production data, deployment, or `main` was changed.
