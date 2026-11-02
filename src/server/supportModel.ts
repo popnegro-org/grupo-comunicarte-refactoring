@@ -237,23 +237,27 @@ function mapPricingRow(row: SupportPricingRow | null | undefined): SupportPricin
   };
 }
 
-function mapMediaRows(rows: SupportMediaRow[]): SupportMediaItem[] {
+function mapMediaRows(rows: SupportMediaRow[], includePrivateStorageKey = false): SupportMediaItem[] {
   return rows
     .slice()
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id)
-    .map((row) => ({
-      id: row.id,
-      media_type: row.mediaType as SupportMediaType,
-      url: typeof (row.metadata as Record<string, unknown> | null)?.storage_key === 'string'
-        ? `/api/media/${row.id}`
-        : row.url,
-      title: row.title || undefined,
-      alt: row.alt || undefined,
-      mime_type: row.mimeType || undefined,
-      sort_order: row.sortOrder,
-      metadata: (row.metadata as Record<string, unknown>) || undefined,
-      active: row.active ?? true,
-    }));
+    .map((row) => {
+      const metadata = (row.metadata as Record<string, unknown> | null) || undefined;
+      const publicMetadata = metadata && !includePrivateStorageKey
+        ? Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== 'storage_key'))
+        : metadata;
+      return {
+        id: row.id,
+        media_type: row.mediaType as SupportMediaType,
+        url: typeof metadata?.storage_key === 'string' ? `/api/media/${row.id}` : row.url,
+        title: row.title || undefined,
+        alt: row.alt || undefined,
+        mime_type: row.mimeType || undefined,
+        sort_order: row.sortOrder,
+        metadata: publicMetadata,
+        active: row.active ?? true,
+      };
+    });
 }
 
 function mapTechnicalRow(row: SupportTechnicalRow | null | undefined): SupportTechnicalData | null {
@@ -929,7 +933,7 @@ export async function updateSupportRouteRecord(canonicalId: string, route: Parti
 
 export async function listSupportMediaRecords(canonicalId: string) {
   const rows = await db.select().from(supportMedia).where(eq(supportMedia.supportCanonicalId, canonicalId));
-  return mapMediaRows(rows);
+  return mapMediaRows(rows, true);
 }
 
 export async function createSupportMediaRecord(canonicalId: string, media: SupportMediaInput) {
