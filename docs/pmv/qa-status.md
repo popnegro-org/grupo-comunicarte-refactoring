@@ -1,9 +1,10 @@
 # PMV — cierre consolidado
 
 **Rama candidata:** `pmv-validation-candidate`  
-**SHA de código validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6`  
+**HEAD candidato verificado:** `c2920018dfb17fe8aa4a208e414f5d30d7e30688`  
+**SHA funcional base:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6` (los commits posteriores solo actualizaron documentación).  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
-**Preview QA actual:** [deployment aislado](https://grupo-comunicarte-refactoring-d1xfuujv3-popnegros-projects.vercel.app) — `dpl_AFgKNGDWzr4TpKDBDmve5e4GyRo1`, READY, SHA de código coincidente.  
+**Preview QA verificado:** [deployment aislado](https://grupo-comunicarte-refactoring-7wy8q0tr5-popnegros-projects.vercel.app) — `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, READY, HEAD `c2920018dfb17fe8aa4a208e414f5d30d7e30688`.  
 **Main / Production / Neon Production:** sin cambios.
 
 ## Decisión de alcance
@@ -18,25 +19,26 @@ No se agregan funcionalidades posteriores al PMV (SEO/GEO, nuevos módulos o int
 
 ## 1. Integración y calidad automática — PASS
 
-Evidencia del SHA de código `3ec2e407`:
+Evidencia CI del HEAD candidato `c2920018` (código funcional sin cambios desde `3ec2e407`):
 
 | Control | Resultado |
 |---|---|
-| CI | PASS — run [41475409170](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409170) |
-| CI Candidate | PASS — run [41475409083](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409083) |
+| CI | PASS — run [41522434155](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409170) |
+| CI Candidate | PASS — run [41522434076](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409083) |
 | TypeScript | PASS — `tsc --noEmit` |
 | Unit tests | PASS — 45/45 |
 | Build | PASS |
 | Auditoría de dependencias de producción | PASS — 0 vulnerabilidades reportadas |
-| Visual QA CI | PASS — run [41475409136](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), 28 aprobadas / 2 omitidas |
-| Vercel Preview | READY — deployment QA actual, SHA de código coincidente |
+| Visual QA CI | PASS — run [41522434073](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), workflow PASS |
+| Vercel Preview | READY — deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, HEAD `c2920018` |
 
-Repetición local en caja efímera sobre el mismo SHA:
+Repetición local en caja efímera sobre el HEAD `c2920018` (cambios de documentación respecto del código funcional):
 - `npm ci`: PASS, 0 vulnerabilidades reportadas.
 - `npm run lint`: PASS (el script ejecuta TypeScript, no ESLint).
 - `npm run test:unit`: PASS, 45/45.
 - `npm run build`: PASS.
-- `git diff --check`: PASS; árbol de trabajo limpio.
+- `npm audit --omit=dev --audit-level=moderate`: PASS, 0 vulnerabilidades de dependencias de producción reportadas.
+- `git diff --check`: PASS (sin errores de whitespace).
 
 La repetición local de Playwright no puede certificar regresión visual: el checkout no contiene snapshots de referencia. El intento local produjo 22 pruebas aprobadas y 6 fallos de comparación exclusivamente por snapshots ausentes; se descartaron los snapshots generados automáticamente. La evidencia visual válida para el candidato es el workflow CI PASS con baseline confiable; no se creó ni aceptó un baseline nuevo.
 
@@ -44,12 +46,13 @@ La repetición local de Playwright no puede certificar regresión visual: el che
 
 ### Preview público y API — PASS
 
-Verificado en el deployment QA actual:
-- Home, inventario y contacto cargan en navegador.
+Verificado nuevamente por HTTP en el deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj` (HEAD `c2920018`):
+- `GET /`, `/inventario` y `/contacto`: HTTP 200 (smoke HTTP; no se declara una nueva comprobación visual de navegador en esta pasada).
 - `GET /api/health`: HTTP 200, `database=connected`.
 - `GET /api/supports`: HTTP 200, 28 soportes.
 - `GET /api/admin/stats`, `/api/admin/requests`, `/api/admin/support-pricing` y `/api/admin/mediakits` sin sesión: HTTP 401.
 - `POST /api/admin/login` desde origen no permitido: HTTP 403.
+- `PATCH /api/admin/mediakits/nonexistent/status` con cookie inválida y Origin externo: HTTP 403; con Origin same-origin Preview: HTTP 401 (el middleware de origen acepta la solicitud y la autenticación rechaza la cookie inválida).
 - `POST /api/admin/login` desde el origen Preview con credenciales inválidas: HTTP 401.
 - `GET /api/media/74`, `/api/media/51`, `/api/media/70`: HTTP 302.
 - Descarga del objeto mediante la URL firmada emitida: HTTP 200.
