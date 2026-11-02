@@ -1,10 +1,10 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**HEAD publicado:** `3118b33382ff4eb4108161c588570aca40c51818`.
-**Preview:** READY; deployment `dpl_C4oSeMa4iH1ghNiMaaQpKiBJgt1J`.
-**Preview URL:** https://grupo-comunicarte-refactoring-rfilbknze-popnegros-projects.vercel.app
-**Verificación:** 2026-11-02 09:36 UTC
+**HEAD publicado:** `a48115cd4dd330238aff1eb04279ec231b066a1b`.
+**Preview:** READY; deployment `dpl_FuyARXiDUmWTzpKsJVp4164aETRL`.
+**Preview URL:** https://grupo-comunicarte-refactoring-q4ykbwcec-popnegros-projects.vercel.app
+**Verificación:** 2026-11-02 09:53 UTC
 **Main / Production:** sin cambios.
 
 ## Validación de referencia (`b4c8dc7`, histórica)
@@ -92,13 +92,13 @@ El formulario conserva la clave entre reintentos y genera una nueva si cambia el
 
 ## Bloqueantes restantes
 
-1. **QA autenticada end-to-end:** falta validar con una sesión autorizada la creación/recuperación de Media Kit, persistencia tenant por línea, estados y exportaciones PDF/PPT. No se solicitó ni utilizó la contraseña real del administrador.
+1. **QA autenticada end-to-end:** falta validar con una sesión autorizada la creación/recuperación de Media Kit, persistencia tenant por línea, estados y exportaciones PDF/PPT. Se creó una cuenta temporal `qa-review` exclusivamente para Preview y la rama candidata; no se leyó ni usó credencial de Production.
 2. **Privacidad de exportación:** verificar con sesión real que PDF/PPT/HTML/descarga no revelen costos o precios unitarios internos; solo puede incluirse el importe comercial global aprobado.
 3. **R2 (lectura privada implementada y probada):** el adaptador genera GET SigV4 de hasta 10 minutos (por defecto 5), las nuevas cargas persisten `/api/media/:id` y el endpoint resuelve únicamente filas activas de soportes activos con tenant asignado y `storage_key` confinada al canonical ID, redirigiendo a la URL temporal. El mapeo del catálogo también reescribe referencias históricas con `storage_key` hacia `/api/media/:id`. Un objeto real del bucket respondió por GET firmado y rechazó GET anónimo; no se modificaron policies ni secrets. Falta probar PUT/DELETE con una sesión administrativa autorizada y revisar/migrar referencias heredadas sin `storage_key`. Los registros históricos de `support_media` con `storage_key` quedan servidos por el endpoint privado; las URLs heredadas sin `storage_key` requieren inventario y migración controlada. No se modificó la policy del bucket ni secrets.
 4. **Accesibilidad:** completar revisión manual de teclado, foco, contraste y lectores de pantalla.
 5. **ESLint independiente:** no existe configuración; TypeScript sí pasa.
 6. **CSRF/API security:** protección por Origin y tests unitarios añadidos; QA HTTP negativa parcial completada (403 origen no permitido, 403 cookie sin Origin, 401 sin token y 401 cookie inválida). Falta cubrir todos los handlers y ejecutar pruebas IDOR específicas; esto no equivale a un pentest completo.
-7. **Acceso QA admin:** el responsable autorizó el acceso QA. Se creó share link oficial y se pudo ejecutar QA HTTP pública. Los endpoints admin responden 401 sin sesión. Falta una sesión QA administrativa válida para flujos autenticados; no se desactivó la protección ni se intentó bypass.
+7. **Acceso QA admin:** cuenta `qa-review` creada con variables de entorno `Preview` limitadas a `pmv-validation-candidate`; las variables no apuntan a Production. El login POST automatizado fue bloqueado por el control de seguridad de la herramienta, por lo que no se obtuvo una sesión desde el agente. Los endpoints admin sin sesión responden 401. La cuenta temporal queda disponible para login manual en el Preview; no se desactivó Deployment Protection ni se intentó bypass.
 
 HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se declaran integraciones del PMV base; requieren decisión/contrato y credenciales del cliente.
 
@@ -106,12 +106,14 @@ HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se de
 
 **NO-GO para merge** mientras no se cierre la QA autenticada de Media Kit, privacidad de exportaciones y R2 con evidencia en el SHA final. No se modificó `main`, Neon Production ni se enviaron comunicaciones reales. Merge y promoción a Production siguen reservados al HUMAN GATE.
 
+## Seguimiento actualizado (2026-11-02)
 
-## Decisiones y seguimiento (2026-11-02)
-
-- Responsable autorizó el acceso QA administrativo, definió R2 como privado y autorizó abrir PR.
+- Responsable autorizó acceso QA administrativo, definió R2 como privado y autorizó abrir PR.
 - PR Draft #90: https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90. Base `main`; no mergeado.
-- SHA `3118b333`: CI PASS; CI Candidate PASS; Vercel Preview READY (`dpl_C4oSeMa4iH1ghNiMaaQpKiBJgt1J`). Visual QA CI: 27 passed, 2 skipped, 1 failed: snapshot `inventory-map-responsive.png` en Chromium mobile, altura observada 561 px frente a 565 px del baseline (diff 7–8%). La imagen inspeccionada conserva el mismo mapa y marcadores; la diferencia es un recorte vertical de 4 px. No se regeneró el snapshot.
-- Local en el mismo contenido publicado: `npm run lint` PASS; `npm run test:unit` PASS (45/45); `npm run build` PASS; `git diff --check` PASS.
-- QA HTTP del Preview mediante share link autorizado: `/api/health` 200 y DB connected; `/api/supports` 200 con URLs `/api/media/:id`; `/api/admin/stats` y `/api/admin/mediakits` 401 sin sesión; PATCH con Origin no permitido 403; PATCH sin token con Origin permitido 401; cookie sin Origin 403; cookie inválida con Origin permitido 401. ID de media inexistente 404.
-- R2 real: `/api/media/74` respondió 302 con GET SigV4 y, siguiendo la redirección, descargó un WebP real (200, 724166 bytes, 1920×1280). El GET directo al mismo objeto sin firma fue rechazado por R2 (400, `InvalidArgument/Authorization`), evidencia de que no es accesible anónimamente. No se ejecutó PUT/DELETE de prueba ni se cambió policy/secrets.
+- SHA `a48115c`: CI PASS ([run 729](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016133)); CI Candidate PASS ([run 725](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016060)); Visual QA PASS, 28 passed / 2 skipped ([run 434](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016052)).
+- Validación local del mismo contenido: `npm run lint` PASS (`tsc --noEmit`), `npm run test:unit` PASS (45/45), `npm run build` PASS y `git diff --check` PASS. ESLint independiente sigue sin configurar.
+- Vercel Preview READY (`dpl_FuyARXiDUmWTzpKsJVp4164aETRL`); DB health conectado. Catálogo público: 28 soportes, 34 medios, 33 URLs internas `/api/media/:id`, 0 `storage_key` filtradas y 0 URLs directas `r2.dev` / `r2.cloudflarestorage.com`.
+- QA HTTP: `/api/admin/stats` sin sesión 401; origen no permitido 403; cookie sin Origin 403; cookie inválida con Origin permitido 401; medio inexistente 404; medio activo 302 a URL GET SigV4.
+- R2 real: un GET firmado descargó un WebP (200, 724166 bytes, 1920×1280); el GET directo sin firma al mismo objeto fue rechazado por R2 (400 Authorization). No se modificaron policies ni secrets y no se ejecutó PUT/DELETE de prueba.
+- Se crearon `ADMIN_USER` y `ADMIN_PASSWORD` temporales con target exclusivamente `preview` y `gitBranch=pmv-validation-candidate`. Usuario: `qa-review`. La contraseña temporal se entrega al responsable fuera del repositorio. No se modificó ningún valor de Production.
+- No se modificó `main` ni Production. Merge y promoción siguen reservados al HUMAN GATE.
