@@ -20,6 +20,32 @@ export function parseCookies(header?: string): Record<string, string> {
 
 type RequestHeaders = Record<string, unknown>;
 
+/** Accept configured cross-origin clients and the exact origin serving this request.
+ * The host/protocol comparison keeps Vercel Preview deployments same-origin without
+ * allowing arbitrary preview domains or weakening cookie-authenticated CSRF checks.
+ */
+export function isAllowedRequestOrigin(
+  origin: unknown,
+  allowedOrigins: string[],
+  headers: RequestHeaders,
+): boolean {
+  if (typeof origin !== 'string') return false;
+  if (allowedOrigins.includes(origin)) return true;
+
+  const host = headers.host;
+  const forwardedProto = headers['x-forwarded-proto'];
+  const protocol = typeof forwardedProto === 'string'
+    ? forwardedProto.split(',')[0].trim()
+    : undefined;
+  if (typeof host !== 'string' || !protocol) return false;
+
+  try {
+    return new URL(origin).origin === `${protocol}://${host}`;
+  } catch {
+    return false;
+  }
+}
+
 export function adminAuthHeader(headers: RequestHeaders): string | undefined {
   const auth = headers.authorization;
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth;
@@ -42,5 +68,5 @@ export function hasValidAdminMutationOrigin(
   const cookies = parseCookies(typeof headers.cookie === 'string' ? headers.cookie : undefined);
   if (!cookies[ADMIN_COOKIE]) return true;
   const origin = headers.origin;
-  return typeof origin === 'string' && allowedOrigins.includes(origin);
+  return isAllowedRequestOrigin(origin, allowedOrigins, headers);
 }
