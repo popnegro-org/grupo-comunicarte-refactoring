@@ -42,10 +42,16 @@ export async function createApp() {
   // Trust only the single Vercel ingress hop; never trust arbitrary client-supplied X-Forwarded-For values.
   app.set('trust proxy', process.env.VERCEL ? 1 : false);
 
-  const allowedOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
+  const configuredOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  // Vercel assigns deployment-specific and branch-stable hostnames to Preview.
+  // Trust only these platform-provided hostnames in addition to explicitly configured origins.
+  const vercelOrigins = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]
+    .filter((hostname): hostname is string => Boolean(hostname?.trim()))
+    .map((hostname) => `https://${hostname.trim()}`);
+  const allowedOrigins = [...new Set([...configuredOrigins, ...vercelOrigins])];
 
   const isAllowedOrigin = (origin?: string): boolean => {
     if (!origin) return true;
