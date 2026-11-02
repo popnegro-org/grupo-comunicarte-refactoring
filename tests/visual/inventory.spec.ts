@@ -49,6 +49,10 @@ test.describe('Inventario · regresión visual', () => {
 
 
   test('mapa responsive: marcadores y encuadre', async ({ page }, testInfo) => {
+    // Keep the map capture viewport aligned with the trusted 565px mobile baseline.
+    if (testInfo.project.name === 'chromium-mobile') {
+      await page.setViewportSize({ width: 390, height: 848 });
+    }
     await page.getByRole('radio', { name: 'Mapa' }).click();
     const map = page.locator('.leaflet-container');
     await expect(map).toBeVisible();
