@@ -1,8 +1,8 @@
 # PMV — cierre consolidado
 
 **Rama candidata:** `pmv-validation-candidate`  
-**HEAD documental:** `b3a9963375312709aa53d8b313ee3228e2707270`  
 **SHA de código validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6`  
+**Última actualización documental:** 2 de noviembre de 2026  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
 **Preview de código:** [abrir entorno candidato](https://grupo-comunicarte-refactoring-mje3iogvr-popnegros-projects.vercel.app)  
 **Main / Production / Neon Production:** sin cambios.
