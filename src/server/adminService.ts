@@ -23,6 +23,7 @@ import {
 } from './supportModel.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
 import { isSafeSupportMediaKey } from './r2StorageAdapter.ts';
+import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
 import { db, pool, isDatabaseConfigured } from '../db/index.ts';
 import { and, count, eq, isNotNull } from 'drizzle-orm';
 
@@ -237,7 +238,7 @@ export async function getPublicSupportMediaAsset(mediaId: number) {
     .innerJoin(supports, eq(supportMedia.supportCanonicalId, supports.canonicalId))
     .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true), isNotNull(supports.tenantId)))
     .limit(1);
-  if (!result) return null;
+  if (!result || !isSupportEligibleForPublicCatalog(result.support.tenantId, result.support.active)) return null;
   const storageKey = (result.media.metadata as Record<string, unknown> | null)?.storage_key;
   if (typeof storageKey !== 'string' || !isSafeSupportMediaKey(result.support.canonicalId, storageKey)) return null;
   return { storageKey, mimeType: result.media.mimeType || undefined };
