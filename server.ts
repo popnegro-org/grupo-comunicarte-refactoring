@@ -8,7 +8,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
-import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin } from './src/server/adminRequestSecurity.ts';
+import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
 import {
   authenticateAdmin,
   getPublicSupportMediaAsset,
@@ -47,18 +47,18 @@ export async function createApp() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const isAllowedOrigin = (origin?: string): boolean => {
+  const isAllowedOrigin = (origin: string | undefined, req: express.Request): boolean => {
     if (!origin) return true;
-    return allowedOrigins.includes(origin);
+    return isAllowedRequestOrigin(origin, allowedOrigins, req.headers);
   };
 
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
-    if (origin && !isAllowedOrigin(origin) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (origin && !isAllowedOrigin(origin, req) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       return res.status(403).json({ status: 'error', message: 'Origen no permitido.' });
     }
 
-    if (origin && isAllowedOrigin(origin)) {
+    if (origin && isAllowedOrigin(origin, req)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -67,7 +67,7 @@ export async function createApp() {
     }
 
     if (req.method === 'OPTIONS') {
-      if (isAllowedOrigin(origin)) {
+      if (isAllowedOrigin(origin, req)) {
         return res.sendStatus(204);
       }
       return res.sendStatus(403);
