@@ -22,6 +22,7 @@ import {
   validateAvailability,
 } from './supportModel.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
+import { isSafeSupportMediaKey } from './r2StorageAdapter.ts';
 import { db, pool, isDatabaseConfigured } from '../db/index.ts';
 import { and, count, eq } from 'drizzle-orm';
 
@@ -231,11 +232,15 @@ export async function getSupportMediaByAdmin(canonicalId: string) {
 
 export async function getPublicSupportMediaAsset(mediaId: number) {
   if (!Number.isSafeInteger(mediaId) || mediaId <= 0) return null;
-  const [row] = await db.select().from(supportMedia).where(eq(supportMedia.id, mediaId)).limit(1);
-  if (!row || row.active !== true) return null;
-  const storageKey = (row.metadata as Record<string, unknown> | null)?.storage_key;
-  if (typeof storageKey !== 'string' || !storageKey || storageKey.includes('..')) return null;
-  return { storageKey, mimeType: row.mimeType || undefined };
+  const [result] = await db.select({ media: supportMedia, support: supports })
+    .from(supportMedia)
+    .innerJoin(supports, eq(supportMedia.supportCanonicalId, supports.canonicalId))
+    .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true)))
+    .limit(1);
+  if (!result) return null;
+  const storageKey = (result.media.metadata as Record<string, unknown> | null)?.storage_key;
+  if (typeof storageKey !== 'string' || !isSafeSupportMediaKey(result.support.canonicalId, storageKey)) return null;
+  return { storageKey, mimeType: result.media.mimeType || undefined };
 }
 
 export async function getSupportPricingByAdmin(canonicalId: string) {

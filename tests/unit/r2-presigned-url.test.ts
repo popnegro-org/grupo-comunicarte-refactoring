@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPresignedGetUrl } from '../../src/server/r2StorageAdapter';
+import { createPresignedGetUrl, isSafeSupportMediaKey } from '../../src/server/r2StorageAdapter';
 
 const config = {
   endpoint: 'https://account-id.r2.cloudflarestorage.com',
@@ -26,4 +26,11 @@ test('R2 GET URL is signed, scoped to one object and short-lived', () => {
 test('R2 GET URL rejects expiration outside the 10-minute credential window', () => {
   assert.throws(() => createPresignedGetUrl({ ...config, expiresInSeconds: 601 }), /entre 1 y 600/);
   assert.throws(() => createPresignedGetUrl({ ...config, expiresInSeconds: 0 }), /entre 1 y 600/);
+});
+
+test('public media keys are confined to their canonical support folder', () => {
+  assert.equal(isSafeSupportMediaKey('mza-01', 'soporte/mza-01/cover/image.png'), true);
+  assert.equal(isSafeSupportMediaKey('mza-01', 'soporte/other/cover/image.png'), false);
+  assert.equal(isSafeSupportMediaKey('mza-01', 'soporte/mza-01/../private/image.png'), false);
+  assert.equal(isSafeSupportMediaKey('mza-01', 'soporte/mza-01/cover\\private.png'), false);
 });

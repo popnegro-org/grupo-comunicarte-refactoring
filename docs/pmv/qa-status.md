@@ -1,13 +1,14 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**Base de esta iteración:** `b173ba6a0ef09179faa142cd3dfe2480dbc58421`; cambios R2 aún sin publicar al momento de esta nota.
+**HEAD local:** `78255994cd0fa7454f2f6cf8a8527d4544159cb5` (pendiente de publicar al actualizar esta nota).
+**Último SHA desplegado:** `fdb2544c8beca5b4ffc6520a058ee2877a812440`.
 **Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app)
 **Vercel:** `dpl_FWRwNnzm28wWdP8e1EUMtJETA3Lr`
 **Última verificación automatizada:** 2026-11-02 08:40 UTC
 **Main / Production:** sin cambios.
 
-## Validación del candidato actual (`b4c8dc7`)
+## Validación de referencia (`b4c8dc7`, histórica)
 
 - CI Candidate: [PASS](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41414525561).
 - Visual QA: [PASS](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41414525581).
@@ -112,4 +113,5 @@ HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se de
 - Responsable autorizó el acceso QA administrativo, definió R2 como privado y autorizó abrir PR.
 - PR Draft #90: https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90. Base `main`; no mergeado.
 - El primer intento de acceso al Preview con share link fue rechazado por Vercel (401); la QA administrativa real continúa bloqueada.
-- En esta iteración: `npm run lint` PASS, `npm run test:unit` PASS (44/44), `npm run build` PASS. Visual QA local: 22 passed, 2 skipped y 6 fallos por snapshots de referencia ausentes en el checkout local; no se regeneraron snapshots. El primer intento con 10 workers colapsó por límite de recursos del navegador y no se toma como evidencia funcional.
+- Commit `fdb2544`: CI y CI Candidate PASS; Vercel Preview READY (`dpl_851DnPnBUyMoiQGvfCjMKqUwmse7`). Visual QA CI: 27 passed, 2 skipped, 1 failed: snapshot `inventory-map-responsive.png` en Chromium mobile, altura observada 561 px frente a 565 px del baseline (diff 8%). No se regeneró el snapshot.
+- Iteración local posterior `7825599`: `npm run lint` PASS; `npm run test:unit` PASS (45/45); `npm run build` PASS; `git diff --check` PASS. Añadido filtro de soporte activo y validación de prefijo/ruta del storage key antes de firmar GET. Este SHA aún requiere publicación y CI/Preview propios.

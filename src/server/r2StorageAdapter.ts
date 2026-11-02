@@ -27,6 +27,10 @@ function requiredEnv(name: string): string {
 function sha256(value: string | Buffer): string { return crypto.createHash('sha256').update(value).digest('hex'); }
 function hmac(key: Buffer | string, value: string): Buffer { return crypto.createHmac('sha256', key).update(value).digest(); }
 function encodePath(key: string): string { return key.split('/').map((part) => encodeURIComponent(part)).join('/'); }
+export function isSafeSupportMediaKey(canonicalId: string, key: string): boolean {
+  if (!key.startsWith(`soporte/${canonicalId}/`)) return false;
+  return key.split('/').every((segment) => Boolean(segment) && segment !== '.' && segment !== '..' && !segment.includes('\\') && !segment.includes('\0'));
+}
 
 export function createPresignedGetUrl(input: { endpoint: string; bucket: string; accessKey: string; secretKey: string; key: string; expiresInSeconds?: number; now?: Date }): string {
   const expiresInSeconds = input.expiresInSeconds ?? 300;
