@@ -23,14 +23,14 @@ Evidencia CI del HEAD documental `85175284` (código funcional sin cambios desde
 
 | Control | Resultado |
 |---|---|
-| CI | PASS — run [41544304488](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409170) |
-| CI Candidate | PASS — run [41544304550](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409083) |
+| CI | PASS — run [41544304488](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41544304488) |
+| CI Candidate | PASS — run [41544304550](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41544304550) |
 | TypeScript | PASS — `tsc --noEmit` |
 | Unit tests | PASS — 45/45 |
 | Build | PASS |
 | Auditoría de dependencias de producción | PASS — 0 vulnerabilidades reportadas |
-| Visual QA CI | PASS — run [41544304591](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), workflow PASS |
-| Vercel Preview | READY — deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, HEAD `85175284` |
+| Visual QA CI | PASS — run [41544304591](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41544304591), workflow PASS |
+| Vercel Preview | READY — deployment `dpl_HASwcLzczHChpKS4PeEQBspec5oY`, HEAD `85175284` |
 
 Repetición local en caja efímera sobre el mismo código funcional; la validación CI más reciente corresponde al HEAD documental `85175284`:
 - `npm ci`: PASS, 0 vulnerabilidades reportadas.
