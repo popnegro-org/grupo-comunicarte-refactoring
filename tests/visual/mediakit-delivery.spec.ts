@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import JSZip from 'jszip';
 
 test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', async ({ page }) => {
   let requestStatus = 'pending';
@@ -286,13 +286,10 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
   await page.getByRole('button', { name: 'PPT', exact: true }).click();
   const pptDownload = await pptDownloadPromise;
   const pptPath = (await pptDownload.path())!;
-  const pptSlides = [1, 2, 3].map((slide) => {
-    try {
-      return execFileSync('unzip', ['-p', pptPath, `ppt/slides/slide${slide}.xml`], { encoding: 'utf8' });
-    } catch {
-      return '';
-    }
-  }).join(' ');
+  const pptArchive = await JSZip.loadAsync(await readFile(pptPath));
+  const pptSlideFiles = Object.entries(pptArchive.files)
+    .filter(([path, file]) => /^ppt\/slides\/slide\d+\.xml$/.test(path) && !file.dir);
+  const pptSlides = (await Promise.all(pptSlideFiles.map(([, file]) => file.async('string')))).join(' ');
   expect(pptSlides).toContain('Inversión sujeta a cotización');
   expect(pptSlides).not.toContain('99999');
 });
