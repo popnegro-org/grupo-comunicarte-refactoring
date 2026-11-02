@@ -1,10 +1,10 @@
 # PMV — cierre consolidado
 
 **Rama candidata:** `pmv-validation-candidate`  
-**HEAD candidato verificado:** `c2920018dfb17fe8aa4a208e414f5d30d7e30688`  
-**SHA funcional base:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6` (los commits posteriores solo actualizaron documentación).  
+**SHA funcional validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6` (código funcional sin cambios en los commits documentales posteriores).  
+**Último HEAD documental verificado:** `8517528479664aa13443a79972303c0cc6219b0c`.  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
-**Preview QA verificado:** [deployment aislado](https://grupo-comunicarte-refactoring-7wy8q0tr5-popnegros-projects.vercel.app) — `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, READY, HEAD `c2920018dfb17fe8aa4a208e414f5d30d7e30688`.  
+**Preview QA verificado:** [deployment aislado](https://grupo-comunicarte-refactoring-p5eqm30d1-popnegros-projects.vercel.app) — `dpl_HASwcLzczHChpKS4PeEQBspec5oY`, READY, HEAD documental `85175284`.  
 **Main / Production / Neon Production:** sin cambios.
 
 ## Decisión de alcance
@@ -19,20 +19,20 @@ No se agregan funcionalidades posteriores al PMV (SEO/GEO, nuevos módulos o int
 
 ## 1. Integración y calidad automática — PASS
 
-Evidencia CI del HEAD candidato `c2920018` (código funcional sin cambios desde `3ec2e407`):
+Evidencia CI del HEAD documental `85175284` (código funcional sin cambios desde `3ec2e407`):
 
 | Control | Resultado |
 |---|---|
-| CI | PASS — run [41522434155](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409170) |
-| CI Candidate | PASS — run [41522434076](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409083) |
+| CI | PASS — run [41544304488](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409170) |
+| CI Candidate | PASS — run [41544304550](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409083) |
 | TypeScript | PASS — `tsc --noEmit` |
 | Unit tests | PASS — 45/45 |
 | Build | PASS |
 | Auditoría de dependencias de producción | PASS — 0 vulnerabilidades reportadas |
-| Visual QA CI | PASS — run [41522434073](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), workflow PASS |
-| Vercel Preview | READY — deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, HEAD `c2920018` |
+| Visual QA CI | PASS — run [41544304591](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), workflow PASS |
+| Vercel Preview | READY — deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj`, HEAD `85175284` |
 
-Repetición local en caja efímera sobre el HEAD `c2920018` (cambios de documentación respecto del código funcional):
+Repetición local en caja efímera sobre el mismo código funcional; la validación CI más reciente corresponde al HEAD documental `85175284`:
 - `npm ci`: PASS, 0 vulnerabilidades reportadas.
 - `npm run lint`: PASS (el script ejecuta TypeScript, no ESLint).
 - `npm run test:unit`: PASS, 45/45.
@@ -46,7 +46,7 @@ La repetición local de Playwright no puede certificar regresión visual: el che
 
 ### Preview público y API — PASS
 
-Verificado nuevamente por HTTP en el deployment `dpl_DKVXEWjpW1Sf1d9ovJvHC8AsFNFj` (HEAD `c2920018`):
+Verificado nuevamente por HTTP en el deployment `dpl_HASwcLzczHChpKS4PeEQBspec5oY` (HEAD documental `85175284`; código funcional sin cambios):
 - `GET /`, `/inventario` y `/contacto`: HTTP 200 (smoke HTTP; no se declara una nueva comprobación visual de navegador en esta pasada).
 - `GET /api/health`: HTTP 200, `database=connected`.
 - `GET /api/supports`: HTTP 200, 28 soportes.
