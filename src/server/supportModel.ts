@@ -244,7 +244,9 @@ function mapMediaRows(rows: SupportMediaRow[]): SupportMediaItem[] {
     .map((row) => ({
       id: row.id,
       media_type: row.mediaType as SupportMediaType,
-      url: row.url,
+      url: typeof (row.metadata as Record<string, unknown> | null)?.storage_key === 'string'
+        ? `/api/media/${row.id}`
+        : row.url,
       title: row.title || undefined,
       alt: row.alt || undefined,
       mime_type: row.mimeType || undefined,

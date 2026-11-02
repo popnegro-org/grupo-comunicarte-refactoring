@@ -24,7 +24,7 @@ import {
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
 import { isSafeSupportMediaKey } from './r2StorageAdapter.ts';
 import { db, pool, isDatabaseConfigured } from '../db/index.ts';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -235,7 +235,7 @@ export async function getPublicSupportMediaAsset(mediaId: number) {
   const [result] = await db.select({ media: supportMedia, support: supports })
     .from(supportMedia)
     .innerJoin(supports, eq(supportMedia.supportCanonicalId, supports.canonicalId))
-    .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true)))
+    .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true), isNotNull(supports.tenantId)))
     .limit(1);
   if (!result) return null;
   const storageKey = (result.media.metadata as Record<string, unknown> | null)?.storage_key;
