@@ -2,9 +2,8 @@
 
 **Rama candidata:** `pmv-validation-candidate`  
 **SHA de código validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6`  
-**Último commit documental:** `1a464f3088e05c6bb0eb555a6413942e601ecc9e`  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
-**Preview QA actual:** [deployment aislado](https://grupo-comunicarte-refactoring-d1xfuujv3-popnegros-projects.vercel.app) — `dpl_AFgKNGDWzr4TpKDBDmve5e4GyRo1`, READY, branch/SHA coincidentes.  
+**Preview QA actual:** [deployment aislado](https://grupo-comunicarte-refactoring-d1xfuujv3-popnegros-projects.vercel.app) — `dpl_AFgKNGDWzr4TpKDBDmve5e4GyRo1`, READY, SHA de código coincidente.  
 **Main / Production / Neon Production:** sin cambios.
 
 ## Decisión de alcance
