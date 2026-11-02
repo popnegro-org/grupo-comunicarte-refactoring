@@ -36,7 +36,7 @@ Mapeo:
 - Clasificación de solicitudes mixtas conciliadas globales y homogéneas tenant-scoped; las solicitudes mixtas con ítems pendientes permanecen sin scope.
 - Catálogo público devuelve 28 soportes asignados; `mza-trad-16` (activo sin evidencia) responde 404 en detalle y no puede generar solicitud pública.
 - Solicitudes nuevas bloquean ownership pendiente en la transacción y guardan `tenant_id` en cada ítem.
-- Media Kits guardan tenant por cabecera cuando son mono-tenant y por línea cuando son mixtos; validación bloquea soportes pendientes y exige duración estándar para estado listo/enviado. Migración `mediakit_items.tenant_id` aplicada en Preview con 0 filas existentes.
+- Media Kits guardan tenant por cabecera cuando son mono-tenant y por línea cuando son mixtos; validación bloquea soportes pendientes y exige duración estándar para estado listo/enviado. La transición a listo/enviado revalida soportes, disponibilidad y consistencia tenant de cabecera/líneas dentro de una transacción con orden de locks consistente. Migración `mediakit_items.tenant_id` aplicada en Preview con 0 filas existentes.
 - Los constructores limitan duraciones a 7, 15, 21 días y mensual; metadatos legacy no estándar quedan sin seleccionar y requieren revisión.
 
 ## Bloqueantes P0/P1 pendientes
@@ -44,8 +44,8 @@ Mapeo:
 La idempotencia de solicitudes ya está implementada y verificada con dos POST concurrentes (201 + 200 duplicate), una cabecera y un ítem; los datos de prueba fueron eliminados.
 1. Pruebas negativas de tenant spoofing, IDOR y acceso no autenticado a endpoints admin.
 2. QA funcional autenticada de Media Kit: persistencia `tenant_id` en cabecera/líneas y selección multi-tenant.
-3. Confirmar que solicitudes con ítems pendientes no puedan cotizarse, exportarse ni marcarse entregadas (UI + API).
-4. Pruebas de privacidad de pricing en API, PDF, PPT y rutas de recuperación.
+3. Confirmar que solicitudes con ítems pendientes no puedan cotizarse ni exportarse; el cambio de estado a cotizada/enviada/cerrada ahora revalida ownership bajo bloqueo transaccional y responde 409 cuando hay ítems pendientes.
+4. Pruebas de privacidad de pricing en API y rutas de recuperación; PDF y PPT ya tienen regresión automatizada que confirma ausencia de tarifas base sin monto global aprobado.
 
 ## Condición de desbloqueo
 Los 28 soportes con correspondencia inequívoca ya están conciliados. Los 18 sin fuente (17 inactivos y 1 activo) permanecen `tenant_id = NULL`, excluidos del catálogo público y de nuevas solicitudes. No se debe inventar ownership. El administrador es global en esta versión; RLS se difiere porque el rol runtime Preview tiene BYPASSRLS y no existen identidades tenant-scoped.

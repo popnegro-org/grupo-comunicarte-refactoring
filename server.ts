@@ -427,7 +427,7 @@ export async function createApp() {
     } catch (err: any) {
       console.error(`Error updating request ${req.params.id}:`, err);
       const msg = err.message || '';
-      const statusCode = msg.includes('no encontrada') ? 404 : msg.includes('inválido') ? 400 : 500;
+      const statusCode = msg.includes('no encontrada') ? 404 : msg.includes('inválido') ? 400 : msg.includes('no puede avanzar comercialmente') ? 409 : 500;
       res.status(statusCode).json({ status: 'error', message: msg || 'Error al actualizar la solicitud.' });
     }
   });

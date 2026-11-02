@@ -354,58 +354,124 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
     throw new Error('Estado de Media Kit inválido.');
   }
-  const existing = await pool.query(
-    'SELECT metadata, support_ids FROM mediakits WHERE kit_id = $1 LIMIT 1',
-    [kitId],
-  );
-  if (!existing.rows[0]) return null;
-  if (status === 'ready' || status === 'sent') {
-    const proposalPeriod = existing.rows[0].metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
-    if (!isProposalDurationValid({
-      duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
-      duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
-    })) {
-      throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
-    }
-    const ownership = await pool.query(
-      `SELECT 1
-         FROM jsonb_array_elements_text($1::jsonb) AS item(support_id)
-         LEFT JOIN supports s ON s.canonical_id = item.support_id
-        WHERE s.canonical_id IS NULL OR s.tenant_id IS NULL
-        LIMIT 1`,
-      [JSON.stringify(existing.rows[0].support_ids || [])],
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Keep the same lock order as saveMediaKit (supports, then kit) to avoid
+    // deadlocks when a save races with approval or delivery.
+    const snapshot = await client.query(
+      'SELECT support_ids FROM mediakits WHERE kit_id = $1 LIMIT 1',
+      [kitId],
     );
-    if ((existing.rows[0].support_ids || []).length === 0 || ownership.rows.length > 0) {
-      throw new Error('El Media Kit no puede marcarse como listo o enviado: requiere soportes con ownership conciliado.');
+    if (!snapshot.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
     }
+    const snapshotSupportIds = normalizeSupportIds(snapshot.rows[0].support_ids);
+    let lockedSupports: any[] = [];
+    if ((status === 'ready' || status === 'sent') && snapshotSupportIds.length > 0) {
+      const supportsResult = await client.query(
+        `SELECT canonical_id, tenant_id, active, disponibilidad
+           FROM supports
+          WHERE canonical_id = ANY($1::text[])
+          FOR UPDATE`,
+        [snapshotSupportIds],
+      );
+      lockedSupports = supportsResult.rows;
+    }
+
+    const existing = await client.query(
+      `SELECT kit_id, tenant_id, source_request_id, metadata, support_ids
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE`,
+      [kitId],
+    );
+    if (!existing.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const current = existing.rows[0];
+    if (status === 'ready' || status === 'sent') {
+      const proposalPeriod = current.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
+      if (!isProposalDurationValid({
+        duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
+        duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
+      })) {
+        throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
+      }
+
+      const supportIds = normalizeSupportIds(current.support_ids);
+      if (supportIds.length === 0) {
+        throw new Error('El Media Kit no puede marcarse como listo o enviado: requiere al menos un soporte conciliado.');
+      }
+      if (supportIds.length !== snapshotSupportIds.length || supportIds.some((id, index) => id !== snapshotSupportIds[index])) {
+        throw new Error('El Media Kit cambió mientras se validaba. Actualizá e intentá nuevamente.');
+      }
+      if (lockedSupports.length !== supportIds.length) {
+        throw new Error('El Media Kit contiene soportes que ya no existen en el inventario.');
+      }
+      const invalid = lockedSupports.find((support) =>
+        !support.tenant_id || support.active !== true || support.disponibilidad !== 'disponible'
+      );
+      if (invalid) {
+        throw new Error(`El soporte '${invalid.canonical_id}' está pendiente de ownership o dejó de estar disponible.`);
+      }
+
+      const itemRows = await client.query(
+        `SELECT support_id, tenant_id
+           FROM mediakit_items
+          WHERE kit_id = $1`,
+        [kitId],
+      );
+      const itemTenantBySupport = new Map(itemRows.rows.map((item) => [String(item.support_id), item.tenant_id as string | null]));
+      if (itemRows.rows.length !== supportIds.length || lockedSupports.some((support) =>
+        itemTenantBySupport.get(String(support.canonical_id)) !== support.tenant_id
+      )) {
+        throw new Error('El ownership de las líneas del Media Kit no coincide con el inventario actual. Guardá nuevamente el Media Kit antes de aprobarlo.');
+      }
+
+      const derivedTenantId = resolveMediaKitTenantId(lockedSupports.map((support) => String(support.tenant_id)));
+      if ((current.tenant_id ?? null) !== derivedTenantId) {
+        throw new Error('El ownership de la cabecera del Media Kit no coincide con sus soportes. Guardá nuevamente el Media Kit antes de aprobarlo.');
+      }
+    }
+
+    const result = await client.query(
+      `UPDATE mediakits SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
+       RETURNING kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+                 support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
+                 created_at, updated_at`,
+      [kitId, status],
+    );
+    await client.query('COMMIT');
+    const row = result.rows[0];
+    return {
+      kitId: row.kit_id,
+      tenantId: row.tenant_id ?? null,
+      sourceRequestId: row.source_request_id,
+      status: normalizeStatus(row.status),
+      clientName: row.client_name,
+      clientEmail: row.client_email,
+      clientCompany: row.client_company,
+      clientPhone: row.client_phone,
+      supportIds: row.support_ids || [],
+      approvedPrices: row.approved_prices || {},
+      totalAmount: row.total_amount,
+      currency: row.currency,
+      notes: row.notes,
+      metadata: row.metadata || {},
+      pdfUrl: row.pdf_url,
+      pptUrl: row.ppt_url,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-  const result = await pool.query(
-    `UPDATE mediakits SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
-     RETURNING kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
-               support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
-               created_at, updated_at`,
-    [kitId, status]
-  );
-  if (!result.rows[0]) return null;
-  const row = result.rows[0];
-  return {
-    kitId: row.kit_id,
-    tenantId: row.tenant_id ?? null,
-    sourceRequestId: row.source_request_id,
-    status: normalizeStatus(row.status),
-    clientName: row.client_name,
-    clientEmail: row.client_email,
-    clientCompany: row.client_company,
-    clientPhone: row.client_phone,
-    supportIds: row.support_ids || [],
-    approvedPrices: row.approved_prices || {},
-    totalAmount: row.total_amount,
-    currency: row.currency,
-    notes: row.notes,
-    metadata: row.metadata || {},
-    pdfUrl: row.pdf_url,
-    pptUrl: row.ppt_url,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
-  };
 }

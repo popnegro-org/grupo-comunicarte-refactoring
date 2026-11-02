@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', async ({ page }) => {
   let requestStatus = 'pending';
@@ -280,6 +281,20 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
   expect(savedPayload?.metadata?.proposalAmount?.amount).toBeNull();
   expect(pdfText).toContain('sujeta a');
   expect(pdfText).not.toContain('99999');
+
+  const pptDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PPT', exact: true }).click();
+  const pptDownload = await pptDownloadPromise;
+  const pptPath = (await pptDownload.path())!;
+  const pptSlides = [1, 2, 3].map((slide) => {
+    try {
+      return execFileSync('unzip', ['-p', pptPath, `ppt/slides/slide${slide}.xml`], { encoding: 'utf8' });
+    } catch {
+      return '';
+    }
+  }).join(' ');
+  expect(pptSlides).toContain('Inversión sujeta a cotización');
+  expect(pptSlides).not.toContain('99999');
 });
 
 test('solicitud con ownership pendiente queda en cuarentena comercial', async ({ page }) => {

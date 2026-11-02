@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { mediakitRequests, mediakitRequestItems, supports, supportPricing } from '../db/schema.ts';
+import { supports, supportPricing } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
   createSupportMediaRecord,
@@ -22,7 +22,7 @@ import {
   validateAvailability,
 } from './supportModel.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
-import { db } from '../db/index.ts';
+import { db, pool, isDatabaseConfigured } from '../db/index.ts';
 import { and, count, eq } from 'drizzle-orm';
 
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -271,26 +271,46 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
   if (!validStatuses.includes(status)) {
     throw new Error(`Estado comercial inválido: ${status}`);
   }
+  if (!isDatabaseConfigured) throw new Error('La persistencia de solicitudes no está disponible.');
 
-  if (['quoted', 'enviado', 'closed', 'cerrado'].includes(status)) {
-    const items = await db
-      .select({ tenantId: mediakitRequestItems.tenantId })
-      .from(mediakitRequestItems)
-      .where(eq(mediakitRequestItems.requestId, requestId));
-    if (items.length === 0 || items.some((item) => !item.tenantId)) {
-      throw new Error('La solicitud no puede avanzar comercialmente: contiene soportes sin ownership conciliado.');
+  const requiresOwnership = ['quoted', 'enviado', 'closed', 'cerrado'].includes(status);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const request = await client.query(
+      'SELECT request_id FROM mediakit_requests WHERE request_id = $1 FOR UPDATE',
+      [requestId],
+    );
+    if (request.rows.length === 0) {
+      throw new Error(`Solicitud con ID '${requestId}' no encontrada.`);
     }
+
+    if (requiresOwnership) {
+      const items = await client.query(
+        `SELECT tenant_id
+           FROM mediakit_request_items
+          WHERE request_id = $1
+          FOR UPDATE`,
+        [requestId],
+      );
+      if (items.rows.length === 0 || items.rows.some((item) => !String(item.tenant_id || '').trim())) {
+        throw new Error('La solicitud no puede avanzar comercialmente: contiene soportes sin ownership conciliado.');
+      }
+    }
+
+    const updated = await client.query(
+      `UPDATE mediakit_requests
+          SET status = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE request_id = $1
+        RETURNING *`,
+      [requestId, status],
+    );
+    await client.query('COMMIT');
+    return updated.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const result = await db
-    .update(mediakitRequests)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(mediakitRequests.requestId, requestId))
-    .returning();
-
-  if (result.length === 0) {
-    throw new Error(`Solicitud con ID '${requestId}' no encontrada.`);
-  }
-
-  return result[0];
 }
