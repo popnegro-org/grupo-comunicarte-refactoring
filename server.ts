@@ -8,6 +8,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
+import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin } from './src/server/adminRequestSecurity.ts';
 import {
   authenticateAdmin,
   verifyAdminToken,
@@ -33,29 +34,7 @@ function clientIp(req: express.Request): string {
   return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
-const ADMIN_COOKIE = 'gc_admin_token';
 const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60;
-
-function parseCookies(header?: string): Record<string, string> {
-  if (!header) return {};
-  return header.split(';').reduce<Record<string, string>>((acc, part) => {
-    const idx = part.indexOf('=');
-    if (idx === -1) return acc;
-    const key = part.slice(0, idx).trim();
-    const val = part.slice(idx + 1).trim();
-    if (key) acc[key] = decodeURIComponent(val);
-    return acc;
-  }, {});
-}
-
-function adminAuthHeader(req: { headers: Record<string, unknown> }): string | undefined {
-  const auth = req.headers.authorization;
-  if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth;
-  const cookies = parseCookies(typeof req.headers.cookie === 'string' ? req.headers.cookie : undefined);
-  const token = cookies[ADMIN_COOKIE];
-  if (token) return `Bearer ${token}`;
-  return undefined;
-}
 
 export async function createApp() {
   const app = express();
@@ -74,6 +53,10 @@ export async function createApp() {
 
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
+    if (origin && !isAllowedOrigin(origin) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return res.status(403).json({ status: 'error', message: 'Origen no permitido.' });
+    }
+
     if (origin && isAllowedOrigin(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
@@ -180,7 +163,10 @@ export async function createApp() {
   });
 
   const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const authHeader = adminAuthHeader(req);
+    if (!hasValidAdminMutationOrigin(req.headers, req.method, allowedOrigins)) {
+      return res.status(403).json({ status: 'error', message: 'Origen no permitido para modificar la sesión administrativa.' });
+    }
+    const authHeader = adminAuthHeader(req.headers);
     if (!verifyAdminToken(authHeader)) {
       return res.status(401).json({ status: 'error', message: 'No autorizado. Se requiere token de administrador válido.' });
     }
