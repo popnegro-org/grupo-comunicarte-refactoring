@@ -1,11 +1,21 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**Último SHA validado:** `633b4faa794de73f86769ba807062a85ff7c9b3a`  
-**Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-38yca9w04-popnegros-projects.vercel.app)  
-**Vercel:** `dpl_9TJa7U7UAmDUCNhXPi7uTqQQuQU3`  
-**Última verificación automatizada:** 2026-11-02 00:23 UTC  
+**Último SHA validado:** `b4c8dc77af877ceea310fb5eefe68f4125592ab9`
+**Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app)
+**Vercel:** `dpl_FWRwNnzm28wWdP8e1EUMtJETA3Lr`
+**Última verificación automatizada:** 2026-11-02 08:40 UTC
 **Main / Production:** sin cambios.
+
+## Validación del candidato actual (`b4c8dc7`)
+
+- CI Candidate: [PASS](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41414525561).
+- Visual QA: [PASS](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41414525581).
+- Vercel Preview: READY; deployment `dpl_FWRwNnzm28wWdP8e1EUMtJETA3Lr`, target Preview, sin promoción a Production.
+- Local en este SHA: `npm run lint` PASS; `npm run test:unit` PASS (42/42); `npm run build` PASS; `git diff --check` PASS.
+- Se endureció `requireAdmin`: todas las rutas `/api/admin/*` declaradas pasan por autenticación; mutaciones con cookie requieren `Origin` exacto en allowlist. Bearer explícito queda disponible para integraciones no-browser. Se agregaron tests unitarios de parsing de cookie, precedencia Bearer, CSRF por Origin y requests seguras.
+- El bootstrap API ahora responde un mensaje genérico al cliente y no devuelve hostname de DB ni el mensaje interno de excepción.
+- Las verificaciones previas de Preview documentadas más abajo pertenecen a SHA anteriores; no se presentan como smoke tests del SHA actual porque el deployment continúa protegido por Deployment Authentication.
 
 ## Verificación automatizada
 
@@ -87,6 +97,8 @@ El formulario conserva la clave entre reintentos y genera una nueva si cambia el
 3. **R2 (bloqueante confirmado por inspección de código):** `src/server/r2StorageAdapter.ts` implementa PUT/DELETE firmados y devuelve `R2_PUBLIC_URL` directo; no implementa GET firmado, expiración ni endpoint de lectura autorizada. Falta integrar y probar el flujo completo con archivo real y credenciales de Preview. No se inventó ni configuró una política de bucket público.
 4. **Accesibilidad:** completar revisión manual de teclado, foco, contraste y lectores de pantalla.
 5. **ESLint independiente:** no existe configuración; TypeScript sí pasa.
+6. **CSRF/API security:** se añadió protección por Origin para sesiones cookie y tests unitarios; falta ejecutar una batería HTTP negativa autenticada/no autenticada contra el Preview protegido. La cobertura de middleware no equivale a un pentest IDOR completo.
+7. **Acceso QA admin:** Deployment Authentication y ausencia de autorización/credenciales admin disponibles impiden ejecutar el flujo real. No se desactivó la protección ni se intentó bypass.
 
 HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se declaran integraciones del PMV base; requieren decisión/contrato y credenciales del cliente.
 
