@@ -1,26 +1,25 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**Último commit de código validado:** `2c7b3dfe9e7f0d91795ad03184b5460cd4b17a77`  
-**HEAD documental de la candidata:** `6b9248aa0a8b79f16e8481618375edc191faee5e`  
-**Preview vigente:** [Deployment READY](https://grupo-comunicarte-refactoring-lknmw4j5x-popnegros-projects.vercel.app)  
-**Vercel:** `dpl_gEMNyAGEuGZeeQu6ke8oQQmioBxg`  
-**Última verificación:** 2026-11-02  
+**Último SHA validado:** `633b4faa794de73f86769ba807062a85ff7c9b3a`  
+**Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-38yca9w04-popnegros-projects.vercel.app)  
+**Vercel:** `dpl_9TJa7U7UAmDUCNhXPi7uTqQQuQU3`  
+**Última verificación automatizada:** 2026-11-02 00:23 UTC  
 **Main / Production:** sin cambios.
 
 ## Verificación automatizada
 
 | Control | Resultado | Evidencia |
 |---|---|---|
-| TypeScript (`npm run lint`) | PASS | CI Candidate [41364709174](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709174) |
+| TypeScript (`npm run lint`) | PASS | CI Candidate [41366727378](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709174) |
 | Unit tests | PASS — 38/38 | CI Candidate |
 | Build | PASS | CI Candidate |
 | Auditoría de dependencias Production | PASS — 0 vulnerabilidades | CI Candidate |
-| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41364709120](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709120) |
+| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41366727467](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709120) |
 | Baseline visual | PASS | comparación contra baseline confiable del candidato |
 | Vercel Preview / Neon | PASS | deployment READY; `/api/health` database connected |
 
-Los dos skips corresponden a snapshots específicos de proyecto: `desktop mantiene jerarquía, estados y atributos de las tarjetas` solo corre en `chromium-desktop`; `mobile mantiene tarjetas legibles y acciones accesibles` solo corre en `chromium-mobile`. Son exclusiones por proyecto, no fallos. El run más reciente completó 28 pruebas y omitió esas 2.
+En SHA `633b4faa`, CI Candidate y Visual QA completaron con éxito; la suite visual comparó contra el baseline confiable `6b9248aa`. Los dos skips corresponden a snapshots específicos de proyecto: `desktop mantiene jerarquía, estados y atributos de las tarjetas` solo corre en `chromium-desktop`; `mobile mantiene tarjetas legibles y acciones accesibles` solo corre en `chromium-mobile`. Son exclusiones por proyecto, no fallos. El run más reciente completó 28 pruebas y omitió esas 2.
 
 `npm run lint` ejecuta `tsc --noEmit`; ESLint independiente no está configurado.
 
@@ -37,7 +36,7 @@ Fuente primaria: PDFs de `docs/inventario/source/`; matriz en [TENANT-OWNERSHIP-
 
 ## Smoke tests de Preview
 
-Verificación repetida sobre el deployment vigente (`dpl_gEMNyAGEuGZeeQu6ke8oQQmioBxg`, SHA `6b9248aa0a8b79f16e8481618375edc191faee5e`): `/api/health` respondió HTTP 200 con `database=connected`; `/api/supports` respondió HTTP 200 con 28 soportes. El DTO público inspeccionado no incluye `tenant_id` ni campos de pricing interno. Las rutas `/mediakits` y `/contacto` entregaron HTTP 200 (shell SPA).
+Último smoke funcional confirmado en el deployment anterior READY (`dpl_gEMNyAGEuGZeeQu6ke8oQQmioBxg`, SHA `6b9248aa`): `/api/health` HTTP 200 con `database=connected`; `/api/supports` HTTP 200 con 28 soportes; DTO público sin `tenant_id` ni pricing interno; `/mediakits` y `/contacto` HTTP 200. El deployment actual de SHA `633b4faa` está READY, pero la herramienta de fetch encontró protección de Deployment Authentication (401); no se pudo repetir el smoke en ese SHA. No se desactivó la protección.
 
 | Prueba | Resultado |
 |---|---|
@@ -85,7 +84,7 @@ El formulario conserva la clave entre reintentos y genera una nueva si cambia el
 
 1. **QA autenticada end-to-end:** falta validar con una sesión autorizada la creación/recuperación de Media Kit, persistencia tenant por línea, estados y exportaciones PDF/PPT. No se solicitó ni utilizó la contraseña real del administrador.
 2. **Privacidad de exportación:** verificar con sesión real que PDF/PPT/HTML/descarga no revelen costos o precios unitarios internos; solo puede incluirse el importe comercial global aprobado.
-3. **R2:** completar upload, lectura autorizada, URL firmada, expiración y recuperación con archivo real.
+3. **R2 (bloqueante confirmado por inspección de código):** `src/server/r2StorageAdapter.ts` implementa PUT/DELETE firmados y devuelve `R2_PUBLIC_URL` directo; no implementa GET firmado, expiración ni endpoint de lectura autorizada. Falta integrar y probar el flujo completo con archivo real y credenciales de Preview. No se inventó ni configuró una política de bucket público.
 4. **Accesibilidad:** completar revisión manual de teclado, foco, contraste y lectores de pantalla.
 5. **ESLint independiente:** no existe configuración; TypeScript sí pasa.
 
