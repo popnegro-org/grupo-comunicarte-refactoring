@@ -1,7 +1,7 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**Último SHA validado:** `b4c8dc77af877ceea310fb5eefe68f4125592ab9`
+**Base de esta iteración:** `b173ba6a0ef09179faa142cd3dfe2480dbc58421`; cambios R2 aún sin publicar al momento de esta nota.
 **Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app)
 **Vercel:** `dpl_FWRwNnzm28wWdP8e1EUMtJETA3Lr`
 **Última verificación automatizada:** 2026-11-02 08:40 UTC
@@ -94,14 +94,22 @@ El formulario conserva la clave entre reintentos y genera una nueva si cambia el
 
 1. **QA autenticada end-to-end:** falta validar con una sesión autorizada la creación/recuperación de Media Kit, persistencia tenant por línea, estados y exportaciones PDF/PPT. No se solicitó ni utilizó la contraseña real del administrador.
 2. **Privacidad de exportación:** verificar con sesión real que PDF/PPT/HTML/descarga no revelen costos o precios unitarios internos; solo puede incluirse el importe comercial global aprobado.
-3. **R2 (bloqueante confirmado por inspección de código):** `src/server/r2StorageAdapter.ts` implementa PUT/DELETE firmados y devuelve `R2_PUBLIC_URL` directo; no implementa GET firmado, expiración ni endpoint de lectura autorizada. Falta integrar y probar el flujo completo con archivo real y credenciales de Preview. No se inventó ni configuró una política de bucket público.
+3. **R2 (implementación en curso):** el adaptador genera GET SigV4 de hasta 10 minutos (por defecto 5), las nuevas cargas persisten `/api/media/:id` y el endpoint resuelve únicamente filas activas con `storage_key`, redirigiendo a la URL temporal. La configuración del bucket Cloudflare debe confirmarse como privada en la cuenta; no se modificaron policies ni secrets. Falta validar PUT/GET/DELETE con un archivo real y credenciales del Preview. Los recursos históricos que ya dependan de `R2_PUBLIC_URL` requieren inventario/migración controlada antes de retirar ese binding en el entorno.
 4. **Accesibilidad:** completar revisión manual de teclado, foco, contraste y lectores de pantalla.
 5. **ESLint independiente:** no existe configuración; TypeScript sí pasa.
 6. **CSRF/API security:** se añadió protección por Origin para sesiones cookie y tests unitarios; falta ejecutar una batería HTTP negativa autenticada/no autenticada contra el Preview protegido. La cobertura de middleware no equivale a un pentest IDOR completo.
-7. **Acceso QA admin:** Deployment Authentication y ausencia de autorización/credenciales admin disponibles impiden ejecutar el flujo real. No se desactivó la protección ni se intentó bypass.
+7. **Acceso QA admin:** el responsable autorizó el acceso QA. El intento de abrir el Preview protegido mediante share link fue rechazado por Vercel (401 `deployment_authentication_required`). Falta una sesión de QA administrativa válida y acceso al deployment desde una identidad Vercel autorizada; no se desactivó la protección ni se intentó bypass.
 
 HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se declaran integraciones del PMV base; requieren decisión/contrato y credenciales del cliente.
 
 ## Release gate
 
 **NO-GO para merge** mientras no se cierre la QA autenticada de Media Kit, privacidad de exportaciones y R2 con evidencia en el SHA final. No se modificó `main`, Neon Production ni se enviaron comunicaciones reales. Merge y promoción a Production siguen reservados al HUMAN GATE.
+
+
+## Decisiones y seguimiento (2026-11-02)
+
+- Responsable autorizó el acceso QA administrativo, definió R2 como privado y autorizó abrir PR.
+- PR Draft #90: https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90. Base `main`; no mergeado.
+- El primer intento de acceso al Preview con share link fue rechazado por Vercel (401); la QA administrativa real continúa bloqueada.
+- En esta iteración: `npm run lint` PASS, `npm run test:unit` PASS (44/44), `npm run build` PASS. Visual QA local: 22 passed, 2 skipped y 6 fallos por snapshots de referencia ausentes en el checkout local; no se regeneraron snapshots. El primer intento con 10 workers colapsó por límite de recursos del navegador y no se toma como evidencia funcional.

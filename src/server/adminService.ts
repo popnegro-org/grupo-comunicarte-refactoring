@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { supports, supportPricing } from '../db/schema.ts';
+import { supports, supportPricing, supportMedia } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
   createSupportMediaRecord,
@@ -227,6 +227,15 @@ export async function removeSupportMediaByAdmin(canonicalId: string, mediaId: nu
 
 export async function getSupportMediaByAdmin(canonicalId: string) {
   return listSupportMediaRecords(canonicalId);
+}
+
+export async function getPublicSupportMediaAsset(mediaId: number) {
+  if (!Number.isSafeInteger(mediaId) || mediaId <= 0) return null;
+  const [row] = await db.select().from(supportMedia).where(eq(supportMedia.id, mediaId)).limit(1);
+  if (!row || row.active !== true) return null;
+  const storageKey = (row.metadata as Record<string, unknown> | null)?.storage_key;
+  if (typeof storageKey !== 'string' || !storageKey || storageKey.includes('..')) return null;
+  return { storageKey, mimeType: row.mimeType || undefined };
 }
 
 export async function getSupportPricingByAdmin(canonicalId: string) {

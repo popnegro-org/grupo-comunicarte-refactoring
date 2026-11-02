@@ -11,6 +11,7 @@ import { handleMediaUpload } from './src/server/multimediaUpload.ts';
 import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin } from './src/server/adminRequestSecurity.ts';
 import {
   authenticateAdmin,
+  getPublicSupportMediaAsset,
   verifyAdminToken,
   getAdminStats,
   updateRequestStatusByAdmin,
@@ -82,6 +83,23 @@ export async function createApp() {
   } catch (err) {
     console.warn('Database initialization warning on startup:', err);
   }
+
+  // R2 remains private; public catalogue media is delivered through short-lived signed GET URLs.
+  app.get('/api/media/:mediaId', async (req, res) => {
+    try {
+      const mediaId = Number(req.params.mediaId);
+      const asset = await getPublicSupportMediaAsset(mediaId);
+      if (!asset) return res.status(404).json({ status: 'error', message: 'Recurso multimedia no encontrado.' });
+      const signedUrl = (await import('./src/server/r2StorageAdapter.ts')).getStorageAdapter().getAssetUrl(asset.storageKey, 300);
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      if (asset.mimeType) res.setHeader('Content-Type', asset.mimeType);
+      return res.redirect(302, signedUrl);
+    } catch (error) {
+      console.error('Error resolving private media asset:', error);
+      return res.status(404).json({ status: 'error', message: 'Recurso multimedia no disponible.' });
+    }
+  });
 
   app.get('/api/health', async (_req, res) => {
     try {

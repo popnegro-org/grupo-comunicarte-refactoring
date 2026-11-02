@@ -708,7 +708,7 @@ async function syncSupportMedia(canonicalId: string, payload: SupportWritePayloa
       const storageKey = (row.metadata as any)?.storage_key;
       if (storageKey) {
         try {
-          const isR2Configured = process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_PUBLIC_URL;
+          const isR2Configured = process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY;
           if (isR2Configured) {
             const { getStorageAdapter } = await import('./r2StorageAdapter.ts');
             await getStorageAdapter().delete(storageKey);
