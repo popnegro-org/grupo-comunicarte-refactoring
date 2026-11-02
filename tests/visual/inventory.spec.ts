@@ -62,10 +62,9 @@ test.describe('Inventario · regresión visual', () => {
           height: 36px !important;
           min-height: 36px !important;
         }
-        .leaflet-map-pane {
-          translate: 0 2px !important;
-        }
       ` });
+      // Recalculate Leaflet's viewport after normalizing the map container height.
+      await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     }
     await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
     await expect(map).toHaveScreenshot('inventory-map-responsive.png', { stylePath: 'tests/visual/screenshot.css' });
