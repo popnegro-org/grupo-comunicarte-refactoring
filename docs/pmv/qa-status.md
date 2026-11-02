@@ -2,23 +2,25 @@
 
 **Branch:** `pmv-validation-candidate`  
 **Último commit de código validado:** `2c7b3dfe9e7f0d91795ad03184b5460cd4b17a77`  
-**Preview:** [Deployment READY](https://grupo-comunicarte-refactoring-gc2mo97sk-popnegros-projects.vercel.app)  
-**Vercel:** `dpl_3CdMyV8AiiNZAkRTiEFLQx9wAZyd`  
+**HEAD documental de la candidata:** `6b9248aa0a8b79f16e8481618375edc191faee5e`  
+**Preview vigente:** [Deployment READY](https://grupo-comunicarte-refactoring-lknmw4j5x-popnegros-projects.vercel.app)  
+**Vercel:** `dpl_gEMNyAGEuGZeeQu6ke8oQQmioBxg`  
+**Última verificación:** 2026-11-02  
 **Main / Production:** sin cambios.
 
 ## Verificación automatizada
 
 | Control | Resultado | Evidencia |
 |---|---|---|
-| TypeScript (`npm run lint`) | PASS | CI Candidate [41364467867](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364467867) |
+| TypeScript (`npm run lint`) | PASS | CI Candidate [41364709174](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709174) |
 | Unit tests | PASS — 38/38 | CI Candidate |
 | Build | PASS | CI Candidate |
 | Auditoría de dependencias Production | PASS — 0 vulnerabilidades | CI Candidate |
-| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41364467858](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364467858) |
+| Playwright / Visual QA | PASS — 28 passed, 2 skipped | Visual QA [41364709120](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41364709120) |
 | Baseline visual | PASS | comparación contra baseline confiable del candidato |
 | Vercel Preview / Neon | PASS | deployment READY; `/api/health` database connected |
 
-Los dos skips son intencionales: los snapshots de inventario desktop y mobile se ejecutan solo en su proyecto correspondiente. No se contabilizan como tests fallidos.
+Los dos skips corresponden a snapshots específicos de proyecto: `desktop mantiene jerarquía, estados y atributos de las tarjetas` solo corre en `chromium-desktop`; `mobile mantiene tarjetas legibles y acciones accesibles` solo corre en `chromium-mobile`. Son exclusiones por proyecto, no fallos. El run más reciente completó 28 pruebas y omitió esas 2.
 
 `npm run lint` ejecuta `tsc --noEmit`; ESLint independiente no está configurado.
 
@@ -34,6 +36,8 @@ Fuente primaria: PDFs de `docs/inventario/source/`; matriz en [TENANT-OWNERSHIP-
 - Neon Preview: `admin_login_attempts` existe con PK `ip_hash`, CHECK `attempt_count >= 1` e índice `updated_at`.
 
 ## Smoke tests de Preview
+
+Verificación repetida sobre el deployment vigente (`dpl_gEMNyAGEuGZeeQu6ke8oQQmioBxg`, SHA `6b9248aa0a8b79f16e8481618375edc191faee5e`): `/api/health` respondió HTTP 200 con `database=connected`; `/api/supports` respondió HTTP 200 con 28 soportes. El DTO público inspeccionado no incluye `tenant_id` ni campos de pricing interno. Las rutas `/mediakits` y `/contacto` entregaron HTTP 200 (shell SPA).
 
 | Prueba | Resultado |
 |---|---|
