@@ -1,10 +1,11 @@
 # PMV candidate — estado de QA y bloqueantes
 
 **Branch:** `pmv-validation-candidate`  
-**HEAD publicado:** `a48115cd4dd330238aff1eb04279ec231b066a1b`.
-**Preview:** READY; deployment `dpl_FuyARXiDUmWTzpKsJVp4164aETRL`.
-**Preview URL:** https://grupo-comunicarte-refactoring-q4ykbwcec-popnegros-projects.vercel.app
-**Verificación:** 2026-11-02 09:53 UTC
+**HEAD publicado:** `36ac5655cd3307f7c1ac1f678fc5f20ad7167002` (docs-only sobre el código validado).
+**SHA de código validado:** `a48115cd4dd330238aff1eb04279ec231b066a1b`.
+**Preview:** READY; deployment `dpl_2vyXK1M5r8YAFg3dXjiET7gSQPAv`.
+**Preview URL:** https://grupo-comunicarte-refactoring-fa41t3knh-popnegros-projects.vercel.app
+**Verificación:** 2026-11-02 09:56 UTC
 **Main / Production:** sin cambios.
 
 ## Validación de referencia (`b4c8dc7`, histórica)
@@ -110,7 +111,7 @@ HubSpot, Resend/email transaccional, WhatsApp API y Google Drive/Slides no se de
 
 - Responsable autorizó acceso QA administrativo, definió R2 como privado y autorizó abrir PR.
 - PR Draft #90: https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90. Base `main`; no mergeado.
-- SHA `a48115c`: CI PASS ([run 729](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016133)); CI Candidate PASS ([run 725](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016060)); Visual QA PASS, 28 passed / 2 skipped ([run 434](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016052)).
+- SHA `a48115c`: CI PASS ([run 729](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016133)); CI Candidate PASS ([run 725](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016060)); Visual QA PASS, 28 passed / 2 skipped ([run 434](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424016052) y repetida en docs HEAD [run 436](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41424515854)).
 - Validación local del mismo contenido: `npm run lint` PASS (`tsc --noEmit`), `npm run test:unit` PASS (45/45), `npm run build` PASS y `git diff --check` PASS. ESLint independiente sigue sin configurar.
 - Vercel Preview READY (`dpl_FuyARXiDUmWTzpKsJVp4164aETRL`); DB health conectado. Catálogo público: 28 soportes, 34 medios, 33 URLs internas `/api/media/:id`, 0 `storage_key` filtradas y 0 URLs directas `r2.dev` / `r2.cloudflarestorage.com`.
 - QA HTTP: `/api/admin/stats` sin sesión 401; origen no permitido 403; cookie sin Origin 403; cookie inválida con Origin permitido 401; medio inexistente 404; medio activo 302 a URL GET SigV4.
