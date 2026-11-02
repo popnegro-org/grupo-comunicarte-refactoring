@@ -1,10 +1,10 @@
 # PMV — cierre consolidado
 
 **Rama candidata:** `pmv-validation-candidate`  
-**HEAD verificado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6`  
+**HEAD documental:** `b3a9963375312709aa53d8b313ee3228e2707270`  
+**SHA de código validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6`  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
-**Preview:** [abrir entorno candidato](https://grupo-comunicarte-refactoring-mje3iogvr-popnegros-projects.vercel.app)  
-**Deployment:** `dpl_5VDnv4mUmu3A82o7T3ANdRNnTLL8` — READY, rama candidata y SHA coincidentes.  
+**Preview de código:** [abrir entorno candidato](https://grupo-comunicarte-refactoring-mje3iogvr-popnegros-projects.vercel.app)  
 **Main / Production / Neon Production:** sin cambios.
 
 ## Decisión de alcance
@@ -19,7 +19,7 @@ No se agregan funcionalidades posteriores al PMV (SEO/GEO, nuevos módulos o int
 
 ## 1. Integración y calidad automática — PASS
 
-Evidencia del HEAD `3ec2e407`:
+Evidencia del SHA de código `3ec2e407`:
 
 | Control | Resultado |
 |---|---|
@@ -30,22 +30,22 @@ Evidencia del HEAD `3ec2e407`:
 | Build | PASS |
 | Auditoría de dependencias de producción | PASS — 0 vulnerabilidades reportadas |
 | Visual QA CI | PASS — run [41475409136](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41475409136), 28 aprobadas / 2 omitidas |
-| Vercel Preview | READY — deployment del mismo SHA |
+| Vercel Preview | READY — deployment del mismo SHA de código |
 
-Repetición local en caja efímera sobre el mismo HEAD:
+Repetición local en caja efímera sobre el mismo SHA:
 - `npm ci`: PASS, 0 vulnerabilidades reportadas.
 - `npm run lint`: PASS (el script ejecuta TypeScript, no ESLint).
 - `npm run test:unit`: PASS, 45/45.
 - `npm run build`: PASS.
 - `git diff --check`: PASS; árbol de trabajo limpio.
 
-La repetición local de Playwright no puede certificar regresión visual: el checkout no contiene snapshots de referencia. El intento local produjo 22 pruebas funcionales aprobadas y 6 fallos de comparación exclusivamente por snapshots ausentes; se descartaron los snapshots generados automáticamente. La evidencia visual válida para el candidato es el workflow CI PASS con baseline confiable; no se creó ni aceptó un baseline nuevo.
+La repetición local de Playwright no puede certificar regresión visual: el checkout no contiene snapshots de referencia. El intento local produjo 22 pruebas aprobadas y 6 fallos de comparación exclusivamente por snapshots ausentes; se descartaron los snapshots generados automáticamente. La evidencia visual válida para el candidato es el workflow CI PASS con baseline confiable; no se creó ni aceptó un baseline nuevo.
 
 ## 2. Validación funcional y seguridad — PARCIAL
 
 ### Preview público y API — PASS
 
-Verificado en el deployment actual:
+Verificado en el deployment del SHA `3ec2e407`:
 - Home, inventario y contacto cargan en navegador.
 - `GET /api/health`: HTTP 200, `database=connected`.
 - `GET /api/supports`: HTTP 200, 28 soportes.
