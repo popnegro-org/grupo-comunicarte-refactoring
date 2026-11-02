@@ -69,7 +69,7 @@ No se insertaron ni eliminaron registros. Las consultas fueron de solo lectura.
 
 ### Credenciales QA y límite de automatización
 
-Se rotó `ADMIN_USER` y `ADMIN_PASSWORD` como variables sensibles, exclusivamente para Preview y la rama `pmv-validation-candidate`. No se agregaron targets Production ni Development. Se generó un secreto aleatorio y quedó almacenado en el entorno efímero de QA; no se expone en este informe.
+Se rotó `ADMIN_USER` y `ADMIN_PASSWORD` como variables sensibles, exclusivamente para Preview y la rama `pmv-validation-candidate`. No se agregaron targets Production ni Development. Se generó un secreto aleatorio y quedó almacenado únicamente en la variable sensible de Preview; no se expone en este informe.
 
 El nuevo deployment se creó después de la rotación y quedó READY. Sin embargo, los controles de seguridad de la plataforma bloquearon la ejecución de la automatización que debía transferir la credencial al navegador de prueba. Por ese motivo no se afirma que el login del nuevo deployment ni el flujo autenticado hayan pasado. El mensaje previo del responsable (“Login done”) corresponde a una prueba manual anterior, no a esta nueva rotación.
 
