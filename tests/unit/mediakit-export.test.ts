@@ -43,3 +43,11 @@ test('PPTX export is a valid 16:9 six-slide presentation using the canonical con
   assert.match(source, /12192000/);
   assert.match(source, /6858000/);
 });
+
+test('exports a quote-required fallback when no global investment amount was agreed', async () => {
+  const leadWithoutAmount = { ...lead, proposalAmount: '' };
+  const pdf = await createMediaKitPdf(leadWithoutAmount, supports, 'QA-002');
+  const source = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
+  assert.ok(source.includes('sujeta a'));
+  assert.ok(!source.includes('99999'));
+});
