@@ -130,7 +130,7 @@ Los logs del deployment Preview dpl_2AqTphHpN4BMCUrME5UcZmRmMkRs registraron POS
 - git diff --check: PASS.
 - Plan SQL de las sentencias INSERT/SELECT validado contra el schema de Neon Preview con analyze=false; no se insertaron registros de prueba.
 
-**Estado:** corrección desplegada en Preview READY; CI y CI Candidate PASS. Pendiente la repetición autenticada de guardado + descarga real PDF y PPTX. Visual QA CI seguía en ejecución al documentar este HEAD. No se declara resuelta la incidencia hasta que ambos archivos se descarguen correctamente desde Preview.
+**Estado:** corrección desplegada en Preview READY; CI y CI Candidate PASS. Pendiente la repetición autenticada de guardado + descarga real PDF y PPTX. Visual QA CI completó PASS — run [41550453074](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453074). No se declara resuelta la incidencia hasta que ambos archivos se descarguen correctamente desde Preview.
 
 No se modificó main, Production ni Neon Production. No se realizaron escrituras en Neon durante esta auditoría.
 
@@ -139,7 +139,7 @@ No se modificó main, Production ni Neon Production. No se realizaron escrituras
 
 - CI: PASS — run [41550452999](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550452999).
 - CI Candidate: PASS — run [41550453019](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453019).
-- Visual QA: IN PROGRESS — run [41550453074](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453074).
+- Visual QA: PASS — run [41550453074](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453074).
 - Vercel Preview: READY — [abrir deployment](https://grupo-comunicarte-refactoring-kccph535k-popnegros-projects.vercel.app), deployment `dpl_GTKSUyip4e3BVArhTBe2nNHEheBB`.
 - Smoke HTTP en ese deployment: `/` 200, `/api/health` 200 con DB connected, `/api/supports` 200, `/api/admin/mediakits` 401 sin sesión.
 - No se ejecutó POST autenticado de prueba ni se crearon registros en Neon; la prueba real de persistencia/descarga queda a la espera de la repetición manual del responsable.
