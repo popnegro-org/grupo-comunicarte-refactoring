@@ -143,3 +143,37 @@ No se modificó main, Production ni Neon Production. No se realizaron escrituras
 - Vercel Preview: READY — [abrir deployment](https://grupo-comunicarte-refactoring-kccph535k-popnegros-projects.vercel.app), deployment `dpl_GTKSUyip4e3BVArhTBe2nNHEheBB`.
 - Smoke HTTP en ese deployment: `/` 200, `/api/health` 200 con DB connected, `/api/supports` 200, `/api/admin/mediakits` 401 sin sesión.
 - No se ejecutó POST autenticado de prueba ni se crearon registros en Neon; la prueba real de persistencia/descarga queda a la espera de la repetición manual del responsable.
+
+
+## 5. Alineación de exportadores con el prototipo canónico — 2026-11-02
+
+Se tomó como referencia prototipo_mediakit_grupo_comunicarte.pptx (6 diapositivas, 16:9) y se corrigió src/lib/adminMediaKitExport.ts en la rama candidata.
+
+### Cambios implementados
+- PPTX y PDF comparten la secuencia canónica: portada, propuesta, selección de soportes, ubicaciones, resumen comercial y próximos pasos.
+- Se alinearon la proporción panorámica 16:9, paleta navy/blanco/naranja, jerarquía tipográfica, tarjetas de soportes, resumen de inversión, pie y numeración.
+- La selección se pagina en grupos de tres soportes; la página de ubicaciones y el resumen se conservan.
+- El PPTX incorpora las imágenes de soportes disponibles; cuando no hay imagen, muestra el bloque de vista previa.
+- El PDF ahora utiliza páginas panorámicas 960×540 pt y la misma composición/secuencia.
+
+### Validación automatizada del artefacto
+- Test unitario nuevo: genera PDF y PPTX desde datos sintéticos.
+- PDF: cabecera PDF 1.4, 6 páginas, MediaBox 960×540 y estructura xref.
+- PPTX: ZIP válido, 6 diapositivas y tamaño wide 16:9.
+- npm run lint: PASS.
+- npm run test:unit: PASS, 48/48.
+- npm run build: PASS.
+- git diff --check: PASS.
+
+### Alcance aún no certificado
+- No se ha ejecutado una comparación visual pixel-a-pixel contra las seis diapositivas del archivo de referencia.
+- El mapa de ubicaciones sigue siendo esquemático, como indica el propio prototipo; no debe presentarse como georreferenciación real.
+- La prueba de generación usa datos sintéticos y no certifica persistencia autenticada ni descarga desde Preview.
+- No se han hecho escrituras en Neon ni despliegues Production.
+
+La corrección de diseño queda preparada para CI y Preview; no se declara el PMV listo para release ni se levanta el NO-GO general hasta completar la prueba autenticada real y el QA visual del deployment.
+
+### QA visual en esta iteración
+- Se intentó repetir Playwright sobre tests/visual/mediakit-delivery.spec.ts (desktop y mobile).
+- Resultado: bloqueado antes de iniciar los tests porque el ejecutable Chromium `chrome-headless-shell` no está instalado en la caja efímera.
+- No se instaló ni se intentó sortear el bloqueo del navegador. La validación visual del artefacto permanece pendiente.
