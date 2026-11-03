@@ -8,7 +8,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
-import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin } from './src/server/adminRequestSecurity.ts';
+import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
 import {
   authenticateAdmin,
   getPublicSupportMediaAsset,
@@ -53,18 +53,19 @@ export async function createApp() {
     .map((hostname) => `https://${hostname.trim()}`);
   const allowedOrigins = [...new Set([...configuredOrigins, ...vercelOrigins])];
 
-  const isAllowedOrigin = (origin?: string): boolean => {
+  const isAllowedOrigin = (origin: string | undefined, requestOrigin: string): boolean => {
     if (!origin) return true;
-    return allowedOrigins.includes(origin);
+    return isAllowedRequestOrigin(origin, allowedOrigins, requestOrigin);
   };
 
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
-    if (origin && !isAllowedOrigin(origin) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const requestOrigin = `${req.protocol}://${req.get('host')}`;
+    if (origin && !isAllowedOrigin(origin, requestOrigin) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       return res.status(403).json({ status: 'error', message: 'Origen no permitido.' });
     }
 
-    if (origin && isAllowedOrigin(origin)) {
+    if (origin && isAllowedOrigin(origin, requestOrigin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -73,7 +74,7 @@ export async function createApp() {
     }
 
     if (req.method === 'OPTIONS') {
-      if (isAllowedOrigin(origin)) {
+      if (isAllowedOrigin(origin, requestOrigin)) {
         return res.sendStatus(204);
       }
       return res.sendStatus(403);
@@ -187,7 +188,8 @@ export async function createApp() {
   });
 
   const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (!hasValidAdminMutationOrigin(req.headers, req.method, allowedOrigins)) {
+    const requestOrigin = `${req.protocol}://${req.get('host')}`;
+    if (!hasValidAdminMutationOrigin(req.headers, req.method, allowedOrigins, requestOrigin)) {
       return res.status(403).json({ status: 'error', message: 'Origen no permitido para modificar la sesión administrativa.' });
     }
     const authHeader = adminAuthHeader(req.headers);
