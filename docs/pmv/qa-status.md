@@ -185,3 +185,26 @@ La corrección de diseño queda preparada para CI y Preview; no se declara el PM
 - Corrección: PDF y PPTX ahora muestran “Inversión sujeta a cotización” cuando proposalAmount está vacío; se añadió test unitario de regresión.
 - Validación local tras la corrección: TypeScript PASS, 49/49 unit tests PASS, build PASS y diff-check PASS.
 - El siguiente commit candidato debe repetir CI, CI Candidate, Visual QA y Preview. No declarar Visual QA PASS hasta que el workflow posterior termine.
+
+
+### Refinamiento visual del PDF — 2026-11-03
+
+La comparación visual del PDF generado con el PDF de referencia derivado del prototipo identificó una brecha de acabado: las tarjetas y paneles del exportador eran rectangulares y el mapa carecía de algunos acentos gráficos presentes en el diseño canónico.
+
+Corrección aplicada en `src/lib/adminMediaKitExport.ts`:
+- Se agregaron primitivas PDF para rectángulos redondeados, círculos y sombras suaves.
+- Se aplicaron a tarjetas de propuesta, fichas de soportes, paneles del resumen comercial y tarjetas de próximos pasos.
+- El mapa esquemático conserva su condición ilustrativa, pero ahora usa contenedor redondeado, marcadores circulares y segmentos de recorrido en naranja.
+- La portada incorpora líneas horizontales decorativas coherentes con el prototipo.
+- No se cambió el contenido comercial ni se inventaron ubicaciones geográficas.
+
+Evidencia de validación sobre el artefacto generado desde datos sintéticos (3 soportes):
+- PDF generado: 6 páginas, 960×540 pt; revisadas visualmente en Chromium PDF Viewer frente al PDF de referencia de 6 páginas.
+- PPTX generado: 6 diapositivas wide; test de estructura y secuencia canónica PASS.
+- Tests reforzados para exigir geometría redondeada en PDF y tipografía Aptos/geometría redondeada en PPTX.
+- `npm run lint`: PASS.
+- `npm run test:unit`: PASS, 49/49.
+- `npm run build`: PASS.
+- `git diff --check`: PASS.
+
+Alcance no certificado: no es una comparación pixel-a-pixel; las imágenes reales dependen de que los soportes tengan medios válidos y accesibles. El mapa sigue siendo esquemático. La persistencia autenticada y descarga desde Preview siguen pendientes, y no se realizaron escrituras en Neon ni despliegues Production.
