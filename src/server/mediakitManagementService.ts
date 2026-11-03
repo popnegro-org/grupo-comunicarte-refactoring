@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { pool, isDatabaseConfigured } from '../db/index.ts';
 import { resolveMediaKitTenantId } from './tenantAccess.ts';
-import { isProposalDurationValid } from '../lib/mediakitDuration.ts';
+import { isProposalDurationValid, toLegacyMediaKitState } from '../lib/mediakitDuration.ts';
 
 
 export type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
@@ -42,7 +43,9 @@ async function ensureTables(): Promise<void> {
       'id', 'kit_id', 'tenant_id', 'source_request_id', 'status', 'client_name', 'client_email',
       'client_company', 'client_phone', 'support_ids', 'approved_prices', 'total_amount',
       'currency', 'notes', 'metadata', 'pdf_url', 'ppt_url', 'created_at', 'updated_at',
+      'nombre', 'cliente_id', 'cliente_nombre', 'ciudad', 'screen_ids', 'estado', 'fecha',
     ],
+    clientes: ['id', 'tenant_id', 'nombre', 'empresa', 'email', 'telefono', 'categoria', 'created_at'],
     mediakit_items: ['id', 'kit_id', 'support_id', 'tenant_id', 'approved_price', 'sort_order', 'metadata', 'created_at', 'updated_at'],
   };
   const result = await pool.query(
@@ -93,6 +96,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
   }
   let tenantId: string | null = null;
   const tenantBySupportId = new Map<string, string>();
+  const rowsForKitCity = new Map<string, string>();
 
   if (!isDatabaseConfigured) {
     throw new Error('La persistencia de Media Kits requiere base de datos configurada.');
@@ -100,20 +104,23 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
   if (supportIds.length > 0) {
     const availability = await pool.query(
-      `SELECT canonical_id, tenant_id, disponibilidad, active
+      `SELECT canonical_id, tenant_id, disponibilidad, active, ciudad
        FROM supports
        WHERE canonical_id = ANY($1::text[])`,
       [supportIds],
     );
-    const rows = new Map<string, { tenant_id: string | null; disponibilidad: string | null; active: boolean | null }>(
-      availability.rows.map((row: any) => [String(row.canonical_id), { tenant_id: row.tenant_id, disponibilidad: row.disponibilidad, active: row.active }]),
+    const rows = new Map<string, { tenant_id: string | null; disponibilidad: string | null; active: boolean | null; ciudad: string | null }>(
+      availability.rows.map((row: any) => [String(row.canonical_id), { tenant_id: row.tenant_id, disponibilidad: row.disponibilidad, active: row.active, ciudad: row.ciudad ?? null }]),
     );
     const missing = supportIds.find((id) => !rows.has(id));
     if (missing) throw new Error(`El soporte '${missing}' no existe en el catálogo.`);
     const unassigned = supportIds.find((id) => !rows.get(id)?.tenant_id);
     if (unassigned) throw new Error(`El soporte '${unassigned}' está pendiente de conciliación de ownership y no puede incluirse en un Media Kit.`);
     const tenantIds = supportIds.map((id) => String(rows.get(id)!.tenant_id));
-    for (const id of supportIds) tenantBySupportId.set(id, String(rows.get(id)!.tenant_id));
+    for (const id of supportIds) {
+      tenantBySupportId.set(id, String(rows.get(id)!.tenant_id));
+      if (rows.get(id)?.ciudad) rowsForKitCity.set(id, String(rows.get(id)!.ciudad));
+    }
     tenantId = resolveMediaKitTenantId(tenantIds);
     const unavailable = supportIds.find((id) => {
       const row = rows.get(id)!;
@@ -167,7 +174,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
     if (supportIds.length > 0) {
       const locked = await client.query(
-        `SELECT canonical_id, tenant_id, disponibilidad, active
+        `SELECT canonical_id, tenant_id, disponibilidad, active, ciudad
            FROM supports
           WHERE canonical_id = ANY($1::text[])
           FOR UPDATE`,
@@ -182,7 +189,10 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       if (unavailable) throw new Error(`El soporte '${unavailable.canonical_id}' dejó de estar disponible.`);
       const lockedTenantIds = locked.rows.map((row) => String(row.tenant_id));
       tenantBySupportId.clear();
-      for (const row of locked.rows) tenantBySupportId.set(String(row.canonical_id), String(row.tenant_id));
+      for (const row of locked.rows) {
+        tenantBySupportId.set(String(row.canonical_id), String(row.tenant_id));
+        if (row.ciudad) rowsForKitCity.set(String(row.canonical_id), String(row.ciudad));
+      }
       tenantId = resolveMediaKitTenantId(lockedTenantIds);
     }
     if (input.sourceRequestId) {
@@ -197,11 +207,52 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       }
     }
 
+    const clientEmail = String(input.clientEmail || '').trim();
+    const clientCompany = String(input.clientCompany || '').trim() || clientName;
+    const clientPhone = String(input.clientPhone || '').trim();
+    const existingKit = await client.query(
+      `SELECT m.cliente_id
+         FROM mediakits m
+         JOIN clientes c ON c.id = m.cliente_id
+        WHERE m.kit_id = $1
+          AND c.tenant_id IS NOT DISTINCT FROM $2
+        FOR UPDATE OF m, c`,
+      [kitId, tenantId],
+    );
+    const existingClientId = existingKit.rows[0]?.cliente_id as string | undefined;
+    const customer = existingClientId
+      ? { rows: [{ id: existingClientId }] }
+      : clientEmail
+        ? await client.query(
+            `SELECT id
+               FROM clientes
+              WHERE LOWER(email) = LOWER($1)
+                AND tenant_id IS NOT DISTINCT FROM $2
+              ORDER BY created_at ASC
+              LIMIT 1
+              FOR UPDATE`,
+            [clientEmail, tenantId],
+          )
+        : { rows: [] as Array<{ id: string }> };
+    let clientId = customer.rows[0]?.id as string | undefined;
+    if (!clientId) {
+      clientId = 'cl-' + randomUUID();
+      await client.query(
+        'INSERT INTO clientes (id, tenant_id, nombre, empresa, email, telefono, categoria) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [clientId, tenantId, clientName, clientCompany, clientEmail, clientPhone, 'Media Kit'],
+      );
+    }
+    const cityValues = [...new Set(
+      supportIds.map((id) => rowsForKitCity.get(id)).filter((value): value is string => Boolean(value)),
+    )];
+    const legacyCity = cityValues.length === 0 ? 'Sin especificar' : cityValues.length === 1 ? cityValues[0] : 'Varias ciudades';
+    const proposalStart = (input.metadata?.proposalPeriod as { fechaInicio?: unknown } | undefined)?.fechaInicio;
+    const legacyDate = typeof proposalStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(proposalStart) ? proposalStart : new Date().toISOString().slice(0, 10);
     const result = await client.query(
       `INSERT INTO mediakits
         (id, kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
-         support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16,$17,CURRENT_TIMESTAMP)
+         support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url, updated_at, nombre, cliente_id, cliente_nombre, ciudad, screen_ids, estado, fecha)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16,$17,CURRENT_TIMESTAMP,$18,$19,$20,$21,$22,$23,$24)
        ON CONFLICT (kit_id) DO UPDATE SET
          tenant_id = EXCLUDED.tenant_id,
          source_request_id = EXCLUDED.source_request_id,
@@ -218,6 +269,13 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
          metadata = EXCLUDED.metadata,
          pdf_url = EXCLUDED.pdf_url,
          ppt_url = EXCLUDED.ppt_url,
+         nombre = EXCLUDED.nombre,
+         cliente_id = EXCLUDED.cliente_id,
+         cliente_nombre = EXCLUDED.cliente_nombre,
+         ciudad = EXCLUDED.ciudad,
+         screen_ids = EXCLUDED.screen_ids,
+         estado = EXCLUDED.estado,
+         fecha = EXCLUDED.fecha,
          updated_at = CURRENT_TIMESTAMP
        RETURNING kit_id, tenant_id, status, client_name, client_email, client_company, client_phone,
                  support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
@@ -240,6 +298,8 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         JSON.stringify(input.metadata || {}),
         input.pdfUrl || null,
         input.pptUrl || null,
+        'Media Kit ' + kitId, clientId, clientCompany, legacyCity,
+        JSON.stringify(supportIds), toLegacyMediaKitState(status), legacyDate,
       ]
     );
 
@@ -440,11 +500,11 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
     }
 
     const result = await client.query(
-      `UPDATE mediakits SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
+      `UPDATE mediakits SET status = $2, estado = $3, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
        RETURNING kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
                  support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
                  created_at, updated_at`,
-      [kitId, status],
+      [kitId, status, toLegacyMediaKitState(status)],
     );
     await client.query('COMMIT');
     const row = result.rows[0];
