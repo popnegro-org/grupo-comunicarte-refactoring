@@ -29,6 +29,8 @@ test('PDF export follows the six-page 16:9 canonical Media Kit structure', async
   assert.match(source, /RESUMEN COMERCIAL/);
   assert.ok(source.includes('PR'));
   assert.match(source, /startxref/);
+  assert.match(source, / c\n/); // rounded card paths used by the canonical template
+  assert.ok(source.includes('0.867 0.886 0.910 rg')); // subtle card shadow layer
 });
 
 test('PPTX export is a valid 16:9 six-slide presentation using the canonical content sequence', async () => {
@@ -42,6 +44,8 @@ test('PPTX export is a valid 16:9 six-slide presentation using the canonical con
   assert.ok(source.includes('ppt/slides/slide6.xml'));
   assert.match(source, /12192000/);
   assert.match(source, /6858000/);
+  assert.ok(source.includes('Aptos'));
+  assert.ok(source.includes('roundRect')); // rounded native PPTX geometry
 });
 
 test('exports a quote-required fallback when no global investment amount was agreed', async () => {
