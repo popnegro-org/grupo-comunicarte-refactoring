@@ -33,3 +33,15 @@ export function formatProposalDuration(period: ProposalDuration): string {
   if (!isProposalDurationValid(period)) return '';
   return period.duracionUnidad === 'meses' ? 'Mensual' : `${period.duracionValor} días`;
 }
+
+
+export type MediaKitLifecycleStatus = 'draft' | 'ready' | 'sent' | 'archived';
+
+export function toLegacyMediaKitState(status: MediaKitLifecycleStatus): string {
+  switch (status) {
+    case 'ready': return 'Aceptado';
+    case 'sent': return 'Enviado';
+    case 'archived': return 'Archivado';
+    default: return 'Borrador';
+  }
+}
