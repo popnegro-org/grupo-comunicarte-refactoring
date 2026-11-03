@@ -177,3 +177,11 @@ La corrección de diseño queda preparada para CI y Preview; no se declara el PM
 - Se intentó repetir Playwright sobre tests/visual/mediakit-delivery.spec.ts (desktop y mobile).
 - Resultado: bloqueado antes de iniciar los tests porque el ejecutable Chromium `chrome-headless-shell` no está instalado en la caja efímera.
 - No se instaló ni se intentó sortear el bloqueo del navegador. La validación visual del artefacto permanece pendiente.
+
+
+### Corrección posterior a Visual QA — 2026-11-03
+- Visual QA workflow 41553827088: 26 passed, 2 failed. Ambos fallos fueron el caso de inversión global no definida; el test esperaba el texto comercial “Inversión sujeta a cotización”.
+- Causa: el nuevo resumen mostraba el placeholder de moneda/total cuando no existía importe acordado.
+- Corrección: PDF y PPTX ahora muestran “Inversión sujeta a cotización” cuando proposalAmount está vacío; se añadió test unitario de regresión.
+- Validación local tras la corrección: TypeScript PASS, 49/49 unit tests PASS, build PASS y diff-check PASS.
+- El siguiente commit candidato debe repetir CI, CI Candidate, Visual QA y Preview. No declarar Visual QA PASS hasta que el workflow posterior termine.
