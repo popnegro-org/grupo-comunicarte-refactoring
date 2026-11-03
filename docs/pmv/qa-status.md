@@ -1,10 +1,10 @@
 # PMV — cierre consolidado
 
 **Rama candidata:** `pmv-validation-candidate`  
-**SHA funcional validado:** `3ec2e407dcff0a72df1b700d65c90f93186e0fc6` (código funcional sin cambios en los commits documentales posteriores).  
-**Último HEAD documental verificado:** `8517528479664aa13443a79972303c0cc6219b0c`.  
+**SHA actual con la corrección:** `8a9a212da5e0f248b77669ee3f80746a78ef4f06`.  
+**HEAD anterior a la corrección:** `3ee34fff92e1a91d2e0ad95d687174fce217a30d`.  
 **PR de integración:** [#90 — PMV: validación de seguridad y cierre de QA](https://github.com/popnegro/grupo-comunicarte-refactoring/pull/90)  
-**Preview QA verificado:** [deployment aislado](https://grupo-comunicarte-refactoring-p5eqm30d1-popnegros-projects.vercel.app) — `dpl_HASwcLzczHChpKS4PeEQBspec5oY`, READY, HEAD documental `85175284`.  
+**Preview con la corrección:** [deployment aislado](https://grupo-comunicarte-refactoring-kccph535k-popnegros-projects.vercel.app) — `dpl_GTKSUyip4e3BVArhTBe2nNHEheBB`, READY, HEAD `8a9a212d`.  
 **Main / Production / Neon Production:** sin cambios.
 
 ## Decisión de alcance
@@ -130,6 +130,16 @@ Los logs del deployment Preview dpl_2AqTphHpN4BMCUrME5UcZmRmMkRs registraron POS
 - git diff --check: PASS.
 - Plan SQL de las sentencias INSERT/SELECT validado contra el schema de Neon Preview con analyze=false; no se insertaron registros de prueba.
 
-**Estado:** corrección committeada en la rama candidata; pendiente de push/deployment Preview nuevo y repetición autenticada de guardado + descarga real PDF y PPTX. CI del commit de corrección también queda pendiente. No se declara resuelta la incidencia hasta que ambos archivos se descarguen correctamente desde Preview.
+**Estado:** corrección desplegada en Preview READY; CI y CI Candidate PASS. Pendiente la repetición autenticada de guardado + descarga real PDF y PPTX. Visual QA CI seguía en ejecución al documentar este HEAD. No se declara resuelta la incidencia hasta que ambos archivos se descarguen correctamente desde Preview.
 
 No se modificó main, Production ni Neon Production. No se realizaron escrituras en Neon durante esta auditoría.
+
+
+### Evidencia adicional del HEAD 8a9a212d
+
+- CI: PASS — run [41550452999](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550452999).
+- CI Candidate: PASS — run [41550453019](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453019).
+- Visual QA: IN PROGRESS — run [41550453074](https://github.com/popnegro/grupo-comunicarte-refactoring/actions/runs/41550453074).
+- Vercel Preview: READY — [abrir deployment](https://grupo-comunicarte-refactoring-kccph535k-popnegros-projects.vercel.app), deployment `dpl_GTKSUyip4e3BVArhTBe2nNHEheBB`.
+- Smoke HTTP en ese deployment: `/` 200, `/api/health` 200 con DB connected, `/api/supports` 200, `/api/admin/mediakits` 401 sin sesión.
+- No se ejecutó POST autenticado de prueba ni se crearon registros en Neon; la prueba real de persistencia/descarga queda a la espera de la repetición manual del responsable.
