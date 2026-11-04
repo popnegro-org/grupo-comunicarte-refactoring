@@ -121,7 +121,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
     });
   });
 
-  await page.route('**/api/admin/mediakits/KIT-REQ-001', async (route) => {
+  await page.route('**/api/admin/mediakits/by-request/REQ-001', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
