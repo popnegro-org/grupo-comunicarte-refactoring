@@ -377,6 +377,44 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
   };
 }
 
+/** Resolve the persisted Media Kit relation for one onboarding request. */
+export async function getMediaKitBySourceRequestId(sourceRequestId: string): Promise<MediaKitRecord | null> {
+  if (!isDatabaseConfigured) return null;
+  const normalizedRequestId = sourceRequestId.trim();
+  if (!normalizedRequestId) return null;
+  await ensureTables();
+  const result = await pool.query(
+    `SELECT kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+            support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
+            created_at, updated_at
+     FROM mediakits WHERE source_request_id = $1
+     ORDER BY updated_at DESC LIMIT 1`,
+    [normalizedRequestId]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    kitId: row.kit_id,
+    tenantId: row.tenant_id ?? null,
+    sourceRequestId: row.source_request_id,
+    status: normalizeStatus(row.status),
+    clientName: row.client_name,
+    clientEmail: row.client_email,
+    clientCompany: row.client_company,
+    clientPhone: row.client_phone,
+    supportIds: row.support_ids || [],
+    approvedPrices: row.approved_prices || {},
+    totalAmount: row.total_amount,
+    currency: row.currency,
+    notes: row.notes,
+    metadata: row.metadata || {},
+    pdfUrl: row.pdf_url,
+    pptUrl: row.ppt_url,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+}
+
 export async function listMediaKits(): Promise<MediaKitRecord[]> {
   if (!isDatabaseConfigured) return [];
   await ensureTables();
