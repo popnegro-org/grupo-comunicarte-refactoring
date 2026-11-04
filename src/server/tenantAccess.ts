@@ -76,3 +76,15 @@ export function resolveMediaKitTenantId(tenantIds: Array<string | null | undefin
   const assigned = [...new Set(tenantIds.filter((tenantId): tenantId is string => typeof tenantId === 'string' && tenantId.trim().length > 0))];
   return assigned.length === 1 ? assigned[0] : null;
 }
+
+
+/** A commercial request line is valid only when its stored tenant matches the current support owner. */
+export function areRequestItemOwnershipsConsistent(
+  items: Array<{ itemTenantId: string | null | undefined; supportTenantId: string | null | undefined }>,
+): boolean {
+  return items.length > 0 && items.every(({ itemTenantId, supportTenantId }) =>
+    typeof itemTenantId === 'string' && itemTenantId.trim().length > 0 &&
+    typeof supportTenantId === 'string' && supportTenantId.trim().length > 0 &&
+    itemTenantId === supportTenantId
+  );
+}
