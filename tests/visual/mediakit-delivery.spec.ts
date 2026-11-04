@@ -123,9 +123,14 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
 
   await page.route('**/api/admin/mediakits/KIT-REQ-001', async (route) => {
     await route.fulfill({
-      status: 404,
+      status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ status: 'error', message: 'Media Kit no encontrado.' }),
+      body: JSON.stringify({ status: 'success', data: {
+        kitId: 'KIT-REQ-001', sourceRequestId: 'REQ-001', status: 'ready',
+        totalAmount: '50000', currency: 'ARS', supportIds: ['SUP-001'],
+        createdAt: '2026-10-30T11:00:00.000Z', updatedAt: '2026-10-30T12:00:00.000Z',
+        pdfUrl: 'https://files.example.com/kit.pdf', pptUrl: null,
+      } }),
     });
   });
 
@@ -164,14 +169,22 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Cliente Demo' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Cliente', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Oportunidad comercial' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Actividad registrada' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Media Kit asociado' })).toBeVisible();
+  await expect(dialog.getByText('KIT-REQ-001', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'PDF' })).toHaveAttribute('href', 'https://files.example.com/kit.pdf');
   await dialog.getByLabel('Duración contratada').selectOption('7:días');
   await dialog.getByRole('button', { name: 'Marcar en proceso' }).click();
   await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeVisible();
 
+  const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(horizontalOverflow).toBe(false);
   const panel = dialog.locator('div').first();
   const panelBox = await panel.boundingBox();
   const viewportWidth = page.viewportSize()?.width ?? 0;
-  expect(panelBox?.width).toBe(viewportWidth >= 768 ? 460 : viewportWidth);
+  expect(panelBox?.width).toBe(viewportWidth >= 768 ? 560 : viewportWidth);
 
   const numberInputs = dialog.locator('input[type="number"]');
   await numberInputs.nth(0).fill('25000');
@@ -192,7 +205,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   expect(share?.pdfText).not.toContain('99999');
 
   await dialog.getByRole('button', { name: 'Confirmar entrega realizada' }).click();
-  await expect(dialog.getByText('Entregada', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Entregada', { exact: true }).first()).toBeVisible();
   expect(savedKit).not.toBeNull();
   expect((savedKit as Record<string, unknown>).totalAmount).toBe(25000);
   expect(kitStatus).toBe('sent');
