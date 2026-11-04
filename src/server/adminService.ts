@@ -23,7 +23,7 @@ import {
 } from './supportModel.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
 import { isSafeSupportMediaKey } from './r2StorageAdapter.ts';
-import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
+import { areRequestItemOwnershipsConsistent, isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
 import { db, pool, isDatabaseConfigured } from '../db/index.ts';
 import { and, count, eq, isNotNull } from 'drizzle-orm';
 
@@ -302,14 +302,39 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
 
     if (requiresOwnership) {
       const items = await client.query(
-        `SELECT tenant_id
+        `SELECT support_id, tenant_id
            FROM mediakit_request_items
           WHERE request_id = $1
           FOR UPDATE`,
         [requestId],
       );
-      if (items.rows.length === 0 || items.rows.some((item) => !String(item.tenant_id || '').trim())) {
-        throw new Error('La solicitud no puede avanzar comercialmente: contiene soportes sin ownership conciliado.');
+      if (items.rows.length === 0) {
+        throw new Error('La solicitud no puede avanzar comercialmente: no contiene ítems verificables.');
+      }
+
+      const supportIds = [...new Set(items.rows.map((item) => String(item.support_id || '').trim()).filter(Boolean))];
+      const supportsResult = supportIds.length > 0
+        ? await client.query(
+            `SELECT canonical_id, tenant_id
+               FROM supports
+              WHERE canonical_id = ANY($1::text[])
+              FOR UPDATE`,
+            [supportIds],
+          )
+        : { rows: [] as Array<{ canonical_id: string; tenant_id: string | null }> };
+      const supportTenantById = new Map(
+        supportsResult.rows.map((support) => [String(support.canonical_id), support.tenant_id as string | null]),
+      );
+      const ownershipPairs = items.rows.map((item) => ({
+        itemTenantId: item.tenant_id as string | null,
+        supportTenantId: supportTenantById.get(String(item.support_id || '').trim()) ?? null,
+      }));
+
+      if (
+        supportsResult.rows.length !== supportIds.length ||
+        !areRequestItemOwnershipsConsistent(ownershipPairs)
+      ) {
+        throw new Error('La solicitud no puede avanzar comercialmente: el ownership de sus ítems está pendiente o no coincide con el inventario actual.');
       }
     }
 
