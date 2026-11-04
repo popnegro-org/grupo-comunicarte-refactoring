@@ -9,6 +9,12 @@ import {
   FilterX,
   Inbox,
   Save,
+  Building2,
+  BriefcaseBusiness,
+  CalendarClock,
+  ExternalLink,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../components/dashboard/DashboardShell';
@@ -53,6 +59,18 @@ type LeadRequest = {
 };
 
 type SupportForKit = ExportSupport & { pricing?: Pricing | null };
+type RelatedMediaKit = {
+  kitId: string;
+  sourceRequestId?: string | null;
+  status: 'draft' | 'ready' | 'sent' | 'archived';
+  totalAmount?: number | string | null;
+  currency?: string | null;
+  supportIds?: string[];
+  pdfUrl?: string | null;
+  pptUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const labels: Record<WorkflowStatus, string> = {
   request: 'Pendiente',
@@ -78,6 +96,8 @@ export default function DashboardMediaKitWorkflow() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | WorkflowStatus>('all');
   const [selected, setSelected] = useState<LeadRequest | null>(null);
+  const [relatedMediaKit, setRelatedMediaKit] = useState<RelatedMediaKit | null>(null);
+  const [relatedMediaKitLoading, setRelatedMediaKitLoading] = useState(false);
   const [supports, setSupports] = useState<SupportForKit[]>([]);
   const [approvedPrices, setApprovedPrices] = useState<Record<string, string>>({});
   const [period, setPeriod] = useState<ProposalPeriod>({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
@@ -93,6 +113,40 @@ export default function DashboardMediaKitWorkflow() {
     setToast(m);
     window.setTimeout(() => setToast(''), 3000);
   };
+
+  useEffect(() => {
+    if (!selected) {
+      setRelatedMediaKit(null);
+      setRelatedMediaKitLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRelatedMediaKit(null);
+    setRelatedMediaKitLoading(true);
+    apiFetch(`/api/admin/mediakits/by-request/${encodeURIComponent(selected.requestId)}`)
+      .then(async (response) => {
+        const json = await response.json().catch(() => null);
+        if (response.status === 404) {
+          if (!cancelled) setRelatedMediaKit(null);
+          return;
+        }
+        if (!response.ok || json?.status !== 'success' || !json.data) {
+          throw new Error(json?.message || 'No se pudo consultar el Media Kit asociado.');
+        }
+        // Validate the persisted relation; the generated ID alone is not proof of association.
+        if (!cancelled) {
+          setRelatedMediaKit(json.data.sourceRequestId === selected.requestId ? json.data : null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRelatedMediaKit(null);
+          notify(error instanceof Error ? error.message : 'No se pudo consultar el Media Kit asociado.');
+        }
+      })
+      .finally(() => { if (!cancelled) setRelatedMediaKitLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected?.requestId]);
 
   const load = async () => {
     setIsFetchingLeads(true);
@@ -524,7 +578,7 @@ export default function DashboardMediaKitWorkflow() {
 
         {selected && (
           <div className="fixed inset-0 z-[4000] flex justify-end bg-slate-900/35" role="dialog" aria-modal="true" aria-labelledby="mediakit-request-title">
-            <div className="h-full max-h-screen w-full max-w-[460px] overflow-y-auto border-l border-slate-200 bg-[#f8fafc] shadow-2xl">
+            <div className="h-full max-h-screen w-full max-w-[560px] overflow-y-auto border-l border-slate-200 bg-[#f8fafc] shadow-2xl">
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{labels[selected.status]}</p>
@@ -534,17 +588,52 @@ export default function DashboardMediaKitWorkflow() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="space-y-4 p-5">
+              <div className="space-y-4 p-4 sm:p-5">
                 {Boolean(selected.pendingOwnershipCount) && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
                   <p className="font-semibold">Solicitud en cuarentena comercial</p>
                   <p className="mt-1">{selected.pendingOwnershipCount} soporte(s) no tienen ownership conciliado. La solicitud se conserva para revisión, pero no se puede cotizar, exportar ni marcar como entregada hasta resolverlo.</p>
                 </div>}
-                <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                  <p><span className="font-semibold text-slate-800">Email:</span> {selected.email || '—'}</p>
-                  <p><span className="font-semibold text-slate-800">Tel:</span> {selected.phone || '—'}</p>
-                  <p className="sm:col-span-2"><span className="font-semibold text-slate-800">Empresa:</span> {selected.company}</p>
-                  {selected.message && <p className="sm:col-span-2"><span className="font-semibold text-slate-800">Mensaje:</span> {selected.message}</p>}
-                </div>
+                <section aria-labelledby="commercial-client-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2"><Building2 className="h-4 w-4 text-slate-500"/><h3 id="commercial-client-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Cliente</h3></div>
+                  <p className="text-base font-semibold text-slate-900">{selected.clientName}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{selected.company || 'Empresa no informada'}</p>
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                    <a href={selected.email ? `mailto:${selected.email}` : undefined} className={`flex min-h-10 items-center gap-2 rounded-lg bg-slate-50 px-3 text-slate-700 ${selected.email ? 'hover:bg-slate-100' : 'pointer-events-none opacity-60'}`}><Mail className="h-3.5 w-3.5 shrink-0 text-slate-500"/><span className="min-w-0 truncate">{selected.email || 'Email no informado'}</span></a>
+                    <a href={selected.phone ? `tel:${selected.phone.replace(/[^+\d]/g, '')}` : undefined} className={`flex min-h-10 items-center gap-2 rounded-lg bg-slate-50 px-3 text-slate-700 ${selected.phone ? 'hover:bg-slate-100' : 'pointer-events-none opacity-60'}`}><Phone className="h-3.5 w-3.5 shrink-0 text-slate-500"/><span>{selected.phone || 'Teléfono no informado'}</span></a>
+                  </div>
+                  {selected.message && <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-600"><span className="font-semibold text-slate-800">Necesidad / mensaje:</span> {selected.message}</p>}
+                </section>
+
+                <section aria-labelledby="commercial-opportunity-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><BriefcaseBusiness className="h-4 w-4 text-slate-500"/><h3 id="commercial-opportunity-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Oportunidad comercial</h3></div><StatusBadge status={labels[selected.status]}/></div>
+                  <p className="font-semibold text-slate-900">Solicitud {selected.requestId}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                    <div><p className="text-slate-500">Ingreso</p><p className="mt-0.5 font-medium text-slate-800">{formatRequestDate(selected.createdAt)}</p></div>
+                    <div><p className="text-slate-500">Soportes solicitados</p><p className="mt-0.5 font-medium text-slate-800">{selected.supportIds.length}</p></div>
+                  </div>
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900">Esta solicitud funciona como registro de seguimiento. No hay un negocio/pipeline de CRM vinculado en los datos disponibles; no se inventa una etapa ni un importe de oportunidad.</p>
+                </section>
+
+                <section aria-labelledby="commercial-activity-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2"><CalendarClock className="h-4 w-4 text-slate-500"/><h3 id="commercial-activity-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Actividad registrada</h3></div>
+                  <ol className="space-y-3">
+                    <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700"><Inbox className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Solicitud recibida</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(selected.createdAt)} · {selected.requestId}</p></div></li>
+                    {relatedMediaKit && <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><FileText className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Media Kit actualizado</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(relatedMediaKit.updatedAt)} · {relatedMediaKit.kitId}</p></div></li>}
+                  </ol>
+                  <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] leading-4 text-slate-500">Se muestran únicamente eventos deducibles de registros persistidos. El sistema todavía no dispone de un registro independiente de llamadas, reuniones o tareas.</p>
+                </section>
+
+                <section aria-labelledby="commercial-mediakit-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-slate-500"/><h3 id="commercial-mediakit-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Media Kit asociado</h3></div>{relatedMediaKit && <StatusBadge status={{draft:'Borrador',ready:'Listo',sent:'Enviado',archived:'Archivado'}[relatedMediaKit.status]}/>}</div>
+                  {relatedMediaKitLoading ? <p className="text-xs text-slate-500">Consultando documentos asociados…</p> : relatedMediaKit ? <>
+                    <p className="font-semibold text-slate-900">{relatedMediaKit.kitId}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-xs"><div><p className="text-slate-500">Soportes</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.supportIds?.length ?? 0}</p></div><div><p className="text-slate-500">Importe global</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.totalAmount == null ? 'Sin definir' : `${relatedMediaKit.currency || 'ARS'} ${Number(relatedMediaKit.totalAmount).toLocaleString('es-AR')}`}</p></div></div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {relatedMediaKit.pdfUrl && /^https?:\/\//i.test(relatedMediaKit.pdfUrl) && <a href={relatedMediaKit.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">PDF <ExternalLink className="h-3 w-3"/></a>}
+                      {relatedMediaKit.pptUrl && /^https?:\/\//i.test(relatedMediaKit.pptUrl) && <a href={relatedMediaKit.pptUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">Presentación <ExternalLink className="h-3 w-3"/></a>}
+                    </div>
+                  </> : <p className="text-xs leading-5 text-slate-500">No hay un Media Kit vinculado mediante sourceRequestId. Podés preparar una cotización desde esta solicitud; no se asociarán documentos por coincidencia de nombres o códigos.</p>}
+                </section>
 
                 <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Monto global acordado</p>
