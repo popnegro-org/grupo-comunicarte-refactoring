@@ -318,6 +318,7 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
             `SELECT canonical_id, tenant_id
                FROM supports
               WHERE canonical_id = ANY($1::text[])
+              ORDER BY canonical_id
               FOR UPDATE`,
             [supportIds],
           )
