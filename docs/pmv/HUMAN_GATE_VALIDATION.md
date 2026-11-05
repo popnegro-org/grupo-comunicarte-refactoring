@@ -1,49 +1,128 @@
 # PMV — validación HUMAN GATE
 
-## Rama candidata
+**Estado release:** NO-GO hasta completar checklist P0.  
+**Fecha de actualización:** 2026-11-05  
+**Línea de integración única:** `pmv-validation-candidate`  
+**Rama de trabajo P0 ownership/cuarentena:** `pmv/p0-ownership-quarantine-gate` (incluye commits de `fix/request-ownership-revalidation` / PR #96)
 
-- Branch: `pmv-final-human-gate`
-- Base congelada: `pmv-validation-candidate` (`c0a12a9895db913425c7a23190854db318230d58`)
-- Alcance: hardening de origen/CSRF para Preview y detalle comercial responsive de solicitudes.
-- `main`, Production y `pmv-validation-candidate` no forman parte de esta integración.
+## 1. Principios innegociables
 
-## Cambios incluidos
+1. Fail closed ante identidad, tenant, ownership o autorización desconocidos.
+2. No merge a `main`, no despliegue Production, no DDL/backfill Neon Production sin aprobación humana explícita.
+3. Una sola línea de integración PMV. No mergear `canonical-refinement` (#89) ni stacks UX #85–#88 de forma completa.
+4. Evidencia debe referenciar el **SHA exacto** validado (CI, Preview, Playwright, smoke HTTP).
+5. Integraciones HubSpot / email / WhatsApp API no acreditadas no se declaran listas.
 
-1. Aceptar mutaciones cookie-authenticated desde el origen exacto del deployment Preview, manteniendo allowlist explícita y rechazo de orígenes externos.
-2. Agregar pruebas unitarias de origen/CSRF y ejecutar todos los archivos `tests/unit/*.test.ts` mediante `npm run test:unit`.
-3. Incorporar detalle comercial responsive con cliente, solicitud, actividad persistida y Media Kit asociado.
-4. Resolver Media Kit asociado por `source_request_id`; no asumir que el ID público del Media Kit se deriva del ID de solicitud.
-5. Documentar límites actuales de actividad/CRM: no se simulan llamadas, reuniones, tareas ni negocios HubSpot que no estén persistidos.
+## 2. Alcance de la candidata actual
 
-## Evidencia automatizada local
+| Área | Estado en código | Gate pendiente |
+|------|------------------|----------------|
+| Revalidación ownership al avanzar solicitud (`quoted`/`enviado`/`closed`) | Implementado en `updateRequestStatusByAdmin` + locks estables | QA transaccional Neon Preview |
+| Cuarentena catálogo público (`tenant_id` NULL / inactivo) | SQL + `isSupportEligibleForPublicCatalog` | Smoke Preview: 404 detalle, exclusión listado |
+| Alta solicitud pública | Locks + eligibility comercial + scope | Smoke Preview con soporte pendiente rechazado |
+| Media Kit listo/enviado | Bloquea ownership pendiente y revalida en transacción | QA autenticado Media Kit |
+| CORS same-origin Preview | En ramas #91/#92; incorporar solo tras CI verde | Login Preview same-origin |
+| Drawer comercial mobile | #93 draft apilado | QA visual mobile autenticado |
+| Asociación Media Kit por `source_request_id` | #95 merged en candidata | Fixture Visual QA verde |
 
-- `npm ci`: PASS — 0 vulnerabilidades reportadas.
-- `npm run lint`: PASS.
-- `npm run test:unit`: PASS — 56/56.
-- `npm run build`: PASS.
-- `git diff --check`: requerido antes del push.
+## 3. Checklist automatizado (obligatorio en el SHA)
 
-## QA visual
+Ejecutar en el SHA candidato antes de pedir gate humano:
 
-La ejecución local de Playwright quedó bloqueada por una dependencia del contenedor (`libglib-2.0.so.0` ausente), no por un fallo de aserción. El PR #93 ya había obtenido 22/22 pruebas funcionales Playwright en su entorno anterior; esa evidencia no sustituye el check del nuevo SHA. El workflow Visual QA de GitHub debe quedar verde sobre el HEAD de esta rama antes de aprobar el gate.
+```bash
+npm ci
+npm run lint          # tsc --noEmit
+npm run test:unit     # todos tests/unit/*.test.ts
+npm run build
+git diff --check
+```
 
-## Validación humana requerida
+CI requerido:
 
-Con un usuario QA y datos QA aislados, validar:
+- [ ] Workflow **CI Candidate** PASS en el SHA
+- [ ] Workflow **Visual QA** PASS en el SHA (baseline confiable; no aceptar baselines nuevos sin revisión)
+- [ ] Vercel Preview **READY** del mismo SHA
+- [ ] `GET /api/health` → 200 `database: connected`
+- [ ] `GET /api/supports` → solo soportes con ownership asignado
 
-1. Login en Preview y navegación a Solicitudes.
-2. Abrir una solicitud y comprobar que Cliente, Oportunidad y Actividad muestran únicamente datos persistidos.
-3. Cuando exista un Media Kit con `source_request_id` coincidente, verificar estado, soportes, importe y enlaces válidos.
-4. Cuando no exista relación persistida, verificar el estado vacío sin asociación inferida.
-5. En móvil (390×844) y desktop (1440×900), verificar drawer, scroll interno y ausencia de overflow horizontal.
-6. Confirmar que una solicitud con ownership pendiente sigue en cuarentena y no habilita cotización/exportación/entrega.
-7. Verificar que el origen exacto del Preview puede realizar mutaciones cookie-authenticated y que un origen externo recibe 403.
+## 4. Checklist humano — ownership y cuarentena (P0)
 
-## Fuera de alcance / no autorizado
+Usar usuario QA y datos aislados en **Neon Preview** (nunca Production).
 
-- No mergear esta rama ni promoverla a `main`.
-- No modificar Neon/Production, credenciales, DNS, Cloudflare ni datos reales.
-- No enviar comunicaciones reales.
-- No integrar las ramas históricas #85–#88 completas.
+### 4.1 Catálogo y selección
 
-**Decisión esperada:** aprobación/rechazo del PR y del flujo manual de Preview. La aprobación no autoriza por sí sola promoción a Production.
+1. Listar inventario público: no aparece ningún soporte con ownership pendiente.
+2. Detalle de un `canonical_id` pendiente conocido (p. ej. `mza-trad-16` si sigue sin asignar) → 404.
+3. Intentar `POST /api/mediakit/request` incluyendo un soporte pendiente o reservado → error 4xx; no se crea cabecera.
+
+### 4.2 Avance comercial de solicitud (PR #96)
+
+Preparar en Preview (o usar fixtures existentes):
+
+| Caso | Acción | Resultado esperado |
+|------|--------|--------------------|
+| Match OK | Solicitud con ítems cuyo `tenant_id` coincide con `supports.tenant_id` → status `quoted` | 200; status actualizado |
+| Drift | Cambiar ownership del soporte (solo Preview) o usar ítem con tenant distinto al soporte actual → `quoted` | Error; status de la solicitud **sin cambio** |
+| Ownership pendiente | Ítem o soporte con `tenant_id` NULL → `quoted`/`enviado`/`cerrado` | Error; status intacto |
+| Sin ítems | Solicitud sin líneas → avance comercial | Error explícito |
+| Soporte eliminado | `support_id` huérfano en ítem | Error; status intacto |
+| Concurrencia | Dos mutaciones simultáneas sobre la misma solicitud/soportes | Una gana; la otra falla limpio o ve estado consistente (sin partial update) |
+
+Estados que **requieren** ownership: `quoted`, `enviado`, `closed`, `cerrado`.  
+Estados que **no** deben exigir revalidación fuerte de ownership de inventario: `pending`/`nuevo`, `contacted`/`contactado`, `cancelled` (salvo regla comercial futura documentada).
+
+### 4.3 Media Kit
+
+1. No se puede marcar `ready`/`sent` si algún soporte del kit quedó sin ownership.
+2. Asociación por `source_request_id` exacto; sin inferencia por prefijo de ID.
+3. Export PDF/PPT no expone precios internos.
+
+### 4.4 Auth / Preview
+
+1. Login admin desde origen exacto del host Preview permitido.
+2. Origen externo en mutación cookie → 403.
+3. Endpoints admin sin sesión → 401.
+
+### 4.5 UX mínimo (desktop 1440×900 y móvil 390×844)
+
+1. Dashboard → Solicitudes → drawer/detalle sin overflow horizontal.
+2. Inventario mapa/lista operable; selección no incluye cuarentena.
+3. Teclado: foco visible en CTAs principales del flujo comercial.
+
+## 5. Consolidación de ramas (mejora prioritaria 4)
+
+**Permitido integrar en la candidata (tras CI + QA del SHA):**
+
+- `fix/request-ownership-revalidation` / `pmv/p0-ownership-quarantine-gate` (ownership + cuarentena + tests)
+- Fix CORS same-origin Preview (#92) si aún no está en el HEAD de la candidata
+- Commits ya merged de asociación Media Kit (#95)
+
+**No integrar como bloque:**
+
+- `canonical-refinement` / PR #89 (referencia UX únicamente)
+- PR #85–#88 completos (apilados / divergentes)
+- Ramas históricas `feat/dashboard-*`, `feat/uxui-pmv*`, `uxui/paralelo-prod*` sin split revisado
+
+Cualquier cherry-pick UX debe ser **selectivo**, con diff revisado y sin traer modelos duplicados ni fallbacks localStorage.
+
+## 6. Evidencias a adjuntar al pedir HUMAN GATE hacia `main`
+
+1. SHA candidato y URL del commit.
+2. Links de runs CI Candidate + Visual QA PASS.
+3. URL Preview READY + resultados smoke HTTP (health, supports count, 401 admin, 403 origen externo).
+4. Resultados de la matriz §4.2 (ownership) y §4.3 (Media Kit).
+5. Capturas o notas de §4.5 (desktop/móvil).
+6. Confirmación explícita: **no** se modificó `main` ni Neon Production.
+
+## 7. Regla de liberación
+
+- **NO-GO** si queda cualquier ítem P0 del contrato abierto, un soporte sin ownership puede venderse, hay drift de tenant en avance comercial, o CI/Preview del SHA no está verde.
+- **GO para revisión humana de merge a `main`** solo con P0/P1 cerrados y evidencias del SHA exacto.
+- Merge a `main` y promoción Production permanecen **HUMAN GATE** (no automatizar).
+
+## 8. Referencias
+
+- Contrato: `docs/PMV-CONTRACT-AND-ACCEPTANCE.md`
+- Ownership fuente: `docs/inventario/processed/TENANT-OWNERSHIP-MAPPING.md`
+- Bloqueante aislamiento: `docs/pmv/tenant-isolation-blocker.md`
+- Plan QA ownership Preview: `docs/pmv/QA-OWNERSHIP-REVALIDATION-PREVIEW.md`

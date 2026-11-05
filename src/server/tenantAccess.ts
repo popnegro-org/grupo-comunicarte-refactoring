@@ -88,3 +88,31 @@ export function areRequestItemOwnershipsConsistent(
     itemTenantId === supportTenantId
   );
 }
+
+
+/** A support can enter a new commercial request only when active, available and ownership-assigned. */
+export function isSupportSelectableForCommercialRequest(support: {
+  tenantId?: string | null;
+  tenant_id?: string | null;
+  active?: boolean | null;
+  disponibilidad?: string | null;
+}): boolean {
+  const tenantId = support.tenantId ?? support.tenant_id;
+  const active = support.active === true || support.active === undefined;
+  const disponibilidad = typeof support.disponibilidad === 'string' ? support.disponibilidad.trim().toLowerCase() : '';
+  return isSupportEligibleForPublicCatalog(tenantId, active !== false) && disponibilidad === 'disponible';
+}
+
+/** Fail-closed evaluation of locked support rows used inside commercial transactions. */
+export function areLockedSupportsCommerciallyEligible(
+  rows: Array<{
+    tenantId?: string | null;
+    tenant_id?: string | null;
+    active?: boolean | null;
+    disponibilidad?: string | null;
+  }>,
+  expectedCount: number,
+): boolean {
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length !== expectedCount) return false;
+  return rows.every((row) => isSupportSelectableForCommercialRequest(row));
+}
