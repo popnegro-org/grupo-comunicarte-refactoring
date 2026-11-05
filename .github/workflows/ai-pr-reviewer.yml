@@ -1,0 +1,126 @@
+name: 🤖 Revisor de PR Autónomo (Sin Merge)
+
+on:
+  pull_request:
+    types: [opened, synchronize] # Se ejecuta al abrir el PR o al subir nuevos commits
+
+# Permisos mínimos necesarios para que la IA comente y apruebe en el PR
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📂 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: 🐍 Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Instalar dependencias
+        run: |
+          pip install openai requests
+
+      - name: 🚀 Ejecutar Revisión con IA
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Variables de entorno provistas automáticamente por el evento de GitHub
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          python - << 'EOF'
+          import os
+          import json
+          import requests
+          from openai import OpenAI
+
+          # 1. Validar entorno
+          api_key = os.getenv("OPENAI_API_KEY")
+          github_token = os.getenv("GITHUB_TOKEN")
+          repo = os.getenv("REPO_NAME")
+          pr_id = os.getenv("PR_NUMBER")
+
+          if not api_key or not github_token:
+              print("❌ Faltan credenciales esenciales.")
+              exit(1)
+
+          client = OpenAI(api_key=api_key)
+          headers = {
+              "Authorization": f"token {github_token}",
+              "Accept": "application/vnd.github.v3+json"
+          }
+
+          # 2. Obtener los cambios del código (Diff) del PR
+          print(f"🔍 Extrayendo el Diff para el PR #{pr_id}...")
+          diff_url = f"https://github.com{repo}/pulls/{pr_id}"
+          # Pedimos el formato diff directamente a la API de GitHub
+          diff_headers = {**headers, "Accept": "application/vnd.github.v3.diff"}
+          diff_response = requests.get(diff_url, headers=diff_headers)
+          
+          code_diff = diff_response.text
+          if not code_diff or len(code_diff.strip()) == 0:
+              print("⏭️ No se encontraron cambios de código detectables en el Diff.")
+              exit(0)
+
+          # Truncar si el diff es masivo para proteger los límites de contexto de la API
+          if len(code_diff) > 40000:
+              code_diff = code_diff[:40000] + "\n\n[... Diff truncado por exceso de tamaño ...]"
+
+          # 3. Consultar a OpenAI
+          print("🤖 Analizando cambios con GPT-4o...")
+          system_prompt = (
+              "Actúas como un Ingeniero de Software Principal de Grupo Comunicarte.\n"
+              "Tu objetivo es revisar el código del Pull Request. Tienes estrictamente prohibido realizar un Merge.\n"
+              "Evalúa la arquitectura, legibilidad, refactorización y manejo de errores.\n\n"
+              "Debes responder estrictamente en un formato JSON estructurado con dos llaves:\n"
+              "1. 'decision': Debe ser exactamente la palabra 'APPROVE' si el código es apto, o 'COMMENT' si requiere cambios.\n"
+              "2. 'comment': Un texto claro, profesional y técnico en español con tu feedback detallado."
+          )
+
+          try:
+              response = client.chat.completions.create(
+                  model="gpt-4o",
+                  response_format={"type": "json_object"},
+                  messages=[
+                      {"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"Código Diff a revisar:\n{code_diff}"}
+                  ],
+                  temperature=0.2
+              )
+              ai_data = json.loads(response.choices.message.content)
+              decision = ai_data.get("decision", "COMMENT")
+              ai_comment = ai_data.get("comment", "Revisión completada sin comentarios adicionales.")
+          except Exception as e:
+              print(f"❌ Error procesando la respuesta de la IA: {e}")
+              exit(1)
+
+          # 4. Publicar veredicto en GitHub (Aprobar o comentar, NUNCA mergear)
+          review_url = f"https://github.com{repo}/pulls/{pr_id}/reviews"
+          
+          if decision == "APPROVE":
+              print("✅ La IA ha determinado que el PR califica para APROBACIÓN.")
+              payload = {
+                  "body": f"### 🤖 Revisión Automatizada de IA\n\n{ai_comment}",
+                  "event": "APPROVE"
+              }
+          else:
+              print("💬 La IA ha determinado dejar comentarios/solicitar cambios.")
+              payload = {
+                  "body": f"### 🤖 Comentarios de Revisión de IA\n\n{ai_comment}",
+                  "event": "COMMENT"
+              }
+
+          review_response = requests.post(review_url, headers=headers, json=payload)
+          
+          if review_response.status_code == 200 or review_response.status_code == 201:
+              print(f"🎉 Feedback publicado con éxito en el PR #{pr_id}.")
+          else:
+              print(f"❌ Error al publicar en GitHub: {review_response.status_code} - {review_response.text}")
+              exit(1)
+          EOF
