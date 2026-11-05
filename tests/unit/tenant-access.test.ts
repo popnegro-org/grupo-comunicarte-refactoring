@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canManageGlobalRequest, deriveRequestScope, getSupportTenantState, isSupportEligibleForPublicCatalog, resolveMediaKitTenantId, resolveExistingSingleAdminAccess, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
+import { areLockedSupportsCommerciallyEligible, areRequestItemOwnershipsConsistent, canManageGlobalRequest, deriveRequestScope, getSupportTenantState, isSupportEligibleForPublicCatalog, isSupportSelectableForCommercialRequest, resolveMediaKitTenantId, resolveExistingSingleAdminAccess, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
 
 test('rejects missing identity and users without active memberships', () => {
   assert.deepEqual(resolveTenantAccess(null), { allowed: false, reason: 'missing_identity' });
@@ -62,4 +62,55 @@ test('Media Kits are tenant-scoped only when all selected supports belong to one
   assert.equal(resolveMediaKitTenantId(['tenant-ba', 'tenant-default']), null);
   assert.equal(resolveMediaKitTenantId(['tenant-default', null]), 'tenant-default');
   assert.equal(resolveMediaKitTenantId([]), null);
+});
+
+
+test('commercial request ownership must match the current support owner', () => {
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: 'tenant-ba', supportTenantId: 'tenant-ba' },
+    { itemTenantId: 'tenant-default', supportTenantId: 'tenant-default' },
+  ]), true);
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: 'tenant-ba', supportTenantId: 'tenant-default' },
+  ]), false);
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: null, supportTenantId: 'tenant-ba' },
+  ]), false);
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: 'tenant-ba', supportTenantId: null },
+  ]), false);
+  assert.equal(areRequestItemOwnershipsConsistent([]), false);
+});
+
+
+test('commercial selection requires assigned ownership, active state and disponibilidad disponible', () => {
+  assert.equal(isSupportSelectableForCommercialRequest({
+    tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible',
+  }), true);
+  assert.equal(isSupportSelectableForCommercialRequest({
+    tenantId: 'tenant-default', active: true, disponibilidad: 'disponible',
+  }), true);
+  assert.equal(isSupportSelectableForCommercialRequest({
+    tenant_id: null, active: true, disponibilidad: 'disponible',
+  }), false);
+  assert.equal(isSupportSelectableForCommercialRequest({
+    tenant_id: 'tenant-ba', active: false, disponibilidad: 'disponible',
+  }), false);
+  assert.equal(isSupportSelectableForCommercialRequest({
+    tenant_id: 'tenant-ba', active: true, disponibilidad: 'reservado',
+  }), false);
+});
+
+test('locked commercial rows fail closed on count mismatch or any ineligible support', () => {
+  assert.equal(areLockedSupportsCommerciallyEligible([
+    { tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible' },
+  ], 1), true);
+  assert.equal(areLockedSupportsCommerciallyEligible([
+    { tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible' },
+    { tenant_id: null, active: true, disponibilidad: 'disponible' },
+  ], 2), false);
+  assert.equal(areLockedSupportsCommerciallyEligible([
+    { tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible' },
+  ], 2), false);
+  assert.equal(areLockedSupportsCommerciallyEligible([], 0), false);
 });

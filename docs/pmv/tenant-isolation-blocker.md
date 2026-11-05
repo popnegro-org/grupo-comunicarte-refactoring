@@ -2,7 +2,7 @@
 
 > Contrato normativo: [PMV-CONTRACT-AND-ACCEPTANCE.md](../PMV-CONTRACT-AND-ACCEPTANCE.md). Conciliación documental y de datos: [TENANT-OWNERSHIP-MAPPING.md](../inventario/processed/TENANT-OWNERSHIP-MAPPING.md).
 
-**Estado: ownership de inventario conciliado y cuarentena pública validada; falta QA de Media Kit y pruebas negativas de seguridad.**
+**Estado: ownership de inventario conciliado; cuarentena pública en código; revalidación de ownership al avanzar solicitudes implementada (PR #96 / `pmv/p0-ownership-quarantine-gate`). Falta QA transaccional Neon Preview de la matriz ownership, QA autenticado Media Kit y pruebas negativas de seguridad en el SHA liberable.**
 
 ## Decisiones vigentes
 - Conservar el único administrador/credencial existente; no crear usuarios ni invitaciones.
@@ -30,6 +30,10 @@ Mapeo:
 - No se modificó Production.
 
 ## Incorporado
+- Revalidación transaccional de ownership al avanzar solicitudes a cotizada/enviada/cerrada (`updateRequestStatusByAdmin`): locks de cabecera, ítems y soportes en orden estable; comparación `item.tenant_id` vs `supports.tenant_id` fail-closed (`areRequestItemOwnershipsConsistent`).
+- Helpers de elegibilidad comercial para alta de solicitud (`isSupportSelectableForCommercialRequest`, `areLockedSupportsCommerciallyEligible`) y locks ordenados en `handleMediakitRequest`.
+- Plan HUMAN GATE y matriz QA Preview: `docs/pmv/HUMAN_GATE_VALIDATION.md`, `docs/pmv/QA-OWNERSHIP-REVALIDATION-PREVIEW.md`.
+
 - Primitivas fail-closed en `src/server/tenantAccess.ts` y tests unitarios en `tests/unit/tenant-access.test.ts`.
 - Conciliación exacta por `canonical_id` con PDFs maestros.
 - Asignación de 28 soportes y 30 ítems históricos únicamente en Neon Preview.

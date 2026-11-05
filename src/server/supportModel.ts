@@ -420,7 +420,7 @@ export async function getSupportDetail(canonicalId: string, options?: { includeI
   if (rows.length === 0) return null;
   const row = rows[0];
   if (!(row.canonicalId && row.name && row.ciudad && row.tipoSoporte)) return null;
-  if (!options?.includeUnassigned && !row.tenantId) return null;
+  if (!options?.includeUnassigned && !isSupportEligibleForPublicCatalog(row.tenantId, row.active !== false)) return null;
   if (!options?.includeInactive && row.active === false) return null;
   const related = await loadRelatedRecords([canonicalId]);
   return rowToInventoryItem(row, related);

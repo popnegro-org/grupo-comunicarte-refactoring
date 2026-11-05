@@ -76,3 +76,43 @@ export function resolveMediaKitTenantId(tenantIds: Array<string | null | undefin
   const assigned = [...new Set(tenantIds.filter((tenantId): tenantId is string => typeof tenantId === 'string' && tenantId.trim().length > 0))];
   return assigned.length === 1 ? assigned[0] : null;
 }
+
+
+/** A commercial request line is valid only when its stored tenant matches the current support owner. */
+export function areRequestItemOwnershipsConsistent(
+  items: Array<{ itemTenantId: string | null | undefined; supportTenantId: string | null | undefined }>,
+): boolean {
+  return items.length > 0 && items.every(({ itemTenantId, supportTenantId }) =>
+    typeof itemTenantId === 'string' && itemTenantId.trim().length > 0 &&
+    typeof supportTenantId === 'string' && supportTenantId.trim().length > 0 &&
+    itemTenantId === supportTenantId
+  );
+}
+
+
+/** A support can enter a new commercial request only when active, available and ownership-assigned. */
+export function isSupportSelectableForCommercialRequest(support: {
+  tenantId?: string | null;
+  tenant_id?: string | null;
+  active?: boolean | null;
+  disponibilidad?: string | null;
+}): boolean {
+  const tenantId = support.tenantId ?? support.tenant_id;
+  const active = support.active === true || support.active === undefined;
+  const disponibilidad = typeof support.disponibilidad === 'string' ? support.disponibilidad.trim().toLowerCase() : '';
+  return isSupportEligibleForPublicCatalog(tenantId, active !== false) && disponibilidad === 'disponible';
+}
+
+/** Fail-closed evaluation of locked support rows used inside commercial transactions. */
+export function areLockedSupportsCommerciallyEligible(
+  rows: Array<{
+    tenantId?: string | null;
+    tenant_id?: string | null;
+    active?: boolean | null;
+    disponibilidad?: string | null;
+  }>,
+  expectedCount: number,
+): boolean {
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length !== expectedCount) return false;
+  return rows.every((row) => isSupportSelectableForCommercialRequest(row));
+}

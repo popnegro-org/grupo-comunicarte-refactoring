@@ -2,7 +2,7 @@ import { db, pool } from '../db/index.ts';
 import { mediakitRequests, mediakitRequestItems } from '../db/schema.ts';
 import { validateSupportsForRequest, getSupportByIdFromDB } from './supportsService.ts';
 import { eq, desc } from 'drizzle-orm';
-import { deriveRequestScope } from './tenantAccess.ts';
+import { areLockedSupportsCommerciallyEligible, deriveRequestScope } from './tenantAccess.ts';
 import { normalizeIdempotencyKey, requestIdFromIdempotencyKey } from './requestIdempotency.ts';
 
 export interface LeadPayload {
@@ -122,18 +122,17 @@ export async function handleMediakitRequest(body: any): Promise<{
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      const orderedIds = [...uniqueSelectedIds].sort();
       const lockedSupports = await client.query(
         `SELECT canonical_id, tenant_id, active, disponibilidad
            FROM supports
           WHERE canonical_id = ANY($1::text[])
+          ORDER BY canonical_id
           FOR UPDATE`,
-        [uniqueSelectedIds],
+        [orderedIds],
       );
-      if (lockedSupports.rows.length !== uniqueSelectedIds.length) {
-        throw new Error('La selección cambió mientras se procesaba. Actualizá el catálogo e intentá nuevamente.');
-      }
-      if (lockedSupports.rows.some((support) => !support.tenant_id || support.active !== true || support.disponibilidad !== 'disponible')) {
-        throw new Error('La selección contiene soportes pendientes de ownership o que ya no están disponibles.');
+      if (!areLockedSupportsCommerciallyEligible(lockedSupports.rows, orderedIds.length)) {
+        throw new Error('La selección contiene soportes pendientes de ownership, inexistentes o que ya no están disponibles.');
       }
       const tenantIds = [...new Set(lockedSupports.rows.map((support) => String(support.tenant_id)))];
       const requestScope = deriveRequestScope(tenantIds, false);
