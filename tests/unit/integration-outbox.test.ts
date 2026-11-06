@@ -104,7 +104,7 @@ test('claims a bounded sandbox batch and marks successful delivery', async () =>
 
   assert.deepEqual(result, { claimed: 1, delivered: 1, retryable: 0, permanent: 0 });
   assert.match(statements[0], /FOR UPDATE SKIP LOCKED/);
-  assert.match(statements[0], /locked_at < NOW() - INTERVAL '5 minutes'/);
+  assert.match(statements[0], /locked_at < NOW\(\) - INTERVAL '5 minutes'/);
   assert.match(statements[1], /status = 'delivered'/);
 });
 
