@@ -158,7 +158,7 @@ No crear ramas Neon nuevas ni eliminar ramas para liberar cuota sin autorizació
 - `npm ci`, TypeScript/lint, 59 tests unitarios, build y auditoría npm se ejecutaron correctamente en un entorno limpio.
 - La ejecución visual local sin baseline restaurado no es concluyente: 22 pruebas pasaron, 2 quedaron omitidas y 6 no pudieron comparar snapshots porque no estaban presentes en el clon limpio. No se generaron ni aprobaron baselines nuevos.
 - Render QA requiere verificar su rama/código actual antes de atribuirle la consistencia de dependencias de la candidata.
-- La conexión Git Vercel y la protección de Neon siguen como bloqueos de infraestructura documentados en `docs/infra/normalization-audit-2026-11-05.md`.
+- La conexión Git Vercel y la protección de Neon siguen como bloqueos de infraestructura documentados en `docs/infra/normalization-audit-2026-11-06.md`.
 
 ## 10. Decisiones que requieren HUMAN GATE
 
