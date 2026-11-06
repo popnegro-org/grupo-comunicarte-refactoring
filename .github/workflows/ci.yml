@@ -6,6 +6,7 @@ on:
       - canonical-refinement
       - pmv-production-refinement
       - pmv-final-human-gate
+      - pmv-validation-candidate
       - 'feat/**'
   pull_request:
     branches:
