@@ -4,6 +4,7 @@ import { validateSupportsForRequest, getSupportByIdFromDB } from './supportsServ
 import { eq, desc } from 'drizzle-orm';
 import { areLockedSupportsCommerciallyEligible, deriveRequestScope } from './tenantAccess.ts';
 import { normalizeIdempotencyKey, requestIdFromIdempotencyKey } from './requestIdempotency.ts';
+import { createRequestCreatedSandboxEvent, enqueueIntegrationEvent } from './integrationOutbox.ts';
 
 export interface LeadPayload {
   name: string;
@@ -154,6 +155,14 @@ export async function handleMediakitRequest(body: any): Promise<{
           'INSERT INTO mediakit_request_items (request_id, support_id, tenant_id) VALUES ($1, $2, $3)',
           [requestId, support.canonical_id, support.tenant_id],
         );
+      }
+      // Sandbox-only outbox enqueue shares the request transaction and contains no contact PII.
+      if (process.env.INTEGRATION_OUTBOX_MODE === 'sandbox') {
+        const event = createRequestCreatedSandboxEvent({
+          requestId,
+          requestScope: requestScope as 'tenant' | 'global',
+        });
+        await enqueueIntegrationEvent(client, event);
       }
       await client.query('COMMIT');
     } catch (error) {

@@ -11,7 +11,8 @@
     "clean": "rm -rf dist node_modules/.vite",
     "lint": "tsc --noEmit",
     "test:visual": "playwright test",
-    "test:unit": "tsx --test tests/unit/*.test.ts"
+    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "integrations:sandbox:drain": "tsx scripts/process-sandbox-outbox.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
