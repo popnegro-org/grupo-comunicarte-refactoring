@@ -29,6 +29,10 @@
 - En Visual QA #510 se restauró un baseline, se capturó baseline de mapa desde la rama base y se ejecutó regresión visual. El paso de regresión terminó en success.
 - El workflow Visual QA instalaba dependencias con `npm install`, a diferencia de CI y CI Candidate que utilizan `npm ci`. Se normalizó a `npm ci --no-audit --no-fund` en esta rama de trabajo para reproducibilidad.
 
+### Corrección adicional de CI
+
+La auditoría detectó que `.github/workflows/ci.yml` ejecutaba en PRs dirigidos a `pmv-validation-candidate`, pero no en pushes directos a esa rama. Se añadió `pmv-validation-candidate` al filtro `push.branches` para que el workflow CI completo (npm ci, lint/typecheck, unit tests y build) valide también cada actualización directa de la candidata. La validación de esta corrección queda sujeta a los checks del PR de normalización.
+
 ## 2. Vercel
 
 - Proyecto: `grupo-comunicarte-refactoring`.
