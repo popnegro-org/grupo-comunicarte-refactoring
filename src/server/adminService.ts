@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { mediakitRequests, supports } from '../db/schema.ts';
+import { supports, supportPricing, supportMedia } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
   createSupportMediaRecord,
@@ -22,8 +22,10 @@ import {
   validateAvailability,
 } from './supportModel.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './supportsService.ts';
-import { db } from '../db/index.ts';
-import { and, count, eq } from 'drizzle-orm';
+import { isSafeSupportMediaKey } from './r2StorageAdapter.ts';
+import { areRequestItemOwnershipsConsistent, isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
+import { db, pool, isDatabaseConfigured } from '../db/index.ts';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -62,10 +64,17 @@ function canonicalizeEditorMedia<T extends SupportWritePayload>(data: T): T {
   };
 }
 
+function secureStringEquals(left: string, right: string): boolean {
+  const leftBytes = Buffer.from(left, 'utf8');
+  const rightBytes = Buffer.from(right, 'utf8');
+  if (leftBytes.length !== rightBytes.length) return false;
+  return crypto.timingSafeEqual(leftBytes, rightBytes);
+}
+
 export function authenticateAdmin(username: string, password: string): { success: boolean; token?: string; message?: string } {
   const user = String(username ?? '').trim();
   const pass = String(password ?? '');
-  if (user === adminUser && pass === adminPassword) {
+  if (user === adminUser && secureStringEquals(pass, adminPassword)) {
     const expiresAt = Date.now() + 8 * 3600 * 1000;
     const payload = `${user}:${expiresAt}`;
     const signature = crypto.createHmac('sha256', adminSecret).update(payload).digest('hex');
@@ -97,7 +106,7 @@ export function verifyAdminToken(authHeader?: string): boolean {
 }
 
 export async function getAdminStats() {
-  const allSupports = await getAllSupportsFromDB({ includeInactive: true });
+  const allSupports = await getAllSupportsFromDB({ includeInactive: true, includeUnassigned: true });
   const allRequests = await getAllMediakitRequestsFromDB();
 
   const total = allSupports.filter((s: any) => s.active !== false).length;
@@ -140,11 +149,11 @@ export async function getAdminStats() {
 }
 
 export async function listAdminSupports() {
-  return getAllSupportsFromDB({ includeInactive: true });
+  return getAllSupportsFromDB({ includeInactive: true, includeUnassigned: true });
 }
 
 export async function getAdminSupportById(canonicalId: string) {
-  const support = await getSupportByIdFromDB(canonicalId, { includeInactive: true });
+  const support = await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true });
   if (!support) {
     throw new Error(`Soporte con ID '${canonicalId}' no encontrado.`);
   }
@@ -153,7 +162,7 @@ export async function getAdminSupportById(canonicalId: string) {
 
 async function assertFeaturedCapacity(canonicalId: string | null, data: SupportWritePayload) {
   const current = canonicalId
-    ? await getSupportByIdFromDB(canonicalId, { includeInactive: true })
+    ? await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true })
     : null;
 
   const nextFeatured = data.isFeatured === undefined ? current?.isFeatured === true : data.isFeatured === true;
@@ -184,7 +193,7 @@ export async function createAdminSupport(data: SupportWritePayload & { canonical
 
   if (canonicalData.canonical_id?.trim()) {
     const canonicalId = canonicalData.canonical_id.trim();
-    const existing = await getSupportByIdFromDB(canonicalId, { includeInactive: true });
+    const existing = await getSupportByIdFromDB(canonicalId, { includeInactive: true, includeUnassigned: true });
     if (existing) {
       throw new Error(`canonical_id duplicado: ${canonicalId}`);
     }
@@ -222,8 +231,42 @@ export async function getSupportMediaByAdmin(canonicalId: string) {
   return listSupportMediaRecords(canonicalId);
 }
 
+export async function getPublicSupportMediaAsset(mediaId: number) {
+  if (!Number.isSafeInteger(mediaId) || mediaId <= 0) return null;
+  const [result] = await db.select({ media: supportMedia, support: supports })
+    .from(supportMedia)
+    .innerJoin(supports, eq(supportMedia.supportCanonicalId, supports.canonicalId))
+    .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true), isNotNull(supports.tenantId)))
+    .limit(1);
+  if (!result || !isSupportEligibleForPublicCatalog(result.support.tenantId, result.support.active)) return null;
+  const storageKey = (result.media.metadata as Record<string, unknown> | null)?.storage_key;
+  if (typeof storageKey !== 'string' || !isSafeSupportMediaKey(result.support.canonicalId, storageKey)) return null;
+  return { storageKey, mimeType: result.media.mimeType || undefined };
+}
+
 export async function getSupportPricingByAdmin(canonicalId: string) {
   return getSupportPricingRecord(canonicalId);
+}
+
+export async function listSupportPricingByAdmin(): Promise<Record<string, {
+  exhibition_price: string | null;
+  installation_price: string | null;
+  printing_price: string | null;
+  monthly_price: string | null;
+  exclusive_price: string | null;
+  currency: string;
+  tax_included: boolean;
+}>> {
+  const rows = await db.select().from(supportPricing);
+  return Object.fromEntries(rows.map((row) => [row.supportCanonicalId, {
+    exhibition_price: row.exhibitionPrice,
+    installation_price: row.installationPrice,
+    printing_price: row.printingPrice,
+    monthly_price: row.monthlyPrice,
+    exclusive_price: row.exclusivePrice,
+    currency: row.currency,
+    tax_included: row.taxIncluded,
+  }]));
 }
 
 export async function patchSupportPricingByAdmin(canonicalId: string, pricing: any) {
@@ -243,16 +286,72 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
   if (!validStatuses.includes(status)) {
     throw new Error(`Estado comercial inválido: ${status}`);
   }
+  if (!isDatabaseConfigured) throw new Error('La persistencia de solicitudes no está disponible.');
 
-  const result = await db
-    .update(mediakitRequests)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(mediakitRequests.requestId, requestId))
-    .returning();
+  const requiresOwnership = ['quoted', 'enviado', 'closed', 'cerrado'].includes(status);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const request = await client.query(
+      'SELECT request_id FROM mediakit_requests WHERE request_id = $1 FOR UPDATE',
+      [requestId],
+    );
+    if (request.rows.length === 0) {
+      throw new Error(`Solicitud con ID '${requestId}' no encontrada.`);
+    }
 
-  if (result.length === 0) {
-    throw new Error(`Solicitud con ID '${requestId}' no encontrada.`);
+    if (requiresOwnership) {
+      const items = await client.query(
+        `SELECT support_id, tenant_id
+           FROM mediakit_request_items
+          WHERE request_id = $1
+          FOR UPDATE`,
+        [requestId],
+      );
+      if (items.rows.length === 0) {
+        throw new Error('La solicitud no puede avanzar comercialmente: no contiene ítems verificables.');
+      }
+
+      const supportIds = [...new Set(items.rows.map((item) => String(item.support_id || '').trim()).filter(Boolean))];
+      const supportsResult = supportIds.length > 0
+        ? await client.query(
+            `SELECT canonical_id, tenant_id
+               FROM supports
+              WHERE canonical_id = ANY($1::text[])
+              ORDER BY canonical_id
+              FOR UPDATE`,
+            [supportIds],
+          )
+        : { rows: [] as Array<{ canonical_id: string; tenant_id: string | null }> };
+      const supportTenantById = new Map(
+        supportsResult.rows.map((support) => [String(support.canonical_id), support.tenant_id as string | null]),
+      );
+      const ownershipPairs = items.rows.map((item) => ({
+        itemTenantId: item.tenant_id as string | null,
+        supportTenantId: supportTenantById.get(String(item.support_id || '').trim()) ?? null,
+      }));
+
+      if (
+        supportsResult.rows.length !== supportIds.length ||
+        !areRequestItemOwnershipsConsistent(ownershipPairs)
+      ) {
+        throw new Error('La solicitud no puede avanzar comercialmente: el ownership de sus ítems está pendiente o no coincide con el inventario actual.');
+      }
+    }
+
+    const updated = await client.query(
+      `UPDATE mediakit_requests
+          SET status = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE request_id = $1
+        RETURNING *`,
+      [requestId, status],
+    );
+    await client.query('COMMIT');
+    return updated.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return result[0];
 }

@@ -5,6 +5,7 @@ import { LocationRecord, MobileRoute, InventoryItem, Plaza, getDisponibilidad } 
 import { SupportCard } from '../inventory/SupportCard';
 import { X, SearchX } from 'lucide-react';
 import { getIcon } from '../../lib/map-icons';
+import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
 import { useSelection } from '../../context/SelectionContext';
 
 interface InventoryMapProps {
@@ -22,7 +23,7 @@ function MapUpdater({ locations, routes, userLocation }: { locations: LocationRe
     const validLocations = locations.filter(loc => loc.lat !== null && loc.lng !== null);
     if (validLocations.length === 0 && routes.length === 0) return;
     const bounds = L.latLngBounds([]);
-    validLocations.forEach(loc => { if (loc.lat && loc.lng) bounds.extend([loc.lat, loc.lng]); });
+    validLocations.forEach(loc => { if (loc.lat !== null && loc.lng !== null) bounds.extend([loc.lat, loc.lng]); });
     routes.forEach(route => { if (route.routePath?.length) route.routePath.forEach(point => bounds.extend(point as [number, number])); });
     if (userLocation) {
       map.flyTo(userLocation, 13, { duration: 0.8 });
@@ -75,7 +76,7 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
                 <div className="px-3 py-2 text-left min-w-[160px] max-w-[220px]">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500">
-                      {loc.tipo_soporte.replace('_', ' ')}
+                      {toInventoryPresentationItem(loc).tipo}
                     </span>
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${

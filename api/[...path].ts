@@ -19,13 +19,6 @@ if (configuredDatabaseUrl) {
   process.env.DATABASE_URL = useNeonPooler(configuredDatabaseUrl);
 }
 
-function databaseHost(): string | null {
-  try {
-    return process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).hostname : null;
-  } catch {
-    return null;
-  }
-}
 
 const MAX_APP_BOOTSTRAP_ATTEMPTS = 3;
 const APP_BOOTSTRAP_RETRY_DELAY_MS = 500;
@@ -83,8 +76,7 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({
       status: 'error',
       code: 'API_BOOTSTRAP_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown API bootstrap error',
-      databaseHost: databaseHost(),
+      message: 'No fue posible iniciar el servicio. Intentá nuevamente más tarde.',
     });
   }
 }

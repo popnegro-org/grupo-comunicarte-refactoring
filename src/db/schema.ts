@@ -1,8 +1,20 @@
 import { pgTable, serial, text, numeric, boolean, json, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
 
+export const tenants = pgTable('tenants', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  plan: text('plan').notNull().default('basic'),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+});
+
 export const supports = pgTable('supports', {
   id: serial('id').primaryKey(),
   canonicalId: text('canonical_id').notNull().unique(),
+  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
   name: text('name').notNull(),
   ciudad: text('ciudad').notNull(),
   tipoSoporte: text('tipo_soporte').notNull(),
@@ -134,6 +146,7 @@ export const supportRoutes = pgTable('support_routes', {
 
 export const mediakitRequests = pgTable('mediakit_requests', {
   id: serial('id').primaryKey(),
+  requestScope: text('request_scope'),
   requestId: text('request_id').notNull().unique(),
   requesterName: text('requester_name').notNull(),
   requesterEmail: text('requester_email').notNull(),
@@ -147,6 +160,7 @@ export const mediakitRequests = pgTable('mediakit_requests', {
 
 export const mediakitRequestItems = pgTable('mediakit_request_items', {
   id: serial('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
   requestId: text('request_id').notNull(),
   supportId: text('support_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -159,7 +173,8 @@ export const mediakitRequestItems = pgTable('mediakit_request_items', {
  * its own lifecycle (draft -> ready -> sent -> archived).
  */
 export const mediakits = pgTable('mediakits', {
-  id: serial('id').primaryKey(),
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
   kitId: text('kit_id').notNull().unique(),
   sourceRequestId: text('source_request_id'),
   status: text('status').notNull().default('draft'),
@@ -181,6 +196,7 @@ export const mediakits = pgTable('mediakits', {
 
 export const mediakitItems = pgTable('mediakit_items', {
   id: serial('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
   kitId: text('kit_id').notNull(),
   supportId: text('support_id').notNull(),
   approvedPrice: numeric('approved_price'),

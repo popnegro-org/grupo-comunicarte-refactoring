@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import {
   supportFaces,
@@ -10,6 +10,7 @@ import {
   supportRoutes,
   supportTechnical,
 } from '../db/schema.ts';
+import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
 import {
   Disponibilidad,
   InventoryItem,
@@ -236,21 +237,27 @@ function mapPricingRow(row: SupportPricingRow | null | undefined): SupportPricin
   };
 }
 
-function mapMediaRows(rows: SupportMediaRow[]): SupportMediaItem[] {
+function mapMediaRows(rows: SupportMediaRow[], includePrivateStorageKey = false): SupportMediaItem[] {
   return rows
     .slice()
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id)
-    .map((row) => ({
-      id: row.id,
-      media_type: row.mediaType as SupportMediaType,
-      url: row.url,
-      title: row.title || undefined,
-      alt: row.alt || undefined,
-      mime_type: row.mimeType || undefined,
-      sort_order: row.sortOrder,
-      metadata: (row.metadata as Record<string, unknown>) || undefined,
-      active: row.active ?? true,
-    }));
+    .map((row) => {
+      const metadata = (row.metadata as Record<string, unknown> | null) || undefined;
+      const publicMetadata = metadata && !includePrivateStorageKey
+        ? Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== 'storage_key'))
+        : metadata;
+      return {
+        id: row.id,
+        media_type: row.mediaType as SupportMediaType,
+        url: typeof metadata?.storage_key === 'string' ? `/api/media/${row.id}` : row.url,
+        title: row.title || undefined,
+        alt: row.alt || undefined,
+        mime_type: row.mimeType || undefined,
+        sort_order: row.sortOrder,
+        metadata: publicMetadata,
+        active: row.active ?? true,
+      };
+    });
 }
 
 function mapTechnicalRow(row: SupportTechnicalRow | null | undefined): SupportTechnicalData | null {
@@ -393,23 +400,27 @@ function rowToInventoryItem(
   } as LocationRecord;
 }
 
-export async function getSupportCatalog(options?: { includeInactive?: boolean }): Promise<InventoryItem[]> {
-  const rows = await db.select().from(supports);
+export async function getSupportCatalog(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
+  const rows = options?.includeUnassigned
+    ? await db.select().from(supports)
+    : await db.select().from(supports).where(isNotNull(supports.tenantId));
   const filtered = rows.filter((row) => {
     const isComplete = Boolean(row.canonicalId && row.name && row.ciudad && row.tipoSoporte);
     const isActive = options?.includeInactive ? true : row.active !== false;
-    return isComplete && isActive;
+    const hasTenant = options?.includeUnassigned ? true : isSupportEligibleForPublicCatalog(row.tenantId, row.active !== false);
+    return isComplete && isActive && hasTenant;
   });
   const canonicalIds = filtered.map((row) => row.canonicalId);
   const related = await loadRelatedRecords(canonicalIds);
   return filtered.map((row) => rowToInventoryItem(row, related));
 }
 
-export async function getSupportDetail(canonicalId: string, options?: { includeInactive?: boolean }): Promise<InventoryItem | null> {
+export async function getSupportDetail(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const rows = await db.select().from(supports).where(eq(supports.canonicalId, canonicalId));
   if (rows.length === 0) return null;
   const row = rows[0];
   if (!(row.canonicalId && row.name && row.ciudad && row.tipoSoporte)) return null;
+  if (!options?.includeUnassigned && !isSupportEligibleForPublicCatalog(row.tenantId, row.active !== false)) return null;
   if (!options?.includeInactive && row.active === false) return null;
   const related = await loadRelatedRecords([canonicalId]);
   return rowToInventoryItem(row, related);
@@ -703,7 +714,7 @@ async function syncSupportMedia(canonicalId: string, payload: SupportWritePayloa
       const storageKey = (row.metadata as any)?.storage_key;
       if (storageKey) {
         try {
-          const isR2Configured = process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_PUBLIC_URL;
+          const isR2Configured = process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY;
           if (isR2Configured) {
             const { getStorageAdapter } = await import('./r2StorageAdapter.ts');
             await getStorageAdapter().delete(storageKey);
@@ -922,7 +933,7 @@ export async function updateSupportRouteRecord(canonicalId: string, route: Parti
 
 export async function listSupportMediaRecords(canonicalId: string) {
   const rows = await db.select().from(supportMedia).where(eq(supportMedia.supportCanonicalId, canonicalId));
-  return mapMediaRows(rows);
+  return mapMediaRows(rows, true);
 }
 
 export async function createSupportMediaRecord(canonicalId: string, media: SupportMediaInput) {

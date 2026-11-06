@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { Layout } from './components/layout/Layout';
@@ -5,24 +6,24 @@ import { PageTransition } from './components/layout/PageTransition';
 import { SelectionProvider } from './context/SelectionContext';
 
 // Public pages
-import Home from './pages/Home';
-import ComingSoon from './pages/ComingSoon';
-import Inventario from './pages/Inventario';
-import MediaKits from './pages/MediaKits';
-import Soportes from './pages/Soportes';
-import Nosotros from './pages/Nosotros';
-import Soluciones from './pages/Soluciones';
-import Contacto from './pages/Contacto';
+const Home = lazy(() => import('./pages/Home'));
+const ComingSoon = lazy(() => import('./pages/ComingSoon'));
+const Inventario = lazy(() => import('./pages/Inventario'));
+const MediaKits = lazy(() => import('./pages/MediaKits'));
+const Soportes = lazy(() => import('./pages/Soportes'));
+const Nosotros = lazy(() => import('./pages/Nosotros'));
+const Soluciones = lazy(() => import('./pages/Soluciones'));
+const Contacto = lazy(() => import('./pages/Contacto'));
 
 // Auth & Dashboard
-import Login from './pages/auth/Login';
-import Dashboard from './pages/dashboard/Dashboard';
-import DashboardSupportList from './pages/dashboard/DashboardSupportList';
-import DashboardSupportProductEditor from './pages/dashboard/DashboardSupportProductEditor';
-import DashboardSupportPreview from './pages/dashboard/DashboardSupportPreview';
-import DashboardSupportReservation from './pages/dashboard/DashboardSupportReservation';
-import DashboardMediaKitWorkflow from './pages/dashboard/DashboardMediaKitWorkflow';
-import DashboardMediaKitBuilder from './pages/dashboard/DashboardMediaKitBuilder';
+const Login = lazy(() => import('./pages/auth/Login'));
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
+const DashboardSupportList = lazy(() => import('./pages/dashboard/DashboardSupportList'));
+const DashboardSupportProductEditor = lazy(() => import('./pages/dashboard/DashboardSupportProductEditor'));
+const DashboardSupportPreview = lazy(() => import('./pages/dashboard/DashboardSupportPreview'));
+const DashboardSupportReservation = lazy(() => import('./pages/dashboard/DashboardSupportReservation'));
+const DashboardMediaKitWorkflow = lazy(() => import('./pages/dashboard/DashboardMediaKitWorkflow'));
+const DashboardMediaKitBuilder = lazy(() => import('./pages/dashboard/DashboardMediaKitBuilder'));
 
 function PublicRoutes() {
   const location = useLocation();
@@ -55,6 +56,7 @@ export default function App() {
   return (
     <SelectionProvider>
       <Router>
+        <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -70,6 +72,7 @@ export default function App() {
           <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
           <Route path="*" element={<PublicRoutes />} />
         </Routes>
+        </Suspense>
       </Router>
     </SelectionProvider>
   );

@@ -16,7 +16,7 @@ export interface StorageUploadInput { key: string; body: Buffer; contentType: st
 export interface StorageAdapter {
   upload(input: StorageUploadInput): Promise<{ key: string; url: string }>;
   delete(key: string): Promise<void>;
-  getAssetUrl(key: string): string;
+  getAssetUrl(key: string, expiresInSeconds?: number): string;
 }
 
 function requiredEnv(name: string): string {
@@ -27,13 +27,45 @@ function requiredEnv(name: string): string {
 function sha256(value: string | Buffer): string { return crypto.createHash('sha256').update(value).digest('hex'); }
 function hmac(key: Buffer | string, value: string): Buffer { return crypto.createHmac('sha256', key).update(value).digest(); }
 function encodePath(key: string): string { return key.split('/').map((part) => encodeURIComponent(part)).join('/'); }
+export function isSafeSupportMediaKey(canonicalId: string, key: string): boolean {
+  if (!key.startsWith(`soporte/${canonicalId}/`)) return false;
+  return key.split('/').every((segment) => Boolean(segment) && segment !== '.' && segment !== '..' && !segment.includes('\\') && !segment.includes('\0'));
+}
+
+export function createPresignedGetUrl(input: { endpoint: string; bucket: string; accessKey: string; secretKey: string; key: string; expiresInSeconds?: number; now?: Date }): string {
+  const expiresInSeconds = input.expiresInSeconds ?? 300;
+  if (!Number.isInteger(expiresInSeconds) || expiresInSeconds < 1 || expiresInSeconds > 600) {
+    throw new Error('La expiración de URL firmada debe estar entre 1 y 600 segundos.');
+  }
+  const url = new URL(`${input.endpoint.replace(/\/$/, '')}/${encodePath(input.bucket)}/${encodePath(input.key)}`);
+  const amzDate = (input.now ?? new Date()).toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/auto/s3/aws4_request`;
+  const query: Record<string, string> = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': `${input.accessKey}/${credentialScope}`,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': String(expiresInSeconds),
+    'X-Amz-SignedHeaders': 'host',
+  };
+  const encode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  const canonicalQuery = Object.keys(query).sort().map((name) => `${encode(name)}=${encode(query[name])}`).join('&');
+  const canonicalRequest = ['GET', url.pathname, canonicalQuery, `host:${url.host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope, sha256(canonicalRequest)].join('\n');
+  const kDate = hmac(`AWS4${input.secretKey}`, dateStamp);
+  const kRegion = hmac(kDate, 'auto');
+  const kService = hmac(kRegion, 's3');
+  const kSigning = hmac(kService, 'aws4_request');
+  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+  url.search = `${canonicalQuery}&X-Amz-Signature=${signature}`;
+  return url.toString();
+}
 
 class CloudflareR2StorageAdapter implements StorageAdapter {
   private readonly endpoint: string;
   private readonly bucket: string;
   private readonly accessKey: string;
   private readonly secretKey: string;
-  private readonly publicUrl: string;
 
   constructor() {
     const accountId = requiredEnv('R2_ACCOUNT_ID');
@@ -41,10 +73,11 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
     this.bucket = requiredEnv('R2_BUCKET_NAME');
     this.accessKey = requiredEnv('R2_ACCESS_KEY_ID');
     this.secretKey = requiredEnv('R2_SECRET_ACCESS_KEY');
-    this.publicUrl = requiredEnv('R2_PUBLIC_URL').replace(/\/$/, '');
   }
 
-  getAssetUrl(key: string): string { return `${this.publicUrl}/${encodePath(key)}`; }
+  getAssetUrl(key: string, expiresInSeconds = 300): string {
+    return createPresignedGetUrl({ endpoint: this.endpoint, bucket: this.bucket, accessKey: this.accessKey, secretKey: this.secretKey, key, expiresInSeconds });
+  }
 
   private async request(method: 'PUT' | 'DELETE', key: string, body?: Buffer, contentType?: string) {
     const url = `${this.endpoint}/${encodePath(this.bucket)}/${encodePath(key)}`;
@@ -83,7 +116,7 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
     if (input.body.length === 0) throw new Error('El archivo está vacío.');
     if (input.body.length > MAX_UPLOAD_BYTES) throw new Error('El archivo excede el límite máximo permitido.');
     await this.request('PUT', input.key, input.body, contentType);
-    return { key: input.key, url: this.getAssetUrl(input.key) };
+    return { key: input.key, url: `r2://${input.key}` };
   }
 
   async delete(key: string): Promise<void> { await this.request('DELETE', key); }

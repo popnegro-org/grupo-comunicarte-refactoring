@@ -5,11 +5,14 @@ on:
     branches:
       - canonical-refinement
       - pmv-production-refinement
+      - pmv-final-human-gate
+      - pmv-validation-candidate
       - 'feat/**'
   pull_request:
     branches:
       - main
       - canonical-refinement
+      - pmv-validation-candidate
 
 permissions:
   contents: read
@@ -38,6 +41,9 @@ jobs:
 
       - name: Lint / Typecheck
         run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
 
       - name: Build
         run: npm run build

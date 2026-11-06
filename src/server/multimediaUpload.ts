@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
-import { addSupportMediaByAdmin, getSupportMediaByAdmin } from './adminService';
+import { addSupportMediaByAdmin, getSupportMediaByAdmin, removeSupportMediaByAdmin, updateSupportMediaByAdmin } from './adminService';
 import { ALLOWED_MEDIA_MIME_TYPES, createAssetKey, getStorageAdapter, MAX_UPLOAD_BYTES } from './r2StorageAdapter';
+import { matchesMediaSignature } from './mediaSignature';
 
 interface MultipartMedia { filename: string; contentType: string; data: Buffer; }
 
@@ -66,6 +67,7 @@ export async function handleMediaUpload(req: Request, res: Response) {
     if (!ALLOWED_MEDIA_MIME_TYPES.has(mimeType)) return res.status(415).json({ status: 'error', message: `MIME no permitido: ${mimeType}.` });
     if (media.data.length === 0) return res.status(400).json({ status: 'error', message: 'El archivo está vacío.' });
     if (media.data.length > MAX_UPLOAD_BYTES) return res.status(413).json({ status: 'error', message: 'El archivo excede el límite máximo permitido.' });
+    if (!matchesMediaSignature(media.data, mimeType)) return res.status(415).json({ status: 'error', message: 'El contenido del archivo no coincide con el MIME declarado.' });
 
     const existing = await getSupportMediaByAdmin(canonicalId);
     const sortOrder = existing.reduce((max: number, item: any) => Math.max(max, Number(item.sort_order ?? item.sortOrder ?? 0)), -1) + 1;
@@ -73,6 +75,7 @@ export async function handleMediaUpload(req: Request, res: Response) {
     const key = createAssetKey(canonicalId, mimeType, role);
     const uploaded = await getStorageAdapter().upload({ key, body: media.data, contentType: mimeType });
 
+    let createdMediaId: number | undefined;
     try {
       const created = await addSupportMediaByAdmin(canonicalId, {
         media_type: mimeType.startsWith('video/') ? 'video' : 'image',
@@ -84,8 +87,17 @@ export async function handleMediaUpload(req: Request, res: Response) {
         metadata: { storage_key: uploaded.key, original_filename: media.filename, role },
         active: true,
       });
-      return res.status(201).json({ status: 'success', data: created });
+      createdMediaId = created.id;
+      const publicRoute = `/api/media/${created.id}`;
+      const persisted = await updateSupportMediaByAdmin(canonicalId, created.id, {
+        url: publicRoute,
+        metadata: { storage_key: uploaded.key, original_filename: media.filename, role },
+      });
+      return res.status(201).json({ status: 'success', data: persisted });
     } catch (dbError) {
+      if (createdMediaId) {
+        try { await removeSupportMediaByAdmin(canonicalId, createdMediaId); } catch (cleanupError) { console.error('Support media cleanup after URL persistence failure:', cleanupError); }
+      }
       try { await getStorageAdapter().delete(uploaded.key); } catch (cleanupError) { console.error('R2 cleanup after support_media failure failed:', cleanupError); }
       throw dbError;
     }

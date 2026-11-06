@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Check, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InventoryItem, getDisponibilidad } from '../../types';
+import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
 import { useSelection } from '../../context/SelectionContext';
 import {
   FactStrip,
@@ -20,7 +21,7 @@ interface SupportCardProps {
   onRemove?: (item: InventoryItem) => void;
 }
 
-const cardBase = 'overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow';
+const cardBase = 'overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md';
 
 export function SupportCard({ item, variant = 'catalog', selectable = false, onRemove }: SupportCardProps) {
   const navigate = useNavigate();
@@ -52,6 +53,11 @@ export function SupportCard({ item, variant = 'catalog', selectable = false, onR
         alt={alt}
       />
       <div className="absolute left-3 top-3"><StatusBadge item={item} /></div>
+      {item.isFeatured && (
+        <span className={`absolute right-3 ${variant === 'selectable' ? 'top-12' : 'top-3'} rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-950 shadow-sm`}>
+          Destacado
+        </span>
+      )}
     </div>
   );
 
@@ -90,15 +96,15 @@ export function SupportCard({ item, variant = 'catalog', selectable = false, onR
           {period && status === 'reservado' && <p className="mt-3 text-xs font-medium text-slate-600">{period}</p>}
           <div className="mt-5 flex gap-3">
             {canSelectMap ? (
-              <button type="button" onClick={() => toggleSelect(item)} aria-pressed={selected} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${selected ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'bg-slate-950 text-white hover:bg-slate-800'}`}>
+              <button type="button" onClick={() => toggleSelect(item)} aria-pressed={selected} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${selected ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'bg-slate-950 text-white hover:bg-slate-800'}`}>
                 {selected ? <Check className="h-4 w-4 text-emerald-600" /> : <Plus className="h-4 w-4" />}{selected ? 'Quitar selección' : 'Añadir al Mediakit'}
               </button>
             ) : status === 'reservado' ? (
-              <button type="button" onClick={() => navigate(contactUrl)} className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
+              <button type="button" onClick={() => navigate(contactUrl)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
                 Consultar disponibilidad
               </button>
             ) : null}
-            <button type="button" onClick={openDetail} className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${canSelectMap || status === 'reservado' ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'bg-slate-950 text-white'}`}>
+            <button type="button" onClick={openDetail} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${canSelectMap || status === 'reservado' ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'bg-slate-950 text-white'}`}>
               Ver soporte <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -108,17 +114,33 @@ export function SupportCard({ item, variant = 'catalog', selectable = false, onR
   }
 
   if (variant === 'dashboard') {
+    const presentation = toInventoryPresentationItem(item);
+    const operationalStateTone =
+      presentation.estadoOperativo === 'Operativo'
+        ? 'bg-emerald-50 text-emerald-700'
+        : presentation.estadoOperativo === 'Mantenimiento'
+          ? 'bg-amber-50 text-amber-800'
+          : presentation.estadoOperativo === 'Inactivo'
+            ? 'bg-slate-100 text-slate-600'
+            : 'bg-violet-50 text-violet-700';
+
     return (
       <article className={`${cardBase} rounded-2xl`}>
         {media}
         <div className="p-4 sm:p-5">
           {titleBlock}
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <span className="text-xs font-semibold text-slate-600">Estado operativo</span>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${operationalStateTone}`}>
+              {presentation.estadoOperativo}
+            </span>
+          </div>
           <div className="mt-5"><FactStrip item={item} /></div>
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => navigate(`/dashboard/soportes/${encodeURIComponent(item.canonical_id)}/edit`)} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+            <button type="button" onClick={() => navigate(`/dashboard/soportes/${encodeURIComponent(item.canonical_id)}/edit`)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
               <Pencil className="h-3.5 w-3.5" /> Editar
             </button>
-            <button type="button" onClick={() => navigate(`/dashboard/soportes/${encodeURIComponent(item.canonical_id)}/preview`)} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+            <button type="button" onClick={() => navigate(`/dashboard/soportes/${encodeURIComponent(item.canonical_id)}/preview`)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
               <Eye className="h-3.5 w-3.5" /> Preview
             </button>
           </div>
@@ -147,15 +169,15 @@ export function SupportCard({ item, variant = 'catalog', selectable = false, onR
         {period && status === 'reservado' && <p className="mt-3 text-xs font-medium text-slate-600">{period}</p>}
         <div className="mt-5 flex gap-3">
           {canSelect ? (
-            <button type="button" onClick={() => toggleSelect(item)} aria-pressed={selected} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${selected ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'bg-slate-950 text-white hover:bg-slate-800'}`}>
+            <button type="button" onClick={() => toggleSelect(item)} aria-pressed={selected} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${selected ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'bg-slate-950 text-white hover:bg-slate-800'}`}>
               {selected ? <Check className="h-4 w-4 text-emerald-600" /> : <Plus className="h-4 w-4" />}{selected ? 'Quitar selección' : 'Seleccionar'}
             </button>
           ) : status === 'reservado' ? (
-            <button type="button" onClick={() => navigate(contactUrl)} className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
+            <button type="button" onClick={() => navigate(contactUrl)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
               Consultar disponibilidad
             </button>
           ) : null}
-          <button type="button" onClick={openDetail} className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${canSelect || status === 'reservado' ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'bg-slate-950 text-white'}`}>
+          <button type="button" onClick={openDetail} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold ${canSelect || status === 'reservado' ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'bg-slate-950 text-white'}`}>
             Ver soporte <ArrowRight className="h-4 w-4" />
           </button>
         </div>

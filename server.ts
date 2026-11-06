@@ -2,13 +2,16 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { allowLoginAttempt } from './src/server/loginRateLimit.ts';
 import { initDatabase, pool } from './src/db/index.ts';
 import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/supportsService.ts';
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
-import { saveMediaKit, getMediaKit, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
+import { saveMediaKit, getMediaKit, getMediaKitBySourceRequestId, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
+import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
 import {
   authenticateAdmin,
+  getPublicSupportMediaAsset,
   verifyAdminToken,
   getAdminStats,
   updateRequestStatusByAdmin,
@@ -22,83 +25,47 @@ import {
   updateSupportMediaByAdmin,
   removeSupportMediaByAdmin,
   getSupportPricingByAdmin,
+  listSupportPricingByAdmin,
   patchSupportPricingByAdmin,
   getSupportRouteByAdmin,
   patchSupportRouteByAdmin,
 } from './src/server/adminService.ts';
 
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 10;
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-
-function clientIp(req: { headers: Record<string, unknown>; socket?: { remoteAddress?: string } }): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.socket?.remoteAddress || 'unknown';
+function clientIp(req: express.Request): string {
+  return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
-function allowLoginAttempt(ip: string): boolean {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= LOGIN_MAX_ATTEMPTS) return false;
-  entry.count += 1;
-  return true;
-}
-
-const ADMIN_COOKIE = 'gc_admin_token';
 const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60;
-
-function parseCookies(header?: string): Record<string, string> {
-  if (!header) return {};
-  return header.split(';').reduce<Record<string, string>>((acc, part) => {
-    const idx = part.indexOf('=');
-    if (idx === -1) return acc;
-    const key = part.slice(0, idx).trim();
-    const val = part.slice(idx + 1).trim();
-    if (key) acc[key] = decodeURIComponent(val);
-    return acc;
-  }, {});
-}
-
-function adminAuthHeader(req: { headers: Record<string, unknown> }): string | undefined {
-  const auth = req.headers.authorization;
-  if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth;
-  const cookies = parseCookies(typeof req.headers.cookie === 'string' ? req.headers.cookie : undefined);
-  const token = cookies[ADMIN_COOKIE];
-  if (token) return `Bearer ${token}`;
-  return undefined;
-}
 
 export async function createApp() {
   const app = express();
+  // Trust only the single Vercel ingress hop; never trust arbitrary client-supplied X-Forwarded-For values.
+  app.set('trust proxy', process.env.VERCEL ? 1 : false);
 
-  const allowedOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
+  const configuredOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  // Vercel assigns deployment-specific and branch-stable hostnames to Preview.
+  // Trust only these platform-provided hostnames in addition to explicitly configured origins.
+  const vercelOrigins = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]
+    .filter((hostname): hostname is string => Boolean(hostname?.trim()))
+    .map((hostname) => `https://${hostname.trim()}`);
+  const allowedOrigins = [...new Set([...configuredOrigins, ...vercelOrigins])];
 
-  const isAllowedOrigin = (origin?: string): boolean => {
+  const isAllowedOrigin = (origin: string | undefined, requestOrigin: string): boolean => {
     if (!origin) return true;
-    if (allowedOrigins.includes(origin)) return true;
-    try {
-      const host = new URL(origin).hostname;
-      if (host.endsWith('.vercel.app') || host === 'vercel.app') return true;
-      if (host === 'localhost' || host === '127.0.0.1') return true;
-    } catch {
-      return false;
-    }
-    return false;
+    return isAllowedRequestOrigin(origin, allowedOrigins, requestOrigin);
   };
 
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
-    if (origin && isAllowedOrigin(origin)) {
+    const requestOrigin = `${req.protocol}://${req.get('host')}`;
+    if (origin && !isAllowedOrigin(origin, requestOrigin) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return res.status(403).json({ status: 'error', message: 'Origen no permitido.' });
+    }
+
+    if (origin && isAllowedOrigin(origin, requestOrigin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -107,7 +74,7 @@ export async function createApp() {
     }
 
     if (req.method === 'OPTIONS') {
-      if (isAllowedOrigin(origin)) {
+      if (isAllowedOrigin(origin, requestOrigin)) {
         return res.sendStatus(204);
       }
       return res.sendStatus(403);
@@ -123,6 +90,23 @@ export async function createApp() {
   } catch (err) {
     console.warn('Database initialization warning on startup:', err);
   }
+
+  // R2 remains private; public catalogue media is delivered through short-lived signed GET URLs.
+  app.get('/api/media/:mediaId', async (req, res) => {
+    try {
+      const mediaId = Number(req.params.mediaId);
+      const asset = await getPublicSupportMediaAsset(mediaId);
+      if (!asset) return res.status(404).json({ status: 'error', message: 'Recurso multimedia no encontrado.' });
+      const signedUrl = (await import('./src/server/r2StorageAdapter.ts')).getStorageAdapter().getAssetUrl(asset.storageKey, 300);
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      if (asset.mimeType) res.setHeader('Content-Type', asset.mimeType);
+      return res.redirect(302, signedUrl);
+    } catch (error) {
+      console.error('Error resolving private media asset:', error);
+      return res.status(404).json({ status: 'error', message: 'Recurso multimedia no disponible.' });
+    }
+  });
 
   app.get('/api/health', async (_req, res) => {
     try {
@@ -168,13 +152,18 @@ export async function createApp() {
     }
   });
 
-  app.post('/api/admin/login', (req, res) => {
-    const ip = clientIp(req);
-    if (!allowLoginAttempt(ip)) {
-      return res.status(429).json({
-        status: 'error',
-        message: 'Demasiados intentos de acceso. Probá de nuevo en unos minutos.',
-      });
+  app.post('/api/admin/login', async (req, res) => {
+    try {
+      const allowed = await allowLoginAttempt(pool, clientIp(req), process.env.JWT_SECRET || process.env.ADMIN_SECRET || '');
+      if (!allowed) {
+        return res.status(429).json({
+          status: 'error',
+          message: 'Demasiados intentos de acceso. Probá de nuevo en unos minutos.',
+        });
+      }
+    } catch (error) {
+      console.error('Admin login rate limiter unavailable:', error);
+      return res.status(503).json({ status: 'error', message: 'El acceso no está disponible temporalmente.' });
     }
     const { username, password } = req.body || {};
     const result = authenticateAdmin(username, password);
@@ -199,7 +188,11 @@ export async function createApp() {
   });
 
   const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const authHeader = adminAuthHeader(req);
+    const requestOrigin = `${req.protocol}://${req.get('host')}`;
+    if (!hasValidAdminMutationOrigin(req.headers, req.method, allowedOrigins, requestOrigin)) {
+      return res.status(403).json({ status: 'error', message: 'Origen no permitido para modificar la sesión administrativa.' });
+    }
+    const authHeader = adminAuthHeader(req.headers);
     if (!verifyAdminToken(authHeader)) {
       return res.status(401).json({ status: 'error', message: 'No autorizado. Se requiere token de administrador válido.' });
     }
@@ -330,6 +323,16 @@ export async function createApp() {
     }
   });
 
+  app.get('/api/admin/support-pricing', requireAdmin, async (_req, res) => {
+    try {
+      const pricing = await listSupportPricingByAdmin();
+      res.status(200).json({ status: 'success', data: pricing });
+    } catch (err) {
+      console.error('Error fetching admin support pricing catalog:', err);
+      res.status(500).json({ status: 'error', message: 'Error al obtener las tarifas internas.' });
+    }
+  });
+
   app.get('/api/admin/supports/:id/pricing', requireAdmin, async (req, res) => {
     try {
       const pricing = await getSupportPricingByAdmin(req.params.id);
@@ -381,6 +384,17 @@ export async function createApp() {
     } catch (err: any) {
       console.error('Error fetching media kits:', err);
       res.status(500).json({ status: 'error', message: 'Error interno al obtener Media Kits.' });
+    }
+  });
+
+  app.get('/api/admin/mediakits/by-request/:requestId', requireAdmin, async (req, res) => {
+    try {
+      const kit = await getMediaKitBySourceRequestId(req.params.requestId);
+      if (!kit) return res.status(404).json({ status: 'error', message: 'Media Kit asociado no encontrado.' });
+      res.status(200).json({ status: 'success', data: kit });
+    } catch (err: any) {
+      console.error(`Error fetching Media Kit for request ${req.params.requestId}:`, err);
+      res.status(500).json({ status: 'error', message: 'Error interno al obtener el Media Kit asociado.' });
     }
   });
 
@@ -436,7 +450,7 @@ export async function createApp() {
     } catch (err: any) {
       console.error(`Error updating request ${req.params.id}:`, err);
       const msg = err.message || '';
-      const statusCode = msg.includes('no encontrada') ? 404 : msg.includes('inválido') ? 400 : 500;
+      const statusCode = msg.includes('no encontrada') ? 404 : msg.includes('inválido') ? 400 : msg.includes('no puede avanzar comercialmente') ? 409 : 500;
       res.status(statusCode).json({ status: 'error', message: msg || 'Error al actualizar la solicitud.' });
     }
   });

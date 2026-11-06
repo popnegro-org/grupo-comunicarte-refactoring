@@ -6,10 +6,13 @@ import { Input } from '../../components/ui/Input';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
 import { downloadMediaKitPdf, downloadMediaKitPpt, ExportSupport } from '../../lib/adminMediaKitExport';
 import { apiFetch } from '../../lib/api';
+import { formatProposalDuration, isProposalDurationValid, normalizeProposalDuration, proposalDurationFromOption, proposalDurationOption, ProposalDurationUnit } from '../../lib/mediakitDuration';
 
 type Pricing = { exhibition_price?: number | string | null; installation_price?: number | string | null; printing_price?: number | string | null; currency?: string | null };
 type Support = ExportSupport & { disponibilidad?: 'disponible' | 'reservado' | 'inactivo'; pricing?: Pricing | null; imageUrls?: string[]; media?: Array<{ url?: string; media_type?: string; active?: boolean }> };
 type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
+type ProposalCurrency = 'ARS' | 'USD' | 'Por definir';
+type ProposalPeriod = { fechaInicio: string; fechaFin: string; duracionValor: string; duracionUnidad: ProposalDurationUnit };
 type PersistedKit = {
   kitId: string;
   status: MediaKitStatus;
@@ -21,9 +24,18 @@ type PersistedKit = {
   approvedPrices?: Record<string, string | number>;
   totalAmount?: number | string | null;
   currency?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 const makeRequestId = () => `MK-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
+
+function formatProposalPeriod(period: ProposalPeriod): string | undefined {
+  const dates = period.fechaInicio || period.fechaFin
+    ? [period.fechaInicio, period.fechaFin].filter(Boolean).join(' – ')
+    : '';
+  const duration = formatProposalDuration(period);
+  return [dates, duration].filter(Boolean).join(' · ') || undefined;
+}
 
 export default function DashboardMediaKitBuilder() {
   const navigate = useNavigate();
@@ -34,6 +46,9 @@ export default function DashboardMediaKitBuilder() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [client, setClient] = useState({ name: '', company: '', email: '', phone: '' });
+  const [period, setPeriod] = useState<ProposalPeriod>({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
+  const [proposalAmount, setProposalAmount] = useState('');
+  const [proposalCurrency, setProposalCurrency] = useState<ProposalCurrency>('ARS');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,10 +61,19 @@ export default function DashboardMediaKitBuilder() {
 
     (async () => {
       try {
-        const supportsResponse = await apiFetch('/api/supports');
-        const supportsJson = await supportsResponse.json();
+        const [supportsResponse, pricingResponse] = await Promise.all([
+          apiFetch('/api/supports'),
+          apiFetch('/api/admin/support-pricing'),
+        ]);
+        const [supportsJson, pricingJson] = await Promise.all([supportsResponse.json(), pricingResponse.json()]);
         if (!supportsResponse.ok || supportsJson.status !== 'success') throw new Error(supportsJson.message || 'No pudimos cargar el inventario.');
-        setAllSupports(Array.isArray(supportsJson.data) ? supportsJson.data : []);
+        if (!pricingResponse.ok || pricingJson.status !== 'success') throw new Error(pricingJson.message || 'No pudimos cargar las tarifas internas.');
+        const pricingById = pricingJson.data || {};
+        const inventory = Array.isArray(supportsJson.data) ? supportsJson.data : [];
+        setAllSupports(inventory.map((support: Support) => ({
+          ...support,
+          pricing: pricingById[support.canonical_id] || null,
+        })));
 
         if (kitIdParam) {
           const kitResponse = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(kitIdParam)}`);
@@ -63,8 +87,26 @@ export default function DashboardMediaKitBuilder() {
               phone: kit.clientPhone || '',
             });
             setSelectedIds(Array.isArray(kit.supportIds) ? kit.supportIds : []);
+            const savedAmount = kit.metadata?.proposalAmount;
+            if (savedAmount && typeof savedAmount === 'object') {
+              const amount = savedAmount as { amount?: unknown; currency?: unknown };
+              setProposalAmount(amount.amount == null ? '' : String(amount.amount));
+              setProposalCurrency(amount.currency === 'USD' || amount.currency === 'Por definir' ? amount.currency : 'ARS');
+            } else {
+              setProposalAmount(kit.totalAmount == null ? '' : String(kit.totalAmount));
+              setProposalCurrency(kit.currency === 'USD' || kit.currency === 'Por definir' ? kit.currency : 'ARS');
+            }
             if (kit.approvedPrices && typeof kit.approvedPrices === 'object') {
               setPrices(Object.fromEntries(Object.entries(kit.approvedPrices).map(([k, v]) => [k, String(v)])));
+            }
+            const savedPeriod = kit.metadata?.proposalPeriod;
+            if (savedPeriod && typeof savedPeriod === 'object') {
+              const p = savedPeriod as Partial<Record<keyof ProposalPeriod, unknown>>;
+              setPeriod({
+                fechaInicio: typeof p.fechaInicio === 'string' ? p.fechaInicio : '',
+                fechaFin: typeof p.fechaFin === 'string' ? p.fechaFin : '',
+                ...normalizeProposalDuration(p.duracionValor, p.duracionUnidad),
+              });
             }
             setRequestId(kit.kitId || kitIdParam);
           }
@@ -87,7 +129,11 @@ export default function DashboardMediaKitBuilder() {
 
   const selected = useMemo(() => allSupports.filter((s) => selectedIds.includes(s.canonical_id)), [allSupports, selectedIds]);
   const total = useMemo(() => selected.reduce((sum, s) => sum + (Number(prices[s.canonical_id]) || 0), 0), [selected, prices]);
-  const canExport = selected.length > 0 && selected.every(s => Number(prices[s.canonical_id]) > 0) && client.name.trim().length > 0;
+  const periodInvalid = Boolean(period.fechaInicio && period.fechaFin && period.fechaFin < period.fechaInicio);
+  const durationInvalid = !isProposalDurationValid(period);
+  const proposalAmountInvalid = proposalCurrency !== 'Por definir' && Boolean(proposalAmount.trim()) &&
+    (!Number.isFinite(Number(proposalAmount)) || Number(proposalAmount) < 0);
+  const canExport = selected.length > 0 && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !proposalAmountInvalid;
   const toggle = (support: Support) => {
     if (support.disponibilidad !== 'disponible' && !selectedIds.includes(support.canonical_id)) {
       notify('Solo se pueden agregar soportes disponibles al Media Kit.');
@@ -105,14 +151,53 @@ export default function DashboardMediaKitBuilder() {
     setPrices(next);
     notify('Tarifas base aplicadas.');
   };
-  const exportSupports: ExportSupport[] = selected.map(s => ({ ...s, approvedPriceWithTax: Number(prices[s.canonical_id] || 0) }));
-  const lead = { name: client.name || 'Cliente', company: client.company, email: client.email, phone: client.phone };
+  // Public deliverables carry only the explicitly agreed global amount. Never
+  // pass per-support internal/base prices into PDF or PPT generation.
+  const exportSupports: ExportSupport[] = selected.map((support) => {
+    const publicSupport = { ...support };
+    delete publicSupport.pricing;
+    return publicSupport;
+  });
+  const lead = {
+    name: client.name || 'Cliente',
+    company: client.company,
+    email: client.email,
+    phone: client.phone,
+    proposalPeriod: formatProposalPeriod(period),
+    proposalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? '' : `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}`,
+  };
 
   const persist = async (status: MediaKitStatus = 'draft'): Promise<PersistedKit> => {
+    if (periodInvalid) throw new Error('La fecha de finalización no puede ser anterior al inicio.');
+    if (durationInvalid && status !== 'draft') throw new Error('Seleccioná una duración comercial estándar: 7, 15, 21 días o mensual.');
+    if (proposalAmountInvalid) throw new Error('El monto global debe ser un número válido igual o mayor que cero.');
     const response = await apiFetch('/api/admin/mediakits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kitId: requestId, clientName: client.name, clientCompany: client.company || null, clientEmail: client.email || null, clientPhone: client.phone || null, supportIds: selectedIds, approvedPrices: prices, totalAmount: total, currency: 'ARS', status }),
+      body: JSON.stringify({
+        kitId: requestId,
+        clientName: client.name,
+        clientCompany: client.company || null,
+        clientEmail: client.email || null,
+        clientPhone: client.phone || null,
+        supportIds: selectedIds,
+        approvedPrices: prices,
+        totalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
+        currency: proposalCurrency,
+        status,
+        metadata: {
+          proposalPeriod: {
+            fechaInicio: period.fechaInicio || null,
+            fechaFin: period.fechaFin || null,
+            duracionValor: period.duracionValor ? Number(period.duracionValor) : null,
+            duracionUnidad: period.duracionUnidad,
+          },
+          proposalAmount: {
+            amount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
+            currency: proposalCurrency,
+          },
+        },
+      }),
     });
     const json = await response.json();
     if (!response.ok || json.status !== 'success') throw new Error(json.message || 'No pudimos guardar el Media Kit.');
@@ -131,7 +216,7 @@ export default function DashboardMediaKitBuilder() {
   };
 
   const exportPdf = async () => {
-    if (!canExport) { notify('Completá cliente, soportes y precios.'); return; }
+    if (!canExport) { notify('Completá el cliente, seleccioná al menos un soporte y revisá el monto global acordado.'); return; }
     setBusy(true);
     try {
       await persist('ready');
@@ -192,6 +277,49 @@ export default function DashboardMediaKitBuilder() {
                   <Input value={client.email} onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} placeholder="Email" />
                   <Input value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" />
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Monto global acordado</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-xs font-medium text-gray-600">Monto total
+                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                  </label>
+                  <label className="block text-xs font-medium text-gray-600">Moneda
+                    <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                      <option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option><option value="Por definir">Por definir</option>
+                    </select>
+                  </label>
+                </div>
+                {proposalAmountInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">El monto global debe ser un número válido igual o mayor que cero.</p>}
+                <p className="mt-2 text-[11px] text-gray-500">El documento para el cliente muestra únicamente el monto global acordado. Si aún no está definido, se indicará “Inversión sujeta a cotización”; las tarifas por soporte son internas.</p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Período de la propuesta</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-xs font-medium text-gray-600">
+                    Fecha de inicio
+                    <input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                  </label>
+                  <label className="block text-xs font-medium text-gray-600">
+                    Fecha de finalización
+                    <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                  </label>
+                  <label className="block text-xs font-medium text-gray-600 sm:col-span-2">
+                    Duración contratada
+                    <select value={proposalDurationOption(period)} onChange={(e) => setPeriod((p) => ({ ...p, ...proposalDurationFromOption(e.target.value) }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                      <option value="">Seleccionar duración</option>
+                      <option value="7:días">7 días</option>
+                      <option value="15:días">15 días</option>
+                      <option value="21:días">21 días</option>
+                      <option value="1:meses">Mensual</option>
+                    </select>
+                  </label>
+                </div>
+                {periodInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La fecha de finalización no puede ser anterior al inicio.</p>}
+                {durationInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">Seleccioná 7, 15, 21 días o mensual. Los períodos históricos no estándar requieren revisión.</p>}
+                <p className="mt-2 text-[11px] text-gray-500">El período se guarda como metadato de la propuesta; no modifica reservas ni disponibilidad.</p>
               </div>
 
               <div className="rounded-xl border border-gray-200 bg-white p-4">

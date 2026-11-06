@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, MapPin, Monitor, Play } from 'lucide-react';
 import { InventoryItem, MobileRoute, getDisponibilidad, isMobileRoute } from '../../types';
+import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
 
 export function formatImpacts(value?: number | string | null) {
   if (value === null || value === undefined || value === '') return null;
@@ -13,28 +14,37 @@ export function formatImpacts(value?: number | string | null) {
 export function getCardFacts(item: InventoryItem) {
   const technical = item.technical;
   const route = isMobileRoute(item) ? item as MobileRoute : null;
-  const impacts = technical?.monthly_impacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 1 } : null;
+  const impacts = technical?.monthly_impacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 4 } : null;
+  const formatFact = technical?.format
+    ? { label: 'Formato', value: technical.format, priority: 2 }
+    : technical?.resolution
+      ? { label: 'Resolución', value: technical.resolution, priority: 2 }
+      : null;
+  const facesFact = technical?.caras ? { label: 'Caras', value: String(technical.caras), priority: 3 } : null;
 
   if (item.family === 'led_mobile' || item.tipo_soporte === 'led_movil') {
     return [
       route?.duration ? { label: 'Duración', value: route.duration, priority: 1 } : null,
-      technical?.spot_duration_seconds ? { label: 'Spot', value: `${technical.spot_duration_seconds}s`, priority: 2 } : null,
-      impacts ? { ...impacts, priority: 3 } : null,
+      formatFact,
+      technical?.spot_duration_seconds ? { label: 'Spot', value: `${technical.spot_duration_seconds}s`, priority: 3 } : null,
+      impacts,
     ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
   }
 
-  if (item.family === 'led' || item.tipo_soporte === 'led') {
+  if (item.family === 'led' || item.tipo_soporte === 'led' || (item.tipo_soporte as string) === 'pantallas_led') {
     return [
       technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-      technical?.resolution ? { label: 'Resolución', value: technical.resolution, priority: 2 } : null,
-      impacts ? { ...impacts, priority: 3 } : null,
+      formatFact,
+      facesFact,
+      impacts,
     ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
   }
 
   return [
     technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-    technical?.caras ? { label: 'Caras', value: `${technical.caras}`, priority: 2 } : null,
-    impacts ? { ...impacts, priority: 3 } : null,
+    formatFact,
+    facesFact,
+    impacts,
   ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
 }
 
@@ -73,7 +83,7 @@ export function StatusBadge({ item, dark = false }: { item: InventoryItem; dark?
 }
 
 export function TypeBadge({ item }: { item: InventoryItem }) {
-  const label = item.tipo_soporte === 'led_movil' ? 'LED Móvil' : item.tipo_soporte === 'led' ? 'LED' : 'Tradicional';
+  const label = toInventoryPresentationItem(item).tipo;
   return <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600"><Monitor className="h-3.5 w-3.5" />{label}</span>;
 }
 
@@ -98,7 +108,8 @@ export function SupportMedia({ slides, index, onPrevious, onNext, onSelect, alt 
 export function FactStrip({ item }: { item: InventoryItem }) {
   const facts = getCardFacts(item);
   if (!facts.length) return null;
-  return <div className="grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-100 py-3">
+  const fourFacts = facts.length > 3;
+  return <div className={`grid ${fourFacts ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} divide-x divide-slate-200 border-y border-slate-100 py-3`}>
     {facts.map((fact) => <div key={fact.label} className="min-w-0 px-3 first:pl-0 last:pr-0">
       <div className="truncate text-sm font-bold text-slate-900">{fact.value}</div>
       <div className="truncate text-[10px] font-medium text-slate-500">{fact.label}</div>

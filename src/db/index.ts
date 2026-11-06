@@ -90,7 +90,6 @@ async function initializeDatabaseOnce() {
 
       ALTER TABLE supports ADD COLUMN IF NOT EXISTS family TEXT DEFAULT 'traditional';
       ALTER TABLE supports ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
-      ALTER TABLE supports DROP COLUMN IF EXISTS data;
 
       CREATE SEQUENCE IF NOT EXISTS supports_id_seq;
       ALTER TABLE supports ALTER COLUMN id SET DEFAULT nextval('supports_id_seq');
@@ -219,7 +218,6 @@ async function initializeDatabaseOnce() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      ALTER TABLE mediakit_requests DROP COLUMN IF EXISTS data;
 
       CREATE SEQUENCE IF NOT EXISTS mediakit_requests_id_seq;
       ALTER TABLE mediakit_requests ALTER COLUMN id SET DEFAULT nextval('mediakit_requests_id_seq');
@@ -234,7 +232,6 @@ async function initializeDatabaseOnce() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      ALTER TABLE mediakit_request_items DROP COLUMN IF EXISTS data;
 
       CREATE SEQUENCE IF NOT EXISTS mediakit_request_items_id_seq;
       ALTER TABLE mediakit_request_items ALTER COLUMN id SET DEFAULT nextval('mediakit_request_items_id_seq');
@@ -243,8 +240,6 @@ async function initializeDatabaseOnce() {
 
     // 1.b Add Foreign Key Constraints & Cleanup Orphans (P0-4)
     await pool.query(`
-      DELETE FROM mediakit_request_items WHERE support_id NOT IN (SELECT canonical_id FROM supports);
-      DELETE FROM mediakit_request_items WHERE request_id NOT IN (SELECT request_id FROM mediakit_requests);
 
       ALTER TABLE mediakit_request_items DROP CONSTRAINT IF EXISTS fk_mediakit_request_items_request;
       ALTER TABLE mediakit_request_items DROP CONSTRAINT IF EXISTS fk_mediakit_request_items_support;
