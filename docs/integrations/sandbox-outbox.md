@@ -15,9 +15,9 @@
 
 ## Límites deliberados
 
-1. No se conecta el flujo público de solicitudes a la cola todavía.
+1. El flujo público solo encola cuando `INTEGRATION_OUTBOX_MODE=sandbox`; por defecto está deshabilitado. El evento se inserta dentro de la misma transacción de la solicitud y solo contiene `requestId`/`requestScope`.
 2. No se crean contactos ni Deals en HubSpot.
-3. El procesador solo atiende eventos `provider=sandbox`; no existe cron ni endpoint HTTP para ejecutarlo.
+3. El procesador solo atiende eventos `provider=sandbox`; se ejecuta manualmente con `npm run integrations:sandbox:drain`. No existe cron ni endpoint HTTP.
 4. No se registra una actividad atribuida a una persona; el principal administrativo compartido no acredita identidad individual.
 5. No se cambian variables de entorno ni se guardan secretos.
 6. No se envían eventos a proveedores externos.
@@ -47,8 +47,8 @@ WHERE schemaname = 'public' AND tablename = 'integration_outbox';
 - [x] CI Candidate, unit tests y build PASS en PR hacia `pmv-validation-candidate`.
 - [x] Visual QA PASS con baseline restaurado; sin snapshots nuevos.
 - [ ] Probar la transacción real en un runtime que ejecute el mismo SHA y use esa rama Neon.
-- [ ] Conectar el evento a la creación de solicitud dentro de la misma transacción, con flag sandbox explícito.
-- [ ] Implementar scheduler/worker aislado y observabilidad operativa.
+- [x] Conectar el evento a la creación de solicitud dentro de la misma transacción, con flag sandbox explícito.
+- [x] Implementar procesador manual aislado; scheduler y observabilidad operativa quedan pendientes.
 - [ ] Definir portal sandbox, objeto destino y campos permitidos antes de cualquier llamada HubSpot.
 - [ ] Agregar identidad individual y matriz de permisos antes de actividades por actor.
 - [ ] Mantener el PR Draft hasta completar QA de runtime; no merge a `main` ni Production.
