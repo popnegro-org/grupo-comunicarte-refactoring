@@ -30,9 +30,9 @@ export function Layout({ children }: { children: ReactNode }) {
               {footerLinks.map(link => <Link key={link.path} to={link.path} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">{link.name}</Link>)}
             </nav>
           </div>
-          <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1 sm:flex-row sm:gap-5"><span>© 2026 Grupo Comunicarte</span><span>9 de Julio 891 · Godoy Cruz, Mendoza</span></div>
-            <span><a href="https://wa.me/5492616706710" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white">Powered by SmartWeb</a></span>
+            <span><a href="https://wa.me/5492616706710" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">Powered by SmartWeb</a></span>
           </div>
         </div>
       </footer>

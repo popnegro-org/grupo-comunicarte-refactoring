@@ -362,8 +362,9 @@ export default function DashboardMediaKitBuilder() {
                         <p className="text-xs font-semibold text-gray-950">{s.name}</p>
                         <button type="button" onClick={() => toggle(s)} className="text-gray-400 hover:text-red-600" aria-label="Quitar"><X className="h-3.5 w-3.5" /></button>
                       </div>
-                      <label className="mt-2 block text-[10px] font-medium text-gray-500">Precio aprobado</label>
+                      <label htmlFor={`approved-price-${s.canonical_id}`} className="mt-2 block text-[10px] font-medium text-gray-500">Precio aprobado para {s.name}</label>
                       <input
+                        id={`approved-price-${s.canonical_id}`}
                         type="number"
                         min={0}
                         value={prices[s.canonical_id] || ''}

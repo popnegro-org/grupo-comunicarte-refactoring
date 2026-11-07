@@ -54,7 +54,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   }, [location.pathname]);
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${isActive ? 'bg-[#DBE7FF] text-[#2563EB]' : 'text-[#475569] hover:bg-white/70 hover:text-[#1E293B]'}`;
+    `flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${isActive ? 'bg-[#DBE7FF] text-[#1D4ED8]' : 'text-[#475569] hover:bg-white/70 hover:text-[#1E293B]'}`;
 
   const handleLogout = () => {
     void apiFetch('/api/admin/logout', { method: 'POST' }).finally(() => navigate('/login'));
@@ -85,7 +85,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </div>
           <div className="flex items-center gap-2.5 px-1.5 py-2">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#DCE4F0] text-sm font-semibold text-[#475569]">GC</span>
-            <div className="min-w-0"><p className="truncate text-[13px] font-medium text-[#1E293B]">Administración</p><p className="mt-0.5 text-[11px] text-[#64748B]">Grupo Comunicarte OOH</p></div>
+            <div className="min-w-0"><p className="truncate text-[13px] font-medium text-[#1E293B]">Administración</p><p className="mt-0.5 text-[11px] text-[#475569]">Grupo Comunicarte OOH</p></div>
           </div>
           <nav aria-label="Navegación principal" className="mt-3 space-y-3">
             {navGroups.map((group) => <section key={group.label}>

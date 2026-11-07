@@ -199,7 +199,7 @@ export default function Home() {
                 <article key={number} className="grid gap-4 py-7 first:pt-7 sm:grid-cols-[56px_1fr] sm:gap-6 md:py-8">
                   <div className="flex items-center gap-3 sm:block">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-950 text-white"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-                    <span className="text-[11px] font-bold tracking-[0.16em] text-gray-400 sm:mt-3 sm:block">{number}</span>
+                    <span className="text-[11px] font-bold tracking-[0.16em] text-gray-600 sm:mt-3 sm:block">{number}</span>
                   </div>
                   <div><h3 className="text-xl font-semibold tracking-tight text-gray-950 md:text-2xl">{title}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 md:text-base md:leading-7">{description}</p></div>
                 </article>

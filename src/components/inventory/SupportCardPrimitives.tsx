@@ -99,7 +99,7 @@ export function SupportMedia({ slides, index, onPrevious, onNext, onSelect, alt 
     {slides.length > 1 && <>
       <button type="button" aria-label="Imagen anterior" onClick={onPrevious} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white hover:bg-black/75"><ArrowLeft className="h-4 w-4" /></button>
       <button type="button" aria-label="Imagen siguiente" onClick={onNext} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white hover:bg-black/75"><ArrowRight className="h-4 w-4" /></button>
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1" role="tablist" aria-label="Recursos multimedia">
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1" role="group" aria-label="Recursos multimedia">
         {slides.map((_, i) => <button key={i} type="button" aria-label={`Ver recurso ${i + 1}`} onClick={() => onSelect(i)} className={`h-1.5 rounded-full ${i === index ? 'w-5 bg-white' : 'w-1.5 bg-white/60'}`} />)}
       </div>
     </>}
