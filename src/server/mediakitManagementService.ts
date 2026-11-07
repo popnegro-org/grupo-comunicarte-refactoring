@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pool, isDatabaseConfigured } from '../db/index.ts';
-import { areRequestItemOwnershipsConsistent, resolveMediaKitTenantId } from './tenantAccess.ts';
+import { resolveMediaKitTenantId } from './tenantAccess.ts';
+import { validateMediaKitSourceRequestItems } from './mediakitSourceRequest.ts';
 import { MediaKitDomainError } from './mediakitErrors.ts';
 import { isProposalDurationValid, toLegacyMediaKitState } from '../lib/mediakitDuration.ts';
 
@@ -206,21 +207,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
           ORDER BY ri.support_id`,
         [input.sourceRequestId],
       );
-      if (sourceItems.rows.length === 0) {
-        throw new MediaKitDomainError('La solicitud de origen no existe.', 404);
-      }
-      const sourceSupportRows = sourceItems.rows.filter((row) => row.support_id);
-      if (sourceSupportRows.length === 0 || !areRequestItemOwnershipsConsistent(sourceSupportRows.map((row) => ({
-        itemTenantId: row.item_tenant_id,
-        supportTenantId: row.support_tenant_id,
-      })))) {
-        throw new MediaKitDomainError('No se puede generar un Media Kit desde una solicitud con ownership pendiente o desactualizado.', 409);
-      }
-      const sourceSupportIds = new Set(sourceSupportRows.map((row) => String(row.support_id)));
-      const unrelatedSupport = supportIds.find((supportId) => !sourceSupportIds.has(supportId));
-      if (unrelatedSupport) {
-        throw new MediaKitDomainError(`El soporte '${unrelatedSupport}' no pertenece a la solicitud de origen.`, 409);
-      }
+      validateMediaKitSourceRequestItems(sourceItems.rows, supportIds);
     }
 
     const clientEmail = String(input.clientEmail || '').trim();
