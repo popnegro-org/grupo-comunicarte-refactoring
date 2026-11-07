@@ -26,8 +26,9 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div>
-            <label className={labelClass}>Tipología *</label>
+            <label htmlFor="support-type" className={labelClass}>Tipología *</label>
             <select
+              id="support-type"
               className={inputClass}
               value={form.tipo_soporte}
               onChange={(e) => set({ tipo_soporte: e.target.value as SupportType })}
@@ -44,8 +45,9 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             readOnly
           />
           <div>
-            <label className={labelClass}>Plaza *</label>
+            <label htmlFor="support-city" className={labelClass}>Plaza *</label>
             <select
+              id="support-city"
               className={inputClass}
               value={form.ciudad}
               onChange={(e) => set({ ciudad: e.target.value as Plaza })}
@@ -63,9 +65,10 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             />
           </div>
           <div className="md:col-span-2">
-            <label className={labelClass}>Descripción · máximo 250 caracteres</label>
+            <label htmlFor="support-description" className={labelClass}>Descripción · máximo 250 caracteres</label>
             <textarea
-              className={`${textareaClass} min-h-28`}
+              id="support-description"
+              className={`${textareaClass} min-h-28`
               maxLength={250}
               value={form.description}
               onChange={(e) => set({ description: e.target.value })}

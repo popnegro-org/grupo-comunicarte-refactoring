@@ -60,6 +60,8 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
             <Marker
               key={loc.canonical_id}
               position={[loc.lat!, loc.lng!]}
+              title={`${loc.name} · ${loc.ciudad} · ${toInventoryPresentationItem(loc).tipo}`}
+              alt={`${toInventoryPresentationItem(loc).tipo}: ${loc.name}`}
               icon={getIcon(loc.tipo_soporte, {
                 isActive: isItemActive,
                 isReservado: isItemReservado,

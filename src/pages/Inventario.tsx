@@ -140,6 +140,7 @@ export default function Inventario() {
 
   return (
     <div className="relative flex h-[calc(100dvh-5rem)] overflow-hidden">
+      <h1 className="sr-only">Inventario de soportes publicitarios</h1>
       <div className="relative z-10 flex h-full min-w-0 flex-grow flex-col">
         <InventoryToolbar
           selectedPlaza={selectedPlaza}

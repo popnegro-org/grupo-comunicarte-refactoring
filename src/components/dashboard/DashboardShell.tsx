@@ -77,7 +77,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-[#1E293B]">
       {mobileNavOpen && <button type="button" aria-label="Cerrar menú" onClick={() => setMobileNavOpen(false)} className="fixed inset-0 z-30 bg-slate-900/40 md:hidden" />}
       <div className="min-h-screen md:flex">
-        <aside className={`${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[#E2E8F0] bg-[#F1F5FB] px-3 py-5 transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0`}>
+        <aside aria-label="Navegación de administración" className={`${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[#E2E8F0] bg-[#F1F5FB] px-3 py-5 transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0`}>
           <div className="flex items-center gap-2.5 px-1.5 pb-4">
             <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full bg-[#0F2A5C] text-xs font-bold text-white">GC</span>
             <span className="text-[15px] font-semibold tracking-tight text-[#1E293B]">Grupo Comunicarte</span>
