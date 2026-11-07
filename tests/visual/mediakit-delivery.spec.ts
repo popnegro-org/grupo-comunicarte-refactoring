@@ -340,3 +340,81 @@ test('solicitud con ownership pendiente queda en cuarentena comercial', async ({
   await expect(dialog.getByRole('button', { name: 'Marcar en proceso' })).toBeDisabled();
   await expect(dialog.getByRole('button', { name: 'Guardar cotización' })).toBeDisabled();
 });
+
+
+test('Media Kit asociado distingue el estado Enviado de Cotizado', async ({ page }) => {
+  await page.route('**/api/admin/stats', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'success', data: [{
+        id: 701,
+        requestId: 'REQ-SENT-STATUS',
+        requesterName: 'Cliente Enviado',
+        requesterEmail: 'qa-sent@example.com',
+        requesterCompany: 'QA',
+        status: 'pending',
+        supportIds: ['SUP-SENT'],
+        supportNames: ['Soporte QA'],
+        createdAt: '2026-11-07T10:00:00.000Z',
+      }] }),
+    });
+  });
+  await page.route('**/api/admin/mediakits/by-request/REQ-SENT-STATUS', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'success', data: {
+        kitId: 'KIT-SENT-STATUS',
+        sourceRequestId: 'REQ-SENT-STATUS',
+        status: 'sent',
+        totalAmount: '10000',
+        currency: 'ARS',
+        supportIds: ['SUP-SENT'],
+        createdAt: '2026-11-07T10:00:00.000Z',
+        updatedAt: '2026-11-07T11:00:00.000Z',
+      } }),
+    });
+  });
+
+  await page.goto('/dashboard/solicitudes');
+  await page.getByRole('button', { name: 'Ver solicitud' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('KIT-SENT-STATUS', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Enviado', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Cotizado', { exact: true })).toHaveCount(0);
+});
+
+test('Media Kit constructor mobile no genera overflow horizontal', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/admin/stats', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [] }) });
+  });
+  await page.route('**/api/supports', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [] }) });
+  });
+  await page.route('**/api/admin/support-pricing', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/mediakits/KIT-MOBILE', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error' }) });
+  });
+
+  await page.goto('/dashboard/mediakits/nuevo?kitId=KIT-MOBILE');
+  await expect(page.getByRole('heading', { name: 'Constructor de Media Kit' })).toBeVisible();
+  await expect(page.getByPlaceholder('Nombre *')).toBeVisible();
+  const dimensions = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+  }));
+  expect(dimensions.document).toBe(dimensions.viewport);
+  expect(dimensions.body).toBe(dimensions.viewport);
+});
