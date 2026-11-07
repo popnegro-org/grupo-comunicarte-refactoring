@@ -16,17 +16,14 @@ export function getCardFacts(item: InventoryItem) {
   const route = isMobileRoute(item) ? item as MobileRoute : null;
   const hasMonthlyImpacts = technical?.monthly_impacts !== null && technical?.monthly_impacts !== undefined && technical.monthly_impacts !== '';
   const impacts = hasMonthlyImpacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 4 } : null;
-  const formatFact = technical?.format
-    ? { label: 'Formato', value: technical.format, priority: 2 }
-    : technical?.resolution
-      ? { label: 'Resolución', value: technical.resolution, priority: 2 }
-      : null;
+  const resolutionFact = technical?.resolution
+    ? { label: 'Resolución', value: technical.resolution, priority: 2 }
+    : null;
   const facesFact = technical?.caras ? { label: 'Caras', value: String(technical.caras), priority: 3 } : null;
 
   if (item.family === 'led_mobile' || item.tipo_soporte === 'led_movil') {
     return [
       route?.duration ? { label: 'Duración', value: route.duration, priority: 1 } : null,
-      formatFact,
       technical?.spot_duration_seconds ? { label: 'Spot', value: `${technical.spot_duration_seconds}s`, priority: 3 } : null,
       impacts,
     ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
@@ -35,15 +32,13 @@ export function getCardFacts(item: InventoryItem) {
   if (item.family === 'led' || item.tipo_soporte === 'led' || (item.tipo_soporte as string) === 'pantallas_led') {
     return [
       technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-      formatFact,
-      facesFact,
+      resolutionFact,
       impacts,
     ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
   }
 
   return [
     technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-    formatFact,
     facesFact,
     impacts,
   ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];

@@ -11,6 +11,7 @@ import {
   supportTechnical,
 } from '../db/schema.ts';
 import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
+import { withSupportFaceCount } from '../lib/supportTechnicalFacts.ts';
 import {
   Disponibilidad,
   InventoryItem,
@@ -350,6 +351,7 @@ function rowToInventoryItem(
 ): InventoryItem {
   const location = related.locations.get(row.canonicalId);
   const technical = related.technical.get(row.canonicalId);
+  const technicalData = withSupportFaceCount(mapTechnicalRow(technical), related.faces.get(row.canonicalId) || []);
   const pricing = related.pricing.get(row.canonicalId);
   const route = related.routes.get(row.canonicalId);
   const media = mapMediaRows(related.media.get(row.canonicalId) || []);
@@ -374,7 +376,7 @@ function rowToInventoryItem(
     isFeatured: row.isFeatured ?? false,
     pricing: mapPricingRow(pricing) ?? undefined,
     media,
-    technical: mapTechnicalRow(technical) ?? undefined,
+    technical: technicalData ?? undefined,
   };
 
   if (isMobile) {

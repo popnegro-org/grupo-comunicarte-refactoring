@@ -72,7 +72,7 @@ test('payloadFrom preserves empty optional monthly impacts as null', () => {
 });
 
 
-test('getCardFacts includes measures, format, faces and monthly impacts when present', async () => {
+test('getCardFacts follows the PMV facts contract for traditional supports', async () => {
   const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
   const item = {
     canonical_id: 'SC-FACTS-01',
@@ -88,8 +88,37 @@ test('getCardFacts includes measures, format, faces and monthly impacts when pre
     technical: { measures: '8 x 4 m', format: 'Backlight', caras: 2, monthly_impacts: 420000 },
   } as import('../../src/types').InventoryItem;
   const facts = getCardFacts(item);
-  assert.deepEqual(facts.map((fact) => fact.label), ['Medidas', 'Formato', 'Caras', 'Impactos / mes']);
-  assert.equal(facts[1].value, 'Backlight');
+  assert.deepEqual(facts.map((fact) => fact.label), ['Medidas', 'Caras', 'Impactos / mes']);
+});
+
+test('getCardFacts follows the PMV facts contract for LED supports', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'SC-LED-FACTS-01',
+    name: 'Pantalla LED',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led',
+    family: 'led',
+    technical: { measures: '4 x 2 m', resolution: 'P4', caras: 2, monthly_impacts: 100000 },
+  } as import('../../src/types').InventoryItem;
+  assert.deepEqual(getCardFacts(item).map((fact) => fact.label), ['Medidas', 'Resolución', 'Impactos / mes']);
+});
+
+test('getCardFacts follows the PMV facts contract for LED mobile supports', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'SC-LED-MOBILE-FACTS-01',
+    name: 'Camión LED móvil',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led_movil',
+    family: 'led_mobile',
+    duration: '4 horas',
+    schedule: 'Lunes a Viernes',
+    waypoints: [],
+    routePath: [],
+    technical: { resolution: 'P4', spot_duration_seconds: 10, monthly_impacts: 100000 },
+  } as import('../../src/types').InventoryItem;
+  assert.deepEqual(getCardFacts(item).map((fact) => fact.label), ['Duración', 'Spot', 'Impactos / mes']);
 });
 
 test('getCardFacts preserves a manually entered zero monthly impact for LED mobile', async () => {
