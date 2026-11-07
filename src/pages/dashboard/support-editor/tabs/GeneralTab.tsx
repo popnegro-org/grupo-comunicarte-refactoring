@@ -68,7 +68,7 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             <label htmlFor="support-description" className={labelClass}>Descripción · máximo 250 caracteres</label>
             <textarea
               id="support-description"
-              className={`${textareaClass} min-h-28`
+              className={`${textareaClass} min-h-28`}
               maxLength={250}
               value={form.description}
               onChange={(e) => set({ description: e.target.value })}
