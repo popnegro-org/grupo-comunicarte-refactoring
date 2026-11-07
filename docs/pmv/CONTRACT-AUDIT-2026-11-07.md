@@ -243,3 +243,58 @@ El workflow Visual QA del HEAD `075d51493d4ef3c62d46faf00072fa11d88290c1` finali
 - `Run visual regression` quedó skipped por la ruta condicional del workflow; la comparación confiable ejecutada fue la del paso anterior y terminó PASS.
 
 CI run `42405285379` y CI Candidate run `42405285375` también finalizaron SUCCESS sobre el mismo SHA. Queda cerrada la validación automatizada contra el baseline confiable. Continúa pendiente la revisión manual de los nodos axe `incomplete` y el recorrido funcional integral del PMV sobre un deployment actualizado.
+
+
+---
+
+## Addendum de QA — Hero, navegación y Media Kit (2026-11-07)
+
+### Regresión funcional encontrada y corrección integrada
+
+La prueba real de interacción detectó que el buscador flotante del Hero interceptaba el clic del CTA `Explorar inventario`. La superposición se reprodujo a 320, 390, 768 y 1440 px.
+
+Corrección en `src/pages/Home.tsx`:
+- Reserva espacio inferior para el buscador con `pb-16` en mobile y `md:pb-24` desde tablet.
+- Conserva el CTA y el buscador como acciones independientes.
+- No altera rutas, copy, API ni datos.
+
+Regresión automatizada añadida a `tests/visual/home-navigation.spec.ts`:
+- Comprueba una separación mínima de 12 px entre CTA y buscador en 320, 390, 768 y 1440 px.
+- Comprueba ausencia de overflow horizontal.
+- Hace clic en el CTA y verifica navegación a `/inventario`.
+- Verifica el envío del término de búsqueda a `/inventario?q=Mendoza`.
+
+Resultado local de esta suite focalizada: **8/8 PASS** (desktop y mobile). El API smoke local devolvió health 200, catálogo público 200 con 28 soportes y admin sin sesión 401; no se observaron claves de pricing, costo, margen, tenant u owner en el payload público.
+
+### Revalidación del HEAD remoto `a9338e8`
+
+- CI #838: PASS.
+- CI Candidate #849: PASS.
+- Visual QA #558: PASS; 32/34 pruebas aprobadas y 2 omitidas.
+- Visual QA restauró el baseline de la candidata y ejecutó comparación; la etapa separada `Compare against previous trusted baseline` quedó omitida.
+- Lint/typecheck local: PASS.
+- Unit tests local: **72/72 PASS**.
+- Build local: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+- Build mantiene advertencia de chunk principal superior a 500 kB; backlog de optimización, no bloqueo de compilación.
+
+La ejecución de la suite visual completa en el contenedor local no se considera evidencia válida: el entorno ARM64 agotó recursos de threads y no tenía todos los snapshots de referencia. No se aceptaron ni se subieron snapshots locales. La suite focalizada de navegación sí se ejecutó correctamente; el gate visual autoritativo sigue siendo GitHub Actions.
+
+### E2E de Media Kit en Neon aislado
+
+- Branch: `qa/pmv-mediakit-e2e-20261107` (`br-little-feather-auiwws5u`), hija de `qa/pr96-ownership-20261105`.
+- Solicitud sintética: `REQ-2026-503430ad-70ff-4820-a6de-c3bd5f9c5d95`.
+- Media Kit sintético: `KIT-QA-E2E-1a329394e39b`.
+- Resultado persistido: `ready`, `tenant-default`, soporte `mza-led-01`, una línea de detalle y ownership de línea consistente.
+- Idempotencia, rechazo de ownership desactualizado (409), soporte ajeno a solicitud (409), solicitud inexistente (404), guardado y recuperación: PASS.
+- El correo sintético utiliza `example.invalid`; no hubo comunicaciones externas.
+
+No se modificó Neon `main`, datos productivos, `main` de GitHub ni Production.
+
+### Despliegues aún desfasados
+
+- Vercel Preview continúa en SHA `26cd907556466d91772cc47a41f6a66261b9e69a`, anterior a `a9338e8` y a la corrección del Hero. El proyecto sigue vinculado en contexto Git al owner histórico `popnegro`; no se re-vinculó.
+- Render QA no fue consultado en esta iteración porque el conector requiere selección explícita del workspace. El último registro documental disponible indica deployment en SHA `ce4bd642`, anterior al HEAD candidato.
+- No se creó otra rama ni se ejecutó un deployment manual adicional.
+
+**Estado:** corrección del Hero integrada en `pmv-validation-candidate`; pendiente CI/Visual QA post-commit. No habilita merge a `main` ni promoción a Production.

@@ -36,7 +36,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/35" />
         </div>
 
-        <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl items-center px-4 pb-16 sm:px-6 md:pb-24 lg:px-8">
           <div className="mx-auto w-full max-w-3xl -translate-y-6 text-center text-white md:-translate-y-8">
             <div className="mb-5 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-800">Espacios Publicitarios Premium</span>
