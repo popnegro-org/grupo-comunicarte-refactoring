@@ -135,3 +135,96 @@ Smoke Preview público (deployment previo, sin despliegue nuevo):
 - Menú hamburguesa mobile: abre; navegación a `/inventario` funciona y no genera overflow.
 - `GET /api/health`: 200; `GET /api/supports`: 200, 28 registros; `GET /api/admin/mediakits` sin sesión: 401.
 - La respuesta pública inspeccionada no expuso claves de precios, costos, márgenes, tenant ni owner.
+
+
+## 10. Ciclo autónomo 1–3 — QA autenticado, seguridad y release QA
+
+Fecha: 2026-11-07. Todas las escrituras de este ciclo se limitaron a la rama Neon aislada `qa/pmv-mediakit-e2e-20261107` (branch ID `br-little-feather-auiwws5u`), hija de `qa/pr96-ownership-20261105` (`br-bold-block-aua43ua0`). No se modificaron Production ni `main`.
+
+### 10.1 Media Kit autenticado end-to-end
+
+| Criterio | Resultado |
+|---|---|
+| Login admin API | PASS — HTTP 200 |
+| Endpoint admin sin autenticación | PASS — HTTP 401 |
+| Crear solicitud pública sintética | PASS — HTTP 201 |
+| Recuperar solicitud en administración | PASS — HTTP 200 |
+| Crear y guardar Media Kit desde solicitud | PASS — HTTP 201 |
+| Recuperar Media Kit por ID | PASS — HTTP 200 |
+| Recuperar Media Kit por solicitud | PASS — HTTP 200 |
+| Transiciones draft → ready → sent | PASS |
+| Crear Media Kit desde solicitud multi-tenant | PASS — cabecera global (`tenant_id = NULL`) |
+| Ownership por línea | PASS — `tenant-default` y `tenant-ba` conservados por soporte |
+| Intento de añadir soporte ajeno a la solicitud de origen | RECHAZADO — HTTP 409 |
+| Solicitud de origen inexistente | RECHAZADA — HTTP 404 |
+| Soporte con ownership pendiente | RECHAZADO — HTTP 409 |
+
+Se implementó validación explícita de la solicitud de origen: debe existir, tener líneas con ownership consistente contra el inventario actual y no se pueden agregar soportes que no pertenezcan a esa solicitud. Los errores de dominio dejaron de responder como HTTP 500 genérico y ahora se clasifican como 400/404/409/503 según corresponda. La lógica de validación quedó extraída a `src/server/mediakitSourceRequest.ts` con pruebas unitarias.
+
+También se creó y guardó un Media Kit desde la interfaz administrativa. El modal de la solicitud recuperó el ID relacionado y presentó el estado `Enviado`, diferenciado de `Cotizado`.
+
+La solicitud multi-tenant enviada con un `tenantId` falsificado fue persistida como global; cada línea conservó el tenant derivado del inventario. El tenant de la cabecera no se acepta desde el cliente.
+
+### 10.2 Seguridad y privacidad comercial
+
+| Control | Resultado |
+|---|---|
+| GET/POST/PATCH de administración sin autenticación | HTTP 401 |
+| Mutación con cookie y Origin ausente | HTTP 403 |
+| Mutación con Origin no confiable | HTTP 403 |
+| Mutación con Origin permitido | Supera CSRF y llega a validación de negocio |
+| Catálogo público `/api/supports` | HTTP 200; 28 soportes en Render QA |
+| Tarifas internas sin autenticación | HTTP 401 |
+| Tarifas internas con autenticación | HTTP 200 |
+| Soporte en cuarentena consultado públicamente | HTTP 404 |
+| Campos de precios/costos/márgenes/tenant/owner en payload público inspeccionado | No detectados |
+
+Prueba de exportación con un soporte cuyo precio interno de referencia era 150: el dato se mostró únicamente en la interfaz administrativa. PDF y PPTX incluyeron el texto de cotización pendiente y no incluyeron el valor interno ni la etiqueta de tarifa interna.
+
+**Límite de la auditoría de IDOR:** la aplicación dispone de un principal administrador global; no existe un usuario autenticado por tenant en el flujo auditado. Por eso se verificaron la frontera admin/público, CSRF, ownership de cabecera/líneas y resistencia a tenant spoofing, pero no se declara demostrada una política de autorización entre usuarios de distintos tenants. Si el PMV requiere usuarios tenant-scoped, esa capacidad sigue pendiente.
+
+### 10.3 UX, visual QA y accesibilidad
+
+- Typecheck/lint: PASS.
+- Unit tests: 67/67 PASS.
+- Build: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades altas.
+- Playwright `mediakit-delivery.spec.ts`: PASS en Chromium desktop y mobile.
+- UI autenticada: creación, consulta de solicitud, consulta del Media Kit y etiqueta `Enviado` PASS.
+- Constructor Media Kit a 390×844: sin overflow horizontal.
+- Axe: 0 violaciones detectadas en home, inventario/mapa, listado de soportes, editor (General, Ubicación, Contenido y Comercial), constructor Media Kit y modal de solicitud, en desktop/mobile. Los resultados `incomplete` de axe siguen requiriendo revisión manual de los casos que la herramienta no puede resolver automáticamente.
+
+Correcciones de accesibilidad incluidas:
+- Los marcadores del mapa reciben nombres accesibles.
+- El catálogo tiene un H1.
+- Labels asociados a selects, textarea y precios.
+- Landmarks de navegación y vista previa con nombres distintos.
+- Contraste corregido en navegación, acciones y textos auxiliares.
+- Estado `Enviado` no se representa como `Cotizado`.
+
+### 10.4 Integridad de datos QA
+
+La rama hija recibió únicamente registros sintéticos. La rama QA padre conservó exactamente sus conteos previos: 20 solicitudes, 34 líneas de solicitud, 3 Media Kits, 0 líneas de Media Kit y 4 clientes. No se borraron registros ni ramas. La rama hija conserva los artefactos sintéticos de las pruebas para trazabilidad; no se ejecutaron comunicaciones ni integraciones externas.
+
+### 10.5 Infraestructura y decisión de release
+
+Smoke HTTP del servicio Render QA existente:
+- `/`: HTTP 200.
+- `/api/health`: HTTP 200, base conectada.
+- `/api/supports`: HTTP 200.
+- `/api/admin/mediakits` y `/api/admin/support-pricing` sin sesión: HTTP 401.
+
+**La instancia Render QA no está desplegada con el HEAD candidato actual.** Su último deployment continúa en `ce4bd642b623a2c37146cdd4d50f3acdf7d67514`; el servicio conserva una referencia histórica de repositorio y no se observó un nuevo deployment al avanzar la rama. Los logs de Render no estuvieron disponibles durante esta pasada (respuesta 503 del proveedor).
+
+**Vercel Preview tampoco está actualizado:** el deployment disponible continúa en SHA `26cd907556466d91772cc47a41f6a66261b9e69a`. No se creó otro deployment para no consumir el límite diario del plan. La vinculación Git del proyecto conserva el namespace histórico y requiere normalización para validar el HEAD actual en Preview.
+
+### 10.6 Veredicto actualizado
+
+**NO-GO para merge a main y Production.** El flujo autenticado de Media Kit, ownership por línea, tenant mixto, validación de origen, privacidad de precios y accesibilidad de las pantallas auditadas tienen evidencia PASS en la rama QA aislada. Sin embargo, no se declara cerrado el PMV completo porque:
+
+1. Render QA y Vercel Preview siguen ejecutando commits anteriores al HEAD candidato.
+2. No se ha completado en un único recorrido reproducible el flujo integral Dashboard → Soportes → Editar → Guardar → Revisión de publicación → Catálogo → Mapa → Media Kit → Disponibilidad → Solicitud sobre el deployment candidato.
+3. La autorización por usuario tenant-scoped no está implementada/validada; la administración actual es global.
+4. La comparación visual contra un baseline confiable y la revisión manual de los casos `incomplete` de axe siguen pendientes.
+
+PR #90 permanece Draft. `main`, Production y las bases de datos productivas permanecen sin cambios. No se solicita ni ejecuta merge.
