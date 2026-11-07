@@ -512,7 +512,7 @@ export default function DashboardMediaKitWorkflow() {
                     : color === 'blue'
                       ? 'border-blue-700 bg-blue-700 text-white'
                       : color === 'amber'
-                        ? 'border-amber-600 bg-amber-600 text-white'
+                        ? 'border-amber-700 bg-amber-700 text-white'
                         : 'border-emerald-700 bg-emerald-700 text-white'
                   : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
               }`}
@@ -668,9 +668,10 @@ export default function DashboardMediaKitWorkflow() {
                       <div key={s.canonical_id} className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
                         <p className="text-xs font-semibold text-slate-900">{s.name}</p>
                         <p className="text-[11px] text-slate-500">{s.ciudad} · {s.tipo_soporte}</p>
-                        <label className="mt-2 block text-[10px] font-medium text-slate-700">Monto acordado con el cliente</label>
+                        <label htmlFor={`approved-quote-${s.canonical_id}`} className="mt-2 block text-[10px] font-medium text-slate-700">Monto acordado con el cliente</label>
                         <p className="text-[10px] leading-4 text-slate-500">Este importe se incluye en el Media Kit que se entrega.</p>
                         <input
+                          id={`approved-quote-${s.canonical_id}`}
                           type="number"
                           min={0}
                           value={approvedPrices[s.canonical_id] || ''}
