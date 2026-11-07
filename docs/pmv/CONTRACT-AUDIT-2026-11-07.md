@@ -225,6 +225,21 @@ Smoke HTTP del servicio Render QA existente:
 1. Render QA y Vercel Preview siguen ejecutando commits anteriores al HEAD candidato.
 2. No se ha completado en un único recorrido reproducible el flujo integral Dashboard → Soportes → Editar → Guardar → Revisión de publicación → Catálogo → Mapa → Media Kit → Disponibilidad → Solicitud sobre el deployment candidato.
 3. La autorización por usuario tenant-scoped no está implementada/validada; la administración actual es global.
-4. La comparación visual contra un baseline confiable y la revisión manual de los casos `incomplete` de axe siguen pendientes.
+4. La revisión manual de los casos `incomplete` de axe sigue pendiente.
 
 PR #90 permanece Draft. `main`, Production y las bases de datos productivas permanecen sin cambios. No se solicita ni ejecuta merge.
+
+
+### 10.7 Resultado final de baseline confiable — 2026-11-07
+
+El workflow Visual QA del HEAD `075d51493d4ef3c62d46faf00072fa11d88290c1` finalizó SUCCESS:
+
+- Run: `42405285396`.
+- Build y Preview server: PASS.
+- Restore visual baseline: PASS.
+- `Compare against previous trusted baseline`: PASS.
+- `Save trusted baseline`: PASS.
+- Los pasos de bootstrap y refresh manual de snapshots quedaron skipped; no se crearon snapshots manuales.
+- `Run visual regression` quedó skipped por la ruta condicional del workflow; la comparación confiable ejecutada fue la del paso anterior y terminó PASS.
+
+CI run `42405285379` y CI Candidate run `42405285375` también finalizaron SUCCESS sobre el mismo SHA. Queda cerrada la validación automatizada contra el baseline confiable. Continúa pendiente la revisión manual de los nodos axe `incomplete` y el recorrido funcional integral del PMV sobre un deployment actualizado.
