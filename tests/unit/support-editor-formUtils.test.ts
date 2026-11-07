@@ -92,6 +92,25 @@ test('getCardFacts includes measures, format, faces and monthly impacts when pre
   assert.equal(facts[1].value, 'Backlight');
 });
 
+test('getCardFacts preserves a manually entered zero monthly impact for LED mobile', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'MZA-LED-MOVIL-ZERO',
+    name: 'Camión LED móvil',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led_movil',
+    family: 'led_mobile',
+    duration: '4 horas',
+    schedule: 'Lunes a Viernes',
+    waypoints: [],
+    routePath: [],
+    technical: { route_duration_hours: 4, spot_duration_seconds: 10, monthly_impacts: 0 },
+  } as import('../../src/types').InventoryItem;
+  const facts = getCardFacts(item);
+  assert.deepEqual(facts.map((fact) => fact.label), ['Duración', 'Spot', 'Impactos / mes']);
+  assert.equal(facts.find((fact) => fact.label === 'Impactos / mes')?.value, '+0');
+});
+
 test('inventory presentation adapter keeps ambiguous LED type unmapped and excludes internal pricing', async () => {
   const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
   const item = {

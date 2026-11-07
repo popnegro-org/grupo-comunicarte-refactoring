@@ -14,7 +14,8 @@ export function formatImpacts(value?: number | string | null) {
 export function getCardFacts(item: InventoryItem) {
   const technical = item.technical;
   const route = isMobileRoute(item) ? item as MobileRoute : null;
-  const impacts = technical?.monthly_impacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 4 } : null;
+  const hasMonthlyImpacts = technical?.monthly_impacts !== null && technical?.monthly_impacts !== undefined && technical.monthly_impacts !== '';
+  const impacts = hasMonthlyImpacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 4 } : null;
   const formatFact = technical?.format
     ? { label: 'Formato', value: technical.format, priority: 2 }
     : technical?.resolution
