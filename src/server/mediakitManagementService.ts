@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pool, isDatabaseConfigured } from '../db/index.ts';
-import { resolveMediaKitTenantId } from './tenantAccess.ts';
+import { areRequestItemOwnershipsConsistent, resolveMediaKitTenantId } from './tenantAccess.ts';
+import { MediaKitDomainError } from './mediakitErrors.ts';
 import { isProposalDurationValid, toLegacyMediaKitState } from '../lib/mediakitDuration.ts';
 
 
@@ -83,7 +84,7 @@ function normalizeSupportIds(value: unknown): string[] {
 
 export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRecord> {
   const clientName = String(input.clientName || '').trim();
-  if (clientName.length < 2) throw new Error('El nombre del cliente es obligatorio.');
+  if (clientName.length < 2) throw new MediaKitDomainError('El nombre del cliente es obligatorio.', 400);
 
   const supportIds = normalizeSupportIds(input.supportIds);
   const status = normalizeStatus(input.status);
@@ -92,14 +93,14 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
     duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
   })) {
-    throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
+    throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.', 409);
   }
   let tenantId: string | null = null;
   const tenantBySupportId = new Map<string, string>();
   const rowsForKitCity = new Map<string, string>();
 
   if (!isDatabaseConfigured) {
-    throw new Error('La persistencia de Media Kits requiere base de datos configurada.');
+    throw new MediaKitDomainError('La persistencia de Media Kits requiere base de datos configurada.', 503);
   }
 
   if (supportIds.length > 0) {
@@ -113,9 +114,9 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       availability.rows.map((row: any) => [String(row.canonical_id), { tenant_id: row.tenant_id, disponibilidad: row.disponibilidad, active: row.active, ciudad: row.ciudad ?? null }]),
     );
     const missing = supportIds.find((id) => !rows.has(id));
-    if (missing) throw new Error(`El soporte '${missing}' no existe en el catálogo.`);
+    if (missing) throw new MediaKitDomainError(`El soporte '${missing}' no existe en el catálogo.`, 404);
     const unassigned = supportIds.find((id) => !rows.get(id)?.tenant_id);
-    if (unassigned) throw new Error(`El soporte '${unassigned}' está pendiente de conciliación de ownership y no puede incluirse en un Media Kit.`);
+    if (unassigned) throw new MediaKitDomainError(`El soporte '${unassigned}' está pendiente de conciliación de ownership y no puede incluirse en un Media Kit.`, 409);
     const tenantIds = supportIds.map((id) => String(rows.get(id)!.tenant_id));
     for (const id of supportIds) {
       tenantBySupportId.set(id, String(rows.get(id)!.tenant_id));
@@ -129,42 +130,42 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     if (unavailable) {
       const row = rows.get(unavailable)!;
       const state = row.active === false ? 'inactivo' : String(row.disponibilidad || 'sin disponibilidad');
-      throw new Error(`El soporte '${unavailable}' no está disponible (estado: ${state}) y no puede incluirse en el Media Kit.`);
+      throw new MediaKitDomainError(`El soporte '${unavailable}' no está disponible (estado: ${state}) y no puede incluirse en el Media Kit.`, 409);
     }
   }
 
   const rawApprovedPrices = input.approvedPrices ?? {};
   if (!rawApprovedPrices || typeof rawApprovedPrices !== 'object' || Array.isArray(rawApprovedPrices)) {
-    throw new Error('Los precios aprobados deben tener un formato válido.');
+    throw new MediaKitDomainError('Los precios aprobados deben tener un formato válido.', 400);
   }
   const approvedPrices: Record<string, string> = {};
   for (const [supportId, rawPrice] of Object.entries(rawApprovedPrices)) {
     if (rawPrice === '') continue;
     if (!supportIds.includes(supportId)) {
-      throw new Error(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`);
+      throw new MediaKitDomainError(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`, 400);
     }
     const price = Number(rawPrice);
     if (!Number.isFinite(price) || price < 0) {
-      throw new Error(`El precio aprobado para '${supportId}' debe ser un número válido mayor o igual a cero.`);
+      throw new MediaKitDomainError(`El precio aprobado para '${supportId}' debe ser un número válido mayor o igual a cero.`, 400);
     }
     approvedPrices[supportId] = String(price);
   }
 
   const currency = String(input.currency || 'ARS').trim().toUpperCase();
   if (!['ARS', 'USD', 'POR DEFINIR'].includes(currency)) {
-    throw new Error('La moneda del Media Kit no está permitida.');
+    throw new MediaKitDomainError('La moneda del Media Kit no está permitida.', 400);
   }
 
   if ((status === 'ready' || status === 'sent') && supportIds.length === 0) {
-    throw new Error('Un Media Kit listo o enviado debe incluir al menos un soporte conciliado.');
+    throw new MediaKitDomainError('Un Media Kit listo o enviado debe incluir al menos un soporte conciliado.', 400);
   }
   const kitId = input.kitId?.trim() || makeKitId();
   const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
   if (totalAmount !== null && (!Number.isFinite(totalAmount) || totalAmount < 0)) {
-    throw new Error('El monto comercial global debe ser un número válido mayor o igual a cero.');
+    throw new MediaKitDomainError('El monto comercial global debe ser un número válido mayor o igual a cero.', 400);
   }
   if (currency === 'POR DEFINIR' && totalAmount !== null) {
-    throw new Error('No se puede asignar un monto global cuando la moneda está definida como Por definir.');
+    throw new MediaKitDomainError('No se puede asignar un monto global cuando la moneda está definida como Por definir.', 400);
   }
 
   await ensureTables();
@@ -181,12 +182,12 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         [supportIds],
       );
       if (locked.rows.length !== supportIds.length) {
-        throw new Error('El inventario cambió mientras se guardaba el Media Kit. Actualizá e intentá nuevamente.');
+        throw new MediaKitDomainError('El inventario cambió mientras se guardaba el Media Kit. Actualizá e intentá nuevamente.', 409);
       }
       const pending = locked.rows.find((row) => !row.tenant_id);
-      if (pending) throw new Error(`El soporte '${pending.canonical_id}' quedó sin ownership y no puede incluirse en un Media Kit.`);
+      if (pending) throw new MediaKitDomainError(`El soporte '${pending.canonical_id}' quedó sin ownership y no puede incluirse en un Media Kit.`, 409);
       const unavailable = locked.rows.find((row) => row.active !== true || row.disponibilidad !== 'disponible');
-      if (unavailable) throw new Error(`El soporte '${unavailable.canonical_id}' dejó de estar disponible.`);
+      if (unavailable) throw new MediaKitDomainError(`El soporte '${unavailable.canonical_id}' dejó de estar disponible.`, 409);
       const lockedTenantIds = locked.rows.map((row) => String(row.tenant_id));
       tenantBySupportId.clear();
       for (const row of locked.rows) {
@@ -196,14 +197,29 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       tenantId = resolveMediaKitTenantId(lockedTenantIds);
     }
     if (input.sourceRequestId) {
-      const pendingRequestItems = await client.query(
-        `SELECT 1 FROM mediakit_request_items
-          WHERE request_id = $1 AND tenant_id IS NULL
-          LIMIT 1`,
+      const sourceItems = await client.query(
+        `SELECT ri.support_id, ri.tenant_id AS item_tenant_id, s.tenant_id AS support_tenant_id
+           FROM mediakit_requests r
+           LEFT JOIN mediakit_request_items ri ON ri.request_id = r.request_id
+           LEFT JOIN supports s ON s.canonical_id = ri.support_id
+          WHERE r.request_id = $1
+          ORDER BY ri.support_id`,
         [input.sourceRequestId],
       );
-      if (pendingRequestItems.rows.length > 0) {
-        throw new Error('No se puede generar un Media Kit desde una solicitud que contiene soportes sin ownership conciliado.');
+      if (sourceItems.rows.length === 0) {
+        throw new MediaKitDomainError('La solicitud de origen no existe.', 404);
+      }
+      const sourceSupportRows = sourceItems.rows.filter((row) => row.support_id);
+      if (sourceSupportRows.length === 0 || !areRequestItemOwnershipsConsistent(sourceSupportRows.map((row) => ({
+        itemTenantId: row.item_tenant_id,
+        supportTenantId: row.support_tenant_id,
+      })))) {
+        throw new MediaKitDomainError('No se puede generar un Media Kit desde una solicitud con ownership pendiente o desactualizado.', 409);
+      }
+      const sourceSupportIds = new Set(sourceSupportRows.map((row) => String(row.support_id)));
+      const unrelatedSupport = supportIds.find((supportId) => !sourceSupportIds.has(supportId));
+      if (unrelatedSupport) {
+        throw new MediaKitDomainError(`El soporte '${unrelatedSupport}' no pertenece a la solicitud de origen.`, 409);
       }
     }
 
@@ -450,7 +466,7 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
   if (!isDatabaseConfigured) return null;
   await ensureTables();
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
-    throw new Error('Estado de Media Kit inválido.');
+    throw new MediaKitDomainError('Estado de Media Kit inválido.', 400);
   }
 
   const client = await pool.connect();
@@ -498,24 +514,24 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
         duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
         duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
       })) {
-        throw new Error('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.');
+        throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.', 409);
       }
 
       const supportIds = normalizeSupportIds(current.support_ids);
       if (supportIds.length === 0) {
-        throw new Error('El Media Kit no puede marcarse como listo o enviado: requiere al menos un soporte conciliado.');
+        throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado: requiere al menos un soporte conciliado.', 409);
       }
       if (supportIds.length !== snapshotSupportIds.length || supportIds.some((id, index) => id !== snapshotSupportIds[index])) {
-        throw new Error('El Media Kit cambió mientras se validaba. Actualizá e intentá nuevamente.');
+        throw new MediaKitDomainError('El Media Kit cambió mientras se validaba. Actualizá e intentá nuevamente.', 409);
       }
       if (lockedSupports.length !== supportIds.length) {
-        throw new Error('El Media Kit contiene soportes que ya no existen en el inventario.');
+        throw new MediaKitDomainError('El Media Kit contiene soportes que ya no existen en el inventario.', 409);
       }
       const invalid = lockedSupports.find((support) =>
         !support.tenant_id || support.active !== true || support.disponibilidad !== 'disponible'
       );
       if (invalid) {
-        throw new Error(`El soporte '${invalid.canonical_id}' está pendiente de ownership o dejó de estar disponible.`);
+        throw new MediaKitDomainError(`El soporte '${invalid.canonical_id}' está pendiente de ownership o dejó de estar disponible.`, 409);
       }
 
       const itemRows = await client.query(
@@ -528,12 +544,12 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
       if (itemRows.rows.length !== supportIds.length || lockedSupports.some((support) =>
         itemTenantBySupport.get(String(support.canonical_id)) !== support.tenant_id
       )) {
-        throw new Error('El ownership de las líneas del Media Kit no coincide con el inventario actual. Guardá nuevamente el Media Kit antes de aprobarlo.');
+        throw new MediaKitDomainError('El ownership de las líneas del Media Kit no coincide con el inventario actual. Guardá nuevamente el Media Kit antes de aprobarlo.', 409);
       }
 
       const derivedTenantId = resolveMediaKitTenantId(lockedSupports.map((support) => String(support.tenant_id)));
       if ((current.tenant_id ?? null) !== derivedTenantId) {
-        throw new Error('El ownership de la cabecera del Media Kit no coincide con sus soportes. Guardá nuevamente el Media Kit antes de aprobarlo.');
+        throw new MediaKitDomainError('El ownership de la cabecera del Media Kit no coincide con sus soportes. Guardá nuevamente el Media Kit antes de aprobarlo.', 409);
       }
     }
 

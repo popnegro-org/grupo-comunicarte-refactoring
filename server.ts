@@ -9,6 +9,7 @@ import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/serve
 import { saveMediaKit, getMediaKit, getMediaKitBySourceRequestId, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
 import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
+import { MediaKitDomainError } from './src/server/mediakitErrors.ts';
 import {
   authenticateAdmin,
   getPublicSupportMediaAsset,
@@ -416,7 +417,8 @@ export async function createApp() {
     } catch (err: any) {
       console.error('Error saving media kit:', err);
       const msg = err.message || 'Error al guardar el Media Kit.';
-      res.status(msg.includes('obligatorio') || msg.includes('requiere') ? 400 : 500).json({ status: 'error', message: msg });
+      const statusCode = err instanceof MediaKitDomainError ? err.statusCode : 500;
+      res.status(statusCode).json({ status: 'error', message: msg });
     }
   });
 
@@ -427,7 +429,8 @@ export async function createApp() {
       res.status(200).json({ status: 'success', data: kit, message: 'Estado del Media Kit actualizado.' });
     } catch (err: any) {
       console.error(`Error updating media kit ${req.params.kitId}:`, err);
-      res.status(400).json({ status: 'error', message: err.message || 'Error al actualizar el Media Kit.' });
+      const statusCode = err instanceof MediaKitDomainError ? err.statusCode : 500;
+      res.status(statusCode).json({ status: 'error', message: err.message || 'Error al actualizar el Media Kit.' });
     }
   });
 
