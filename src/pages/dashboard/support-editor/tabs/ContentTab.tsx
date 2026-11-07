@@ -35,7 +35,7 @@ export function ContentTab({
         <div>
           <div className="text-eyebrow text-gray-500">CONTENIDO Y ATRIBUTOS</div>
           <h2 className="mt-1 text-base font-bold text-gray-900">Multimedia y ficha técnica</h2>
-          <p className="mt-0.5 text-[11px] text-gray-400">{theme.label}</p>
+          <p className="mt-0.5 text-[11px] text-gray-600">{theme.label}</p>
         </div>
 
         <div className="mt-3 space-y-3">
