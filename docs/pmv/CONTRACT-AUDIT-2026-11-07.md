@@ -27,9 +27,9 @@
 | `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilidades altas |
 | `git diff --check` | PASS | Sin errores de whitespace |
 | Playwright local | PARTIAL | 22 passed, 6 sin snapshots de referencia, 2 skipped |
-| CI / CI Candidate / Visual QA | PASS reportado en PR | Runs 42162706785, 42162706783 y 42162706816; Visual QA usó baseline confiable |
+| CI / CI Candidate / Visual QA | PASS en SHA posterior | Runs 42400225412, 42400225564 y 42400225394 sobre SHA 5e477b8; Visual QA ejecutó regresión PASS, pero la comparación contra baseline confiable previo quedó skipped |
 
-Los seis fallos locales fueron por ausencia de archivos en `tests/visual/__snapshots__`, no por diferencias contra un baseline. No se generaron ni aceptaron snapshots. El PASS de Visual QA de GitHub Actions es la evidencia visual autoritativa disponible. `npm run lint` ejecuta TypeScript; no acredita ESLint independiente.
+Los seis fallos locales fueron por ausencia de archivos en `tests/visual/__snapshots__`, no por diferencias contra un baseline. No se generaron ni aceptaron snapshots. GitHub Actions ejecutó la regresión visual y terminó PASS; sin embargo, el paso `Compare against previous trusted baseline` quedó skipped, por lo que no se afirma comparación contra un baseline previamente revisado. `npm run lint` ejecuta TypeScript; no acredita ESLint independiente.
 
 ## 3. Matriz P0
 
@@ -62,7 +62,7 @@ Los seis fallos locales fueron por ausencia de archivos en `tests/visual/__snaps
 | Criterio | Estado | Evidencia / brecha |
 |---|---|---|
 | Typecheck, unit tests y build | PASS | Ejecutados localmente en SHA exacto; 59/59 unit tests. |
-| Playwright en SHA exacto | PARTIAL local / PASS CI reportado | CI Visual QA PASS con baseline confiable; clon local carece de snapshots. |
+| Playwright en SHA exacto | PARTIAL local / PASS CI de regresión | CI Visual QA PASS en `Run visual regression`; comparación contra previous trusted baseline skipped. Clon local carece de snapshots. |
 | QA funcional real desktop/mobile, no solo mocks | PARTIAL | Playwright local usa fixtures/mocks; falta QA autenticado real del flujo comercial y Media Kit. |
 | Accesibilidad manual | NOT VERIFIED | Pendiente teclado, foco, contraste, labels y lector de pantalla. |
 | Rendimiento, bundle y consola | PARTIAL | Build PASS; bundles comprimidos relevantes (~135 KB principal y ~135 KB exportador). Falta auditoría navegador/performance. |
@@ -117,3 +117,21 @@ Se permite continuar en `pmv-validation-candidate` y entornos efímeros/Preview 
 - conexión de proveedores o comunicaciones reales.
 
 El próximo gate será GO para revisión humana solo cuando P0/P1 estén cerrados con evidencia reproducible en el SHA exacto. Merge y Production siguen reservados al HUMAN GATE.
+
+
+## 9. Addendum — corrección y validación posterior
+
+En el mismo ciclo se detectó y corrigió el caso en que `getCardFacts()` omitía un valor manual `monthly_impacts = 0` por una condición truthy. El cambio está en `5e477b8c93d4b72d245b852214e2bd35e69ce31a`, con test unitario específico para LED Móvil.
+
+Validación local del diff: typecheck PASS, 60/60 unit tests, build PASS, auditoría de dependencias de producción 0 vulnerabilidades altas y `git diff --check` PASS.
+
+Workflows del SHA `5e477b8`:
+- CI `42400225412`: SUCCESS.
+- CI Candidate `42400225564`: SUCCESS.
+- Visual QA `42400225394`: SUCCESS; `Run visual regression` SUCCESS. Los pasos `Bootstrap trusted baseline`, `Compare against previous trusted baseline` y `Save trusted baseline` quedaron skipped. Por tanto, el resultado confirma la regresión visual automatizada ejecutada, no la comparación contra baseline previamente revisado.
+
+Smoke Preview público (deployment previo, sin despliegue nuevo):
+- Home desktop 1440 y mobile 390: HTTP 200, sin overflow horizontal ni errores JavaScript.
+- Menú hamburguesa mobile: abre; navegación a `/inventario` funciona y no genera overflow.
+- `GET /api/health`: 200; `GET /api/supports`: 200, 28 registros; `GET /api/admin/mediakits` sin sesión: 401.
+- La respuesta pública inspeccionada no expuso claves de precios, costos, márgenes, tenant ni owner.
