@@ -89,21 +89,21 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </div>
           <nav aria-label="Navegación principal" className="mt-3 space-y-3">
             {navGroups.map((group) => <section key={group.label}>
-              <h2 className="px-2.5 pb-1 pt-3 text-[11px] font-semibold tracking-[.04em] text-[#64748B]">{group.label}</h2>
+              <h2 className="px-2.5 pb-1 pt-3 text-[11px] font-semibold tracking-[.04em] text-[#475569]">{group.label}</h2>
               <div className="space-y-0.5">{group.items.map(({ to, label, icon: Icon, end, count }: any) => <NavLink key={to} to={to} end={end} className={navClass}>
-                {({ isActive }) => <><Icon size={20} strokeWidth={1.7} className={isActive ? 'text-[#2563EB]' : 'text-[#5B6B86]'}/><span className="min-w-0 flex-1">{label}</span>{count ? <span className="rounded-full bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#2563EB]">{count}</span> : null}</>}
+                {({ isActive }) => <><Icon size={20} strokeWidth={1.7} className={isActive ? 'text-[#1D4ED8]' : 'text-[#5B6B86]'}/><span className="min-w-0 flex-1">{label}</span>{count ? <span className="rounded-full bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#1D4ED8]">{count}</span> : null}</>}
               </NavLink>)}</div>
             </section>)}
           </nav>
           <div className="mt-auto space-y-1 border-t border-[#E2E8F0] pt-4">
             <Link to="/inventario" className="flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-[#475569] transition hover:bg-white/70"><Building2 size={19} strokeWidth={1.7} className="text-[#5B6B86]"/><span className="flex-1">Inventario público</span><ChevronRight size={15} className="text-slate-400"/></Link>
             <button type="button" onClick={handleLogout} className="flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#475569] transition hover:bg-white/70 hover:text-red-700"><LogOut size={19} strokeWidth={1.7} className="text-[#5B6B86]"/>Cerrar sesión</button>
-            <div className="mt-3 flex items-center gap-2.5 rounded-lg bg-[#E8EDF5] p-3"><span className="h-[30px] w-[34px] shrink-0 rounded bg-[#CBD5E1]"/><div><p className="text-[11px] font-medium text-[#475569]">Panel de administración</p><p className="mt-0.5 text-[11px] text-[#64748B]">Grupo Comunicarte</p></div></div>
+            <div className="mt-3 flex items-center gap-2.5 rounded-lg bg-[#E8EDF5] p-3"><span className="h-[30px] w-[34px] shrink-0 rounded bg-[#CBD5E1]"/><div><p className="text-[11px] font-medium text-[#475569]">Panel de administración</p><p className="mt-0.5 text-[11px] text-[#475569]">Grupo Comunicarte</p></div></div>
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex h-[60px] items-center justify-between border-b border-[#E2E8F0] bg-white px-4 sm:px-7">
-            <div className="flex min-w-0 items-center gap-3"><button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Abrir menú" className="rounded-md p-2 text-[#475569] hover:bg-[#F1F5F9] md:hidden"><Menu size={19}/></button><div className="min-w-0 md:hidden"><p className="truncate text-sm font-semibold">{currentPage}</p></div><div className="hidden text-xs text-[#64748B] md:block">{currentPage}</div></div>
+            <div className="flex min-w-0 items-center gap-3"><button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Abrir menú" className="rounded-md p-2 text-[#475569] hover:bg-[#F1F5F9] md:hidden"><Menu size={19}/></button><div className="min-w-0 md:hidden"><p className="truncate text-sm font-semibold">{currentPage}</p></div><div className="hidden text-xs text-[#475569] md:block">{currentPage}</div></div>
             <div className="flex items-center gap-4"><Link to="/dashboard/solicitudes" className="relative rounded-md p-1.5 text-[#475569] transition hover:bg-[#F1F5F9]" title={`${newLeadsCount} solicitudes nuevas`} aria-label={`${newLeadsCount} solicitudes nuevas`}><Bell size={20} strokeWidth={1.7}/>{newLeadsCount > 0 && <i className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#2563EB]"/>}</Link><span className="hidden h-7 w-px bg-[#E2E8F0] sm:block"/><span className="hidden text-xs font-medium text-[#475569] sm:block">Grupo Comunicarte</span></div>
           </header>
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 sm:py-6 lg:px-7">{children}</main>
