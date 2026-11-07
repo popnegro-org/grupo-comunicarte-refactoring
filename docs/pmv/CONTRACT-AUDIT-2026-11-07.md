@@ -12,9 +12,9 @@
 
 - Se inspeccionaron el HEAD remoto, PR #90 y PR #100.
 - Se instalaron dependencias desde lockfile y se ejecutaron controles locales en una caja efímera.
-- No se conectó a Neon, Render ni Production durante esta pasada.
+- No se conectó a Neon, Render ni Production durante esta pasada. Sí se ejecutó smoke HTTP público y navegación de solo lectura en el Vercel Preview existente.
 - No se escribieron bases de datos, no se alteraron ramas remotas, no se aceptaron snapshots nuevos ni se enviaron comunicaciones.
-- Los resultados históricos de Preview/CI se identifican como evidencia previa, no como una nueva ejecución HTTP.
+- Los resultados históricos de Preview/CI se identifican como evidencia previa, salvo el smoke HTTP descrito en §7.
 
 ## 2. Controles locales sobre SHA ce4bd642
 
@@ -89,6 +89,21 @@ Los seis fallos locales fueron por ausencia de archivos en `tests/visual/__snaps
 5. **P1 entrega comercial:** cotización con importe global aprobado, PDF/PPT descargable, versión/fecha/responsable y confirmación/seguimiento.
 6. **P2 QA visual/accesibilidad:** ejecutar con baseline confiable y completar revisión manual desktop/mobile. No crear baseline nuevo para hacer pasar el workflow.
 7. **Documentación:** sincronizar `qa-status.md` y `HUMAN_GATE_VALIDATION.md` con esta matriz, sin alterar el contrato normativo.
+
+## 7.1 Smoke público adicional de Vercel Preview — 2026-11-07
+
+Deployment inspeccionado: `https://grupo-comunicarte-refactoring-1bxxizph1-popnegros-projects.vercel.app` (el deployment de Preview documentado por PR #90).
+
+| Prueba | Resultado |
+|---|---|
+| Navegación de `/` en Chromium | PASS; título, navegación principal, CTAs y contenido institucional visibles |
+| `GET /api/health` | HTTP 200 |
+| `GET /api/supports` | HTTP 200; 28 soportes |
+| `GET /api/admin/mediakits` sin sesión | HTTP 401 |
+| Campos sensibles en payload público inspeccionado | No se encontraron claves de tarifas internas, costos, márgenes, tenant ni owner |
+| Soporte LED Móvil `mza-led-movil-01` | `duration: 4 horas`, `spot_duration_seconds: 10`, `technical.monthly_impacts: null` |
+
+El valor de impactos mensuales está ausente (null) en el registro público actual. No se calculó ni se inventó un valor; el dato debe cargarse manualmente cuando exista información comercial confirmada. Esta prueba no acredita guardado autenticado de Media Kit, exportación ni QA del runtime Render.
 
 ## 8. Decisión
 
