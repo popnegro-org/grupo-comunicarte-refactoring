@@ -112,7 +112,11 @@ export async function createApp() {
   app.get('/api/health', async (_req, res) => {
     try {
       await pool.query('SELECT 1');
-      res.status(200).json({ status: 'ok', database: 'connected' });
+      res.status(200).json({
+        status: 'ok',
+        database: 'connected',
+        commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
+      });
     } catch (err: any) {
       console.error('Database health check failed:', err);
       res.status(503).json({ status: 'error', database: 'disconnected' });

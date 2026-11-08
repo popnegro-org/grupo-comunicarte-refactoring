@@ -121,6 +121,10 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
     });
   });
 
+  await page.route('**/api/admin/mediakits/KIT-REQ-001', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error', message: 'Media Kit no encontrado.' }) });
+  });
+
   await page.route('**/api/admin/mediakits/by-request/REQ-001', async (route) => {
     await route.fulfill({
       status: 200,
@@ -308,6 +312,9 @@ test('Media Kit constructor: el PDF no expone tarifas base si el monto global no
 });
 
 test('solicitud con ownership pendiente queda en cuarentena comercial', async ({ page }) => {
+  await page.route('**/api/admin/mediakits/by-request/REQ-PENDING-OWNERSHIP', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error', message: 'Media Kit no encontrado.' }) });
+  });
   await page.route('**/api/admin/stats', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
   });
@@ -362,6 +369,15 @@ test('Media Kit asociado distingue el estado Enviado de Cotizado', async ({ page
         createdAt: '2026-11-07T10:00:00.000Z',
       }] }),
     });
+  });
+  await page.route('**/api/admin/mediakits/KIT-REQ-SENT-STATUS', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 'error', message: 'Media Kit no encontrado.' }) });
+  });
+  await page.route('**/api/supports', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [{ canonical_id: 'SUP-SENT', name: 'Soporte QA', ciudad: 'mendoza', tipo_soporte: 'tradicional', address: 'Mendoza', description: 'Soporte de prueba', characteristics: [] }] }) });
+  });
+  await page.route('**/api/admin/support-pricing', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: { 'SUP-SENT': null } }) });
   });
   await page.route('**/api/admin/mediakits/by-request/REQ-SENT-STATUS', async (route) => {
     await route.fulfill({

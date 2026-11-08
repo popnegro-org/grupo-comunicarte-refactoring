@@ -33,6 +33,10 @@ const support = {
 };
 
 test('support flow: create → edit → preview → list filter', async ({ page }) => {
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [] }) });
+  });
+
   await page.route('**/api/admin/stats', async (route) => {
     await route.fulfill({
       status: 200,
