@@ -35,12 +35,13 @@ test.describe('Preview deployment · PMV smoke', () => {
     expect(forbiddenKeys).toEqual([]);
   });
 
-  test('login administrativo presenta los campos y la acción esperada', async ({ page }) => {
+  test('login administrativo presenta los campos y la acción esperada', async ({ page }, testInfo) => {
     await page.goto('/login');
     await expect(page.getByText('Portal administrativo', { exact: false })).toBeVisible();
     await expect(page.getByLabel('Usuario / Correo Electrónico')).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Contraseña' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('login.png'), fullPage: true });
   });
 
   test('las rutas administrativas redirigen a login cuando no hay sesión', async ({ page }) => {
@@ -55,7 +56,7 @@ test.describe('Preview deployment · PMV smoke', () => {
     expect(await response.json()).toMatchObject({ status: 'error' });
   });
 
-  test('inventario público carga soportes y no desborda en anchos PMV', async ({ page }) => {
+  test('inventario público carga soportes y no desborda en anchos PMV', async ({ page }, testInfo) => {
     await page.goto('/inventario?vista=catalogo');
     await expect(page.getByRole('heading', { name: 'Inventario de soportes publicitarios' })).toBeVisible();
     await expect(page.getByText(/\d+ resultados/)).toBeVisible();
@@ -73,9 +74,11 @@ test.describe('Preview deployment · PMV smoke', () => {
       }));
       expect(dimensions.content, `horizontal overflow at ${viewport.width}px`).toBeLessThanOrEqual(dimensions.viewport);
     }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: testInfo.outputPath('inventory-mobile-390.png'), fullPage: true });
   });
 
-  test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }) => {
+  test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
     await page.goto('/inventario?vista=catalogo');
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
@@ -88,6 +91,7 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
     await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible();
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
   });
 
   test('administrador global puede iniciar sesión cuando se configuró la cuenta QA', async ({ page }) => {
