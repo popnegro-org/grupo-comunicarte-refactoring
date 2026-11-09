@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import JSZip from 'jszip';
 
 // Avoid recording browser state, form values or traces in deployment artifacts.
 // The suite keeps its explicit non-sensitive screenshots via page.screenshot().
@@ -228,5 +229,107 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.pendingRequestStatus).toBe(409);
       expect(result.assignedTenantAfterAttempt).toBe('tenant-ba');
     });
+  });
+});
+
+
+test.describe('Media Kit exports · R2 Preview isolated', () => {
+  test('PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada', async ({ page }) => {
+    test.skip(
+      !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
+      'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA de exportaciones.',
+    );
+
+    await page.goto('/login');
+    await page.getByLabel('Usuario / Correo Electrónico').fill(process.env.E2E_ADMIN_USER!);
+    await page.getByRole('textbox', { name: 'Contraseña' }).fill(process.env.E2E_ADMIN_PASSWORD!);
+    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+    await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
+
+    const supportsResponse = await page.request.get('/api/admin/supports');
+    expect(supportsResponse.status()).toBe(200);
+    const supportsPayload = await supportsResponse.json();
+    const support = (supportsPayload.data || []).find((item: any) =>
+      Boolean(item.tenant_id || item.tenantId) && item.active === true && item.disponibilidad === 'disponible'
+    );
+    expect(support, 'Preview debe tener al menos un soporte asignado y disponible').toBeTruthy();
+
+    const kitId = 'KIT-QA-EXPORT-RECOVERY';
+    let kitSaved = false;
+    const pdfBytes = Buffer.from('%PDF-1.4\\n% Grupo Comunicarte QA export\\n1 0 obj <<>> endobj\\ntrailer <<>>\\n%%EOF', 'ascii');
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>');
+    zip.file('ppt/presentation.xml', '<?xml version="1.0"?><p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"></p:presentation>');
+    const pptxBytes = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    try {
+      const save = await page.request.post('/api/admin/mediakits', {
+        data: {
+          kitId,
+          sourceRequestId: null,
+          status: 'ready',
+          clientName: 'QA Export Recovery',
+          clientEmail: 'qa-export-recovery@example.invalid',
+          clientCompany: 'QA',
+          clientPhone: '',
+          supportIds: [support.canonical_id],
+          approvedPrices: { [support.canonical_id]: '10000' },
+          totalAmount: 10000,
+          currency: 'ARS',
+          metadata: { proposalPeriod: { duracionValor: 7, duracionUnidad: 'días' } },
+        },
+      });
+      expect(save.status()).toBe(201);
+      kitSaved = true;
+
+      const pdfUpload = await page.request.put(`/api/admin/mediakits/${kitId}/exports/pdf`, {
+        data: pdfBytes,
+        headers: { 'Content-Type': 'application/pdf' },
+      });
+      expect(pdfUpload.status()).toBe(201);
+      expect((await pdfUpload.json()).data.url).toBe(`/api/admin/mediakits/${kitId}/exports/pdf`);
+
+      const pptUpload = await page.request.put(`/api/admin/mediakits/${kitId}/exports/pptx`, {
+        data: pptxBytes,
+        headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+      });
+      expect(pptUpload.status()).toBe(201);
+
+      const saved = await page.request.get(`/api/admin/mediakits/${kitId}`);
+      expect(saved.status()).toBe(200);
+      const savedPayload = (await saved.json()).data;
+      expect(savedPayload.pdfUrl).toBe(`/api/admin/mediakits/${kitId}/exports/pdf`);
+      expect(savedPayload.pptUrl).toBe(`/api/admin/mediakits/${kitId}/exports/pptx`);
+      expect(savedPayload.metadata.exports.pdf.sha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(savedPayload.metadata.exports.pptx.sha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(JSON.stringify(savedPayload.metadata)).not.toContain('storageKey');
+
+      const pdfDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pdf`);
+      expect(pdfDownload.status()).toBe(200);
+      expect((await pdfDownload.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
+
+      const pptDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pptx`);
+      expect(pptDownload.status()).toBe(200);
+      expect((await pptDownload.body()).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+
+      const sent = await page.request.patch(`/api/admin/mediakits/${kitId}/status`, {
+        data: { status: 'sent', deliveryChannel: 'manual' },
+      });
+      expect(sent.status()).toBe(200);
+      const sentPayload = (await sent.json()).data;
+      expect(sentPayload.status).toBe('sent');
+      expect(sentPayload.metadata.deliveryEvents.at(-1)).toMatchObject({
+        type: 'delivery_confirmed',
+        actor: 'global_admin',
+        channel: 'manual',
+      });
+      expect(sentPayload.metadata.deliveryEvents.at(-1).confirmedAt).toBeTruthy();
+    } finally {
+      if (kitSaved) {
+        await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { data: { status: 'draft' } }).catch(() => null);
+        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`).catch(() => null);
+        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`).catch(() => null);
+      }
+    }
   });
 });
