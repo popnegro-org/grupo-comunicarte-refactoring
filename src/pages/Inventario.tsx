@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
 import InventoryMap from '../components/map/InventoryMap';
 import { useInventory } from '../hooks/useInventory';
 import { Plaza, Disponibilidad, InventoryItem } from '../types';
@@ -7,9 +6,10 @@ import { ViewMode } from '../components/inventory/ViewModeToggle';
 import { InventoryToolbar, type InventoryTypeFilter } from '../components/inventory/InventoryToolbar';
 import { toInventoryPresentationItem } from '../lib/inventoryPresentationAdapter';
 import { SupportCardGrid } from '../components/inventory/SupportCardGrid';
-import { Loader2, AlertCircle, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 import { useSelection } from '../context/SelectionContext';
 import { Button } from '../components/ui/Button';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Loader2, AlertCircle, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 
 type DisponibilidadFilter = Disponibilidad | 'todos';
 
