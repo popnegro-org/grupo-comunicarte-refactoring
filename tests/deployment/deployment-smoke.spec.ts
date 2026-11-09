@@ -357,8 +357,18 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     } finally {
       if (kitSaved) {
         await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { headers: authHeaders, data: { status: 'draft' } }).catch(() => null);
-        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`, { headers: authHeaders }).catch(() => null);
-        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`, { headers: authHeaders }).catch(() => null);
+        const currentKitResponse = await page.request.get(`/api/admin/mediakits/${kitId}`, { headers: authHeaders });
+        if (currentKitResponse.ok()) {
+          const currentKit = (await currentKitResponse.json()).data;
+          if (currentKit?.pdfUrl) {
+            const removedPdf = await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`, { headers: authHeaders });
+            expect(removedPdf.status()).toBe(200);
+          }
+          if (currentKit?.pptUrl) {
+            const removedPptx = await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`, { headers: authHeaders });
+            expect(removedPptx.status()).toBe(200);
+          }
+        }
       }
       if (requestId) {
         await page.request.patch(`/api/admin/requests/${requestId}`, { headers: authHeaders, data: { status: 'pending' } }).catch(() => null);
