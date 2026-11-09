@@ -13,6 +13,11 @@ export const ALLOWED_MEDIA_MIME_TYPES = new Set([
   'video/mp4', 'video/webm', 'video/quicktime',
 ]);
 
+export function isValidMediaKitExportPayload(format: 'pdf' | 'pptx', body: Buffer): boolean {
+  if (format === 'pdf') return body.subarray(0, 5).toString('ascii') === '%PDF-';
+  return body.length >= 4 && body[0] === 0x50 && body[1] === 0x4b && body[2] === 0x03 && body[3] === 0x04;
+}
+
 const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
   'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
