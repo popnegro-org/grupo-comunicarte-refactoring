@@ -10,7 +10,7 @@ const R2_URI_PREFIX = 'r2://';
 
 /** Resolve private R2 object references into short-lived read URLs for public catalog imagery. */
 function resolvePublicMediaUrl(canonicalId: string, media: { url: string; metadata?: Record<string, unknown>; media_type?: string }): string | null {
-  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\/\//i.test(media.url) ? media.url : null;
+  // Storage-backed media rows use this same-origin route, which checks public-catalog eligibility\n  // before redirecting to a short-lived R2 URL.\n  if (/^\/api\/media\/[1-9]\\d*$/.test(media.url)) return media.url;\n  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\/\//i.test(media.url) ? media.url : null;
   const metadataKey = typeof media.metadata?.storage_key === 'string' ? media.metadata.storage_key : '';
   const key = metadataKey || media.url.slice(R2_URI_PREFIX.length);
   if (!isSafeSupportMediaKey(canonicalId, key)) return null;
