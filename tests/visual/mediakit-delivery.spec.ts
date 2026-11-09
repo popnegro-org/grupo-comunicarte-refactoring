@@ -6,6 +6,8 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   let requestStatus = 'pending';
   let savedKit: Record<string, unknown> | null = null;
   let kitStatus = '';
+  let deliveryChannel = '';
+  const uploadedFormats: string[] = [];
   const requestPatchStatuses: string[] = [];
 
   await page.addInitScript(() => {
@@ -133,7 +135,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
         kitId: 'KIT-REQ-001', sourceRequestId: 'REQ-001', status: 'ready',
         totalAmount: '50000', currency: 'ARS', supportIds: ['SUP-001'],
         createdAt: '2026-10-30T11:00:00.000Z', updatedAt: '2026-10-30T12:00:00.000Z',
-        pdfUrl: 'https://files.example.com/kit.pdf', pptUrl: null,
+        pdfUrl: '/api/admin/mediakits/KIT-REQ-001/exports/pdf', pptUrl: '/api/admin/mediakits/KIT-REQ-001/exports/pptx',
       } }),
     });
   });
@@ -151,14 +153,34 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
     await route.continue();
   });
 
+  await page.route('**/api/admin/mediakits/KIT-REQ-001/exports/**', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const format = route.request().url().endsWith('/pdf') ? 'pdf' : 'pptx';
+      uploadedFormats.push(format);
+      expect(route.request().headers()['content-type']).toBe(format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+      expect((await route.request().postDataBuffer())?.length || 0).toBeGreaterThan(1000);
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: { format, url: `/api/admin/mediakits/KIT-REQ-001/exports/${format}` } }) });
+      return;
+    }
+    await route.continue();
+  });
+
   await page.route('**/api/admin/mediakits/KIT-REQ-001/status', async (route) => {
     if (route.request().method() === 'PATCH') {
       const body = route.request().postDataJSON();
       kitStatus = body.status;
+      deliveryChannel = body.deliveryChannel;
+      if (kitStatus === 'sent') requestStatus = 'enviado';
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ status: 'success', data: { status: kitStatus } }),
+        body: JSON.stringify({ status: 'success', data: {
+          kitId: 'KIT-REQ-001', sourceRequestId: 'REQ-001', status: kitStatus,
+          totalAmount: 25000, currency: 'ARS', supportIds: ['SUP-001'],
+          pdfUrl: '/api/admin/mediakits/KIT-REQ-001/exports/pdf',
+          pptUrl: '/api/admin/mediakits/KIT-REQ-001/exports/pptx',
+          metadata: { deliveryEvents: kitStatus === 'sent' ? [{ type: 'delivery_confirmed', actor: 'global_admin', channel: deliveryChannel, confirmedAt: '2026-11-09T20:00:00.000Z' }] : [] },
+        } }),
       });
       return;
     }
@@ -178,7 +200,8 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   await expect(dialog.getByRole('heading', { name: 'Actividad registrada' })).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Media Kit asociado' })).toBeVisible();
   await expect(dialog.getByText('KIT-REQ-001', { exact: true })).toBeVisible();
-  await expect(dialog.getByRole('link', { name: 'PDF' })).toHaveAttribute('href', 'https://files.example.com/kit.pdf');
+  await expect(dialog.getByRole('link', { name: 'PDF' })).toHaveAttribute('href', '/api/admin/mediakits/KIT-REQ-001/exports/pdf');
+  await expect(dialog.getByRole('link', { name: 'Presentación' })).toHaveAttribute('href', '/api/admin/mediakits/KIT-REQ-001/exports/pptx');
   await dialog.getByLabel('Duración contratada').selectOption('7:días');
   await dialog.getByRole('button', { name: 'Marcar en proceso' }).click();
   await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeVisible();
@@ -196,7 +219,7 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
 
   await expect(dialog.getByRole('button', { name: 'Preparar entrega' })).toBeEnabled();
   await dialog.getByRole('button', { name: 'Preparar entrega' }).click();
-  await expect(page.getByRole('status')).toContainText('Archivos preparados para compartir');
+  await expect(page.getByRole('status')).toContainText('PDF y PPTX guardados en el Media Kit');
   await expect(dialog.getByRole('button', { name: 'Confirmar entrega realizada' })).toBeVisible();
 
   const share = await page.evaluate(() =>
@@ -213,7 +236,9 @@ test('Media Kit: cotizar, preparar archivos y confirmar entrega en dos pasos', a
   expect(savedKit).not.toBeNull();
   expect((savedKit as Record<string, unknown>).totalAmount).toBe(25000);
   expect(kitStatus).toBe('sent');
-  expect(requestPatchStatuses).toEqual(['contactado', 'enviado']);
+  expect(deliveryChannel).toBe('share_sheet');
+  expect(uploadedFormats.sort()).toEqual(['pdf', 'pptx']);
+  expect(requestPatchStatuses).toEqual(['contactado']);
 });
 
 
