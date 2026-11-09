@@ -279,6 +279,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
       const requestPayload = await requestResponse.json();
       requestId = requestPayload.requestId;
       expect(requestId).toBeTruthy();
+      await page.request.patch(`/api/admin/requests/${requestId}`, { data: { status: 'pending' } });
 
       const save = await page.request.post('/api/admin/mediakits', {
         data: {
