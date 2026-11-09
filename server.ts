@@ -8,6 +8,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, getMediaKitBySourceRequestId, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
+import { handleMediaKitExportDelete, handleMediaKitExportDownload, handleMediaKitExportUpload } from './src/server/mediakitExports.ts';
 import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
 import { MediaKitDomainError } from './src/server/mediakitErrors.ts';
 import {
@@ -69,7 +70,7 @@ export async function createApp() {
     if (origin && isAllowedOrigin(origin, requestOrigin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
@@ -414,6 +415,18 @@ export async function createApp() {
     }
   });
 
+  app.get('/api/admin/mediakits/:kitId/exports/:format', requireAdmin, handleMediaKitExportDownload);
+  app.put(
+    '/api/admin/mediakits/:kitId/exports/:format',
+    requireAdmin,
+    express.raw({
+      type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+      limit: '4mb',
+    }),
+    handleMediaKitExportUpload,
+  );
+  app.delete('/api/admin/mediakits/:kitId/exports/:format', requireAdmin, handleMediaKitExportDelete);
+
   app.post('/api/admin/mediakits', requireAdmin, async (req, res) => {
     try {
       const kit = await saveMediaKit(req.body || {});
@@ -428,7 +441,7 @@ export async function createApp() {
 
   app.patch('/api/admin/mediakits/:kitId/status', requireAdmin, async (req, res) => {
     try {
-      const kit = await updateMediaKitStatus(req.params.kitId, req.body?.status);
+      const kit = await updateMediaKitStatus(req.params.kitId, req.body?.status, req.body?.deliveryChannel || 'manual');
       if (!kit) return res.status(404).json({ status: 'error', message: 'Media Kit no encontrado.' });
       res.status(200).json({ status: 'success', data: kit, message: 'Estado del Media Kit actualizado.' });
     } catch (err: any) {
