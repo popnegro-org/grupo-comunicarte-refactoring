@@ -55,10 +55,38 @@ jobs:
       - name: Build
         run: npm run build
 
+  candidate-change-scope:
+    name: Detect runtime changes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate'
+    runs-on: ubuntu-latest
+    outputs:
+      runtime_changed: ${{ steps.filter.outputs.runtime_changed }}
+    steps:
+      - name: Checkout candidate commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Detect application/runtime changes
+        id: filter
+        shell: bash
+        run: |
+          if ! git rev-parse HEAD^ >/dev/null 2>&1; then
+            echo "runtime_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only HEAD^ HEAD)"
+          if printf '%s\\n' "$changed_files" | grep -Ev '^(docs/|\\.github/workflows/|.*\\.md$)' | grep -q .; then
+            echo "runtime_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "runtime_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   authenticated-preview-smoke:
     name: Authenticated Preview Smoke
-    if: github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate'
-    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate' && needs.candidate-change-scope.outputs.runtime_changed == 'true'
+    needs: [validate, candidate-change-scope]
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
