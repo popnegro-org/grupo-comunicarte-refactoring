@@ -10,7 +10,7 @@ const R2_URI_PREFIX = 'r2://';
 
 /** Resolve private R2 object references into short-lived read URLs for public catalog imagery. */
 function resolvePublicMediaUrl(canonicalId: string, media: { url: string; metadata?: Record<string, unknown>; media_type?: string }): string | null {
-  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\\/\\//i.test(media.url) ? media.url : null;
+  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\/\//i.test(media.url) ? media.url : null;
   const metadataKey = typeof media.metadata?.storage_key === 'string' ? media.metadata.storage_key : '';
   const key = metadataKey || media.url.slice(R2_URI_PREFIX.length);
   if (!isSafeSupportMediaKey(canonicalId, key)) return null;
@@ -28,7 +28,7 @@ function withPublicMediaUrls(item: InventoryItem): InventoryItem {
     .map((entry) => ({ ...entry, url: resolvePublicMediaUrl(item.canonical_id, entry) }))
     .filter((entry): entry is typeof entry & { url: string } => Boolean(entry.url));
   const imageUrls = media.filter((entry) => entry.media_type === 'image').map((entry) => entry.url);
-  const legacyImageUrls = (item.imageUrls || []).filter((url) => /^https?:\\/\\//i.test(url));
+  const legacyImageUrls = (item.imageUrls || []).filter((url) => /^https?:\/\//i.test(url));
   return { ...item, media, imageUrls: imageUrls.length ? imageUrls : legacyImageUrls } as InventoryItem;
 }
 
