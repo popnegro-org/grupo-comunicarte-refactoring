@@ -27,7 +27,7 @@ export const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onView
         aria-checked={viewMode === mode}
         onClick={() => onViewModeChange(mode)}
         className={cn(
-          'flex min-h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20',
+          'flex min-h-11 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20',
           viewMode === mode ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-950'
         )}
       >
