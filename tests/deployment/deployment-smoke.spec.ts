@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import JSZip from 'jszip';
 
 // Avoid recording browser state, form values or traces in deployment artifacts.
 // The suite keeps its explicit non-sensitive screenshots via page.screenshot().
@@ -257,10 +256,9 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     const kitId = 'KIT-QA-EXPORT-RECOVERY';
     let kitSaved = false;
     const pdfBytes = Buffer.from('%PDF-1.4\\n% Grupo Comunicarte QA export\\n1 0 obj <<>> endobj\\ntrailer <<>>\\n%%EOF', 'ascii');
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>');
-    zip.file('ppt/presentation.xml', '<?xml version="1.0"?><p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"></p:presentation>');
-    const pptxBytes = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+    // The storage smoke validates ZIP signature and round-trip bytes. Real PPTX generation
+    // is covered by the dedicated export unit tests and browser workflow tests.
+    const pptxBytes = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
 
     try {
       const save = await page.request.post('/api/admin/mediakits', {
