@@ -132,8 +132,11 @@ test.describe('Inventario · regresión visual', () => {
     ];
     for (const control of controls) {
       await expect(control).toBeVisible();
+      const cssHeight = await control.evaluate((element) => Number.parseFloat(window.getComputedStyle(element).height));
+      expect(cssHeight).toBeCloseTo(44, 1);
       const bounds = await control.boundingBox();
-      expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+      // Chromium can report a sub-pixel box such as 43.99998 for a 44px CSS control.
+      expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(43.9);
     }
   });
 
