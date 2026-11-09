@@ -1,6 +1,12 @@
 import crypto from 'crypto';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_DOCUMENT_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+export const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 export const ALLOWED_MEDIA_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp',
@@ -112,9 +118,11 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
 
   async upload(input: StorageUploadInput): Promise<{ key: string; url: string }> {
     const contentType = input.contentType.toLowerCase();
-    if (!ALLOWED_MEDIA_MIME_TYPES.has(contentType)) throw new Error(`MIME no permitido: ${contentType}.`);
+    const isDocument = ALLOWED_DOCUMENT_MIME_TYPES.has(contentType);
+    if (!ALLOWED_MEDIA_MIME_TYPES.has(contentType) && !isDocument) throw new Error(`MIME no permitido: ${contentType}.`);
     if (input.body.length === 0) throw new Error('El archivo está vacío.');
-    if (input.body.length > MAX_UPLOAD_BYTES) throw new Error('El archivo excede el límite máximo permitido.');
+    const maxBytes = isDocument ? MAX_DOCUMENT_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+    if (input.body.length > maxBytes) throw new Error('El archivo excede el límite máximo permitido.');
     await this.request('PUT', input.key, input.body, contentType);
     return { key: input.key, url: `r2://${input.key}` };
   }
@@ -124,6 +132,12 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
 
 let adapter: CloudflareR2StorageAdapter | null = null;
 export function getStorageAdapter(): StorageAdapter { return adapter ??= new CloudflareR2StorageAdapter(); }
+
+export function createMediaKitAssetKey(kitId: string, format: 'pdf' | 'pptx'): string {
+  const safeId = kitId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100);
+  const extension = format === 'pdf' ? 'pdf' : 'pptx';
+  return `mediakit/${safeId}/exports/${format}.${extension}`;
+}
 
 export function createAssetKey(canonicalId: string, mimeType: string, role: 'cover' | 'gallery' = 'gallery'): string {
   const extension = EXTENSIONS[mimeType.toLowerCase()];
