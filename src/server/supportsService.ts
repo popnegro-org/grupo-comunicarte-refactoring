@@ -28,7 +28,9 @@ function withPublicMediaUrls(item: InventoryItem): InventoryItem {
     .map((entry) => ({ ...entry, url: resolvePublicMediaUrl(item.canonical_id, entry) }))
     .filter((entry): entry is typeof entry & { url: string } => Boolean(entry.url));
   const imageUrls = media.filter((entry) => entry.media_type === 'image').map((entry) => entry.url);
-  const legacyImageUrls = (item.imageUrls || []).filter((url) => /^https?:\/\//i.test(url));
+  const legacyImageUrls = (item.imageUrls || [])
+    .map((url) => resolvePublicMediaUrl(item.canonical_id, { url, media_type: 'image' }))
+    .filter((url): url is string => Boolean(url));
   return { ...item, media, imageUrls: imageUrls.length ? imageUrls : legacyImageUrls } as InventoryItem;
 }
 
