@@ -164,6 +164,11 @@ test.describe('Preview deployment · PMV smoke', () => {
 
       const result = await page.evaluate(async () => {
         const json = async (response: Response) => ({ status: response.status, body: await response.json() });
+        const hasSensitiveKey = (value: any): boolean => Array.isArray(value)
+          ? value.some(hasSensitiveKey)
+          : value && typeof value === 'object'
+            ? Object.entries(value).some(([key, nested]) => /tenant|ownership|pricing|price|cost|margin/i.test(key) || hasSensitiveKey(nested))
+            : false;
         const [publicResponse, adminResponse] = await Promise.all([
           fetch('/api/supports', { credentials: 'include' }),
           fetch('/api/admin/supports', { credentials: 'include' }),
@@ -197,7 +202,7 @@ test.describe('Preview deployment · PMV smoke', () => {
         return {
           publicStatus: publicData.status,
           publicHasPendingSupport: publicData.body.data?.some((item: any) => item.canonical_id === 'mza-trad-16'),
-          publicHasSensitiveKeys: JSON.stringify(publicData.body.data).match(/"[^"]*(tenant|pricing|price|cost|margin)[^"]*"/i) !== null,
+          publicHasSensitiveKeys: hasSensitiveKey(publicData.body.data),
           adminStatus: adminData.status,
           pendingTenant: pending?.tenant_id ?? null,
           assignedTenant: assigned?.tenant_id ?? null,
