@@ -56,6 +56,24 @@ jobs:
             visual-baseline-${{ github.event.pull_request.head.ref || github.ref_name }}-
             visual-baseline-${{ github.base_ref || github.ref_name }}-
 
+      - name: Detect manually reviewed baseline refresh
+        id: reviewed_baseline
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
+            message="$(git show -s --format=%s FETCH_HEAD)"
+          else
+            message="$(git log -1 --format=%s)"
+          fi
+          if [[ "$message" == visual-baseline:* ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Bootstrap missing baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: npx playwright test --update-snapshots
@@ -65,7 +83,7 @@ jobs:
         run: npx playwright test
 
       - name: Capture map baseline from base branch
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != '' && steps.reviewed_baseline.outputs.enabled != 'true'
         run: |
           marker="tests/visual/__snapshots__/map-baseline-source.txt"
           if [ ! -f "$marker" ]; then
@@ -104,13 +122,13 @@ jobs:
           echo "No cached baseline was available from this PR branch or its base branch. This run validates the generated screenshots but is not a visual regression comparison against main. The snapshots are cached for subsequent commits to this PR." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summarize visual regression comparison
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != '' && steps.reviewed_baseline.outputs.enabled != 'true'
         run: |
           echo "## Visual QA: baseline comparison" >> "$GITHUB_STEP_SUMMARY"
           echo "The Playwright visual tests are comparing against the restored baseline: ${{ steps.baseline.outputs.cache-matched-key }}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run visual regression
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != '' && steps.reviewed_baseline.outputs.enabled != 'true'
         run: npx playwright test
 
       - name: Save PR baseline for subsequent comparisons
@@ -131,7 +149,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Refresh manually reviewed visual snapshots
-        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'visual-baseline:')
+        if: |
+          (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'visual-baseline:')) ||
+          (github.event_name == 'pull_request' && steps.reviewed_baseline.outputs.enabled == 'true')
         run: |
           npx playwright test --update-snapshots=changed
           npx playwright test
