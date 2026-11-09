@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import InventoryMap from '../components/map/InventoryMap';
 import { useInventory } from '../hooks/useInventory';
 import { Plaza, Disponibilidad, InventoryItem } from '../types';
@@ -7,7 +7,7 @@ import { ViewMode } from '../components/inventory/ViewModeToggle';
 import { InventoryToolbar, type InventoryTypeFilter } from '../components/inventory/InventoryToolbar';
 import { toInventoryPresentationItem } from '../lib/inventoryPresentationAdapter';
 import { SupportCardGrid } from '../components/inventory/SupportCardGrid';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 import { useSelection } from '../context/SelectionContext';
 import { Button } from '../components/ui/Button';
 
@@ -142,6 +142,14 @@ export default function Inventario() {
     <div className="relative flex h-[calc(100dvh-5rem)] overflow-hidden">
       <h1 className="sr-only">Inventario de soportes publicitarios</h1>
       <div className="relative z-10 flex h-full min-w-0 flex-grow flex-col">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 md:px-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">Grupo Comunicarte · OOH</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-950 sm:text-xl">Inventario de soportes</h2>
+            <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">Explorá ubicaciones, compará formatos y armá tu selección.</p>
+          </div>
+          <span className="hidden rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600 sm:inline-flex">{allFilteredItems.length} {allFilteredItems.length === 1 ? 'soporte' : 'soportes'}</span>
+        </div>
         <InventoryToolbar
           selectedPlaza={selectedPlaza}
           setSelectedPlaza={setSelectedPlaza}
@@ -184,6 +192,22 @@ export default function Inventario() {
           )}
         </div>
       </div>
+      {viewMode === 'catalogo' && selectedCount > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-6">
+          <div className="pointer-events-auto mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl border border-gray-800 bg-gray-950 px-4 py-3 text-white shadow-[0_16px_48px_rgba(0,0,0,0.24)] sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10"><Layers className="h-4 w-4" aria-hidden="true" /></span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold" aria-live="polite">{selectedCount} {selectedCount === 1 ? 'soporte seleccionado' : 'soportes seleccionados'}</p>
+                <p className="hidden truncate text-xs text-gray-300 sm:block">Tu selección se conserva mientras explorás el inventario.</p>
+              </div>
+            </div>
+            <Link to="/mediakits" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-white px-4 text-xs font-bold text-gray-950 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:text-sm">
+              Revisar selección <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
