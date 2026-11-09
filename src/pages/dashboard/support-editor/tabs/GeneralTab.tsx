@@ -44,6 +44,36 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             onChange={() => undefined}
             readOnly
           />
+          <div className="md:col-span-2">
+            <label htmlFor="support-tenant" className={labelClass}>Unidad de negocio / ownership *</label>
+            <select
+              id="support-tenant"
+              className={inputClass}
+              value={form.tenant_id}
+              disabled={Boolean(canonicalId && form.tenant_id)}
+              onChange={(e) => set({ tenant_id: e.target.value })}
+              aria-describedby="support-tenant-help"
+            >
+              <option value="">Pendiente de conciliación (no publicable)</option>
+              <option value="tenant-ba">Buenos Aires · tenant-ba</option>
+              <option value="tenant-default">Mendoza · tenant-default</option>
+            </select>
+            <p id="support-tenant-help" className="mt-1 text-xs text-gray-500">
+              La ciudad no asigna ownership automáticamente. Las asignaciones existentes requieren corrección auditada.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <Field
+              label="Evidencia documental de ownership *"
+              value={form.tenant_ownership_evidence}
+              onChange={(value) => set({ tenant_ownership_evidence: value })}
+              placeholder="docs/inventario/source/soportes-mendoza.pdf · posición 01"
+              readOnly={Boolean(canonicalId && form.tenant_id)}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Referencia al PDF fuente y posición exacta. Obligatoria para asignar un tenant; queda registrada con actor y fecha.
+            </p>
+          </div>
           <div>
             <label htmlFor="support-city" className={labelClass}>Plaza *</label>
             <select

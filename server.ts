@@ -250,7 +250,7 @@ export async function createApp() {
     } catch (err: any) {
       console.error('Error creating admin support:', err);
       const msg = err.message || '';
-      const status = msg.includes('vacío') || msg.includes('inválida') || msg.includes('desconocida') ? 400 : 500;
+      const status = msg.includes('vacío') || msg.includes('inválida') || msg.includes('desconocida') || msg.includes('tenant_id requerido') || msg.includes('tenant_id inválido') || msg.includes('evidencia de ownership requerida') ? 400 : 500;
       res.status(status).json({ status: 'error', message: msg || 'Error al crear el soporte.' });
     }
   });
@@ -263,7 +263,7 @@ export async function createApp() {
     } catch (err: any) {
       console.error(`Error updating support ${req.params.id}:`, err);
       const msg = err.message || '';
-      const status = msg.includes('no encontrado') ? 404 : msg.includes('inválido') ? 400 : 500;
+      const status = msg.includes('no encontrado') ? 404 : msg.includes('inválido') || msg.includes('tenant_id') || msg.includes('evidencia de ownership') || msg.includes('ownership asignado') || msg.includes('ownership sin evidencia') ? 400 : 500;
       res.status(status).json({ status: 'error', message: msg || 'Error al actualizar el soporte.' });
     }
   });

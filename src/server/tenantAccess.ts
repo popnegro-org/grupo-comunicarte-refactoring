@@ -52,6 +52,21 @@ export function canManageGlobalRequest(access: TenantAccessDecision): boolean {
   return access.allowed && access.global && access.role === 'global_admin';
 }
 
+
+
+/** Ownership is assigned once from documentary evidence; reassignments need a separate audited correction flow. */
+export function resolveSupportTenantAssignment(
+  currentTenantId: string | null | undefined,
+  requestedTenantId: string | null | undefined,
+): { allowed: true; tenantId: string | null } | { allowed: false; reason: 'ownership_reassignment_requires_audit' } {
+  const current = typeof currentTenantId === 'string' && currentTenantId.trim() ? currentTenantId.trim() : null;
+  const requested = typeof requestedTenantId === 'string' && requestedTenantId.trim() ? requestedTenantId.trim() : null;
+  if (current && requested && current !== requested) {
+    return { allowed: false, reason: 'ownership_reassignment_requires_audit' };
+  }
+  return { allowed: true, tenantId: requested ?? current };
+}
+
 /** Missing ownership is quarantine, never a city-based tenant inference. */
 export function getSupportTenantState(tenantId: string | null | undefined): 'assigned' | 'pending' {
   return typeof tenantId === 'string' && tenantId.trim().length > 0 ? 'assigned' : 'pending';

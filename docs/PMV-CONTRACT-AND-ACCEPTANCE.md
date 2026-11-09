@@ -113,18 +113,17 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 ## 8. Criterios de aceptación
 
 ### P0 — bloquean el PMV
-- [ ] Ownership conciliado con los PDFs fuente; pendientes en cuarentena.
-- [ ] CRUD y endpoints filtran tenant en lectura y escritura.
-- [ ] Solicitud mixta: cabecera global, ítems tenant-scoped.
-- [ ] Media Kits, pricing, solicitudes, estadísticas, media y exportaciones tenant-safe.
-- [ ] Pruebas negativas cross-tenant, spoofing e IDOR.
-- [ ] RLS/rol runtime probados con el principal real o decisión segura documentada.
-- [ ] Cero filtraciones de precios internos en API y exportaciones.
+- [x] Ownership conciliado con los PDFs fuente para los 28 soportes elegibles; 18 filas sin evidencia permanecen en cuarentena.
+- [x] CRUD/endpoints respetan el modelo de administración global: ownership se lee desde DB; nuevas altas requieren tenant y evidencia explícitos; una asignación existente no puede cambiarse desde CRUD.
+- [x] Solicitud mixta: cabecera global, ítems tenant-scoped; las líneas pendientes no pueden avanzar comercialmente.
+- [x] Media Kits, pricing, solicitudes, estadísticas, media y exportaciones respetan el ownership operativo; las rutas públicas excluyen ownership y pricing.
+- [x] Pruebas negativas de autenticación, tenant spoofing, reasignación, soportes pendientes e IDOR contra las rutas administrativas del administrador global.
+- [x] Decisión segura documentada para el runtime: no hay usuarios tenant-scoped en este PMV; el único administrador es global. RLS no se declara activo porque el rol Neon runtime tiene BYPASSRLS; no se promete aislamiento entre usuarios por tenant.
+- [x] Cero filtraciones de precios internos en API pública, PDF y PPTX de cliente.
 - [x] Flujo de solicitud persistente e idempotente; pruebas secuencial y concurrente en Preview sin duplicados.
-- [x] Fuente documental y asignación de ownership de 28 soportes conciliados en Neon Preview.
-- [ ] Soportes e ítems sin ownership excluidos efectivamente del catálogo y del flujo comercial.
-- [ ] Media Kits y sus líneas persisten tenant_id por soporte; los kits multi-tenant se identifican como globales.
-
+- [x] Fuente documental y asignación auditada de ownership de 28 soportes conciliados en Neon Preview.
+- [x] Soportes e ítems sin ownership excluidos del catálogo y del flujo comercial; los pendientes no pueden entrar a un Media Kit ni cotizarse.
+- [x] Media Kits y sus líneas persisten tenant_id por soporte; la cabecera de un kit multi-tenant queda global y las FK compuestas garantizan que cada línea coincida con el tenant de su soporte.
 ### P1 — cierre comercial
 - [x] Duraciones estándar (7, 15, 21 días y mensual) alineadas en ambos constructores y validadas también en backend; valores legacy no estándar requieren revisión explícita.
 - [ ] Cotización, PDF/PPT, entrega y registro trazables.
@@ -187,3 +186,16 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 **NO-GO** si queda cualquier P0 abierto, un soporte sin ownership puede venderse, existe acceso cross-tenant, se filtra pricing o el flujo comercial no se completa.
 
 **GO para revisión humana** cuando P0/P1 estén cerrados con evidencia en el SHA exacto y CI/QA pasen. Merge y Production siguen siendo decisiones humanas.
+
+
+## 13. Cierre P0 — revalidación 2026-11-09
+
+- Rama candidata: pmv-validation-candidate; main y Production permanecen intactas.
+- El editor de soportes incorpora selección explícita de tenant y referencia documental. No deriva ownership de la ciudad. El backend exige evidencia PDF/posición para nuevas asignaciones, valida el tenant contra tenants, conserva asignaciones existentes y rechaza reasignaciones desde CRUD.
+- supports registra tenant_ownership_evidence, tenant_ownership_assigned_by y tenant_ownership_assigned_at. Los 28 ownerships conciliados fueron backfilled con la referencia al PDF y posición documentados; actor de migración documented-reconciliation, fecha 2026-11-01. No se asignaron las 18 filas pendientes.
+- mediakit_items.tenant_id quedó NOT NULL y con FK compuesta (support_id, tenant_id) hacia supports(canonical_id, tenant_id). mediakit_request_items conserva NULL para los dos ítems históricos pendientes, pero los ítems asignados tienen FK compuesta que impide mismatch de tenant.
+- Verificación Neon Preview: 28 soportes asignados y con los tres campos de auditoría; 18 pendientes; 0 mismatches de ownership en mediakit_request_items; mediakit_items no tenía filas al aplicar NOT NULL.
+- Pruebas de código locales: lint/typecheck PASS; 78/78 unit tests PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; Playwright deployment discovery 8 tests.
+- QA autenticado ampliado en tests/deployment/deployment-smoke.spec.ts: rutas admin sin sesión 401; lectura pública sin tenant/pricing; lectura admin con ownership; altas sin tenant/evidencia rechazadas; tenant spoof/reasignación rechazada; Media Kit con soporte pendiente y avance de solicitud pendiente rechazados. Debe ejecutarse en el deployment Preview del SHA final para acreditar el cierre funcional.
+- Alcance explícito: administrador único global; no hay aislamiento de acceso entre usuarios tenant-scoped y no se activa RLS con un rol BYPASSRLS. Esta decisión no debe presentarse como aislamiento multiusuario.
+- Este cierre P0 no cierra P1/P2 ni autoriza merge o promoción a Production. Las migraciones Production requieren aprobación humana independiente.

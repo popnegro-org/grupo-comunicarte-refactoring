@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, boolean, json, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, numeric, boolean, json, jsonb, timestamp, integer, uniqueIndex, foreignKey } from 'drizzle-orm/pg-core';
 
 export const tenants = pgTable('tenants', {
   id: text('id').primaryKey(),
@@ -15,6 +15,9 @@ export const supports = pgTable('supports', {
   id: serial('id').primaryKey(),
   canonicalId: text('canonical_id').notNull().unique(),
   tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
+  tenantOwnershipEvidence: text('tenant_ownership_evidence'),
+  tenantOwnershipAssignedBy: text('tenant_ownership_assigned_by'),
+  tenantOwnershipAssignedAt: timestamp('tenant_ownership_assigned_at'),
   name: text('name').notNull(),
   ciudad: text('ciudad').notNull(),
   tipoSoporte: text('tipo_soporte').notNull(),
@@ -36,7 +39,9 @@ export const supports = pgTable('supports', {
   routePath: json('route_path').$type<[number, number][]>(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
+}, (table) => ({
+  canonicalTenantUnique: uniqueIndex('supports_canonical_tenant_unique').on(table.canonicalId, table.tenantId),
+}));
 
 export const supportLocations = pgTable('support_locations', {
   supportCanonicalId: text('support_canonical_id').primaryKey(),
@@ -164,7 +169,13 @@ export const mediakitRequestItems = pgTable('mediakit_request_items', {
   requestId: text('request_id').notNull(),
   supportId: text('support_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (table) => ({
+  supportTenantOwnershipFk: foreignKey({
+    name: 'mediakit_request_items_support_tenant_fkey',
+    columns: [table.supportId, table.tenantId],
+    foreignColumns: [supports.canonicalId, supports.tenantId],
+  }),
+}));
 
 /**
  * Persistent Media Kit document generated from a request/builder session.
@@ -196,7 +207,7 @@ export const mediakits = pgTable('mediakits', {
 
 export const mediakitItems = pgTable('mediakit_items', {
   id: serial('id').primaryKey(),
-  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
+  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
   kitId: text('kit_id').notNull(),
   supportId: text('support_id').notNull(),
   approvedPrice: numeric('approved_price'),
@@ -204,4 +215,10 @@ export const mediakitItems = pgTable('mediakit_items', {
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
+}, (table) => ({
+  supportTenantOwnershipFk: foreignKey({
+    name: 'mediakit_items_support_tenant_fkey',
+    columns: [table.supportId, table.tenantId],
+    foreignColumns: [supports.canonicalId, supports.tenantId],
+  }),
+}));

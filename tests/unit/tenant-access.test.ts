@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { areLockedSupportsCommerciallyEligible, areRequestItemOwnershipsConsistent, canManageGlobalRequest, deriveRequestScope, getSupportTenantState, isSupportEligibleForPublicCatalog, isSupportSelectableForCommercialRequest, resolveMediaKitTenantId, resolveExistingSingleAdminAccess, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
+import { areLockedSupportsCommerciallyEligible, areRequestItemOwnershipsConsistent, canManageGlobalRequest, deriveRequestScope, getSupportTenantState, isSupportEligibleForPublicCatalog, isSupportSelectableForCommercialRequest, resolveMediaKitTenantId, resolveExistingSingleAdminAccess, resolveSupportTenantAssignment, resolveTenantAccess } from '../../src/server/tenantAccess.ts';
 
 test('rejects missing identity and users without active memberships', () => {
   assert.deepEqual(resolveTenantAccess(null), { allowed: false, reason: 'missing_identity' });
@@ -113,4 +113,15 @@ test('locked commercial rows fail closed on count mismatch or any ineligible sup
     { tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible' },
   ], 2), false);
   assert.equal(areLockedSupportsCommerciallyEligible([], 0), false);
+});
+
+
+test('support ownership is assigned explicitly and cannot be silently reassigned', () => {
+  assert.deepEqual(resolveSupportTenantAssignment(null, 'tenant-ba'), { allowed: true, tenantId: 'tenant-ba' });
+  assert.deepEqual(resolveSupportTenantAssignment('tenant-ba', undefined), { allowed: true, tenantId: 'tenant-ba' });
+  assert.deepEqual(resolveSupportTenantAssignment('tenant-ba', 'tenant-default'), {
+    allowed: false,
+    reason: 'ownership_reassignment_requires_audit',
+  });
+  assert.deepEqual(resolveSupportTenantAssignment(null, null), { allowed: true, tenantId: null });
 });

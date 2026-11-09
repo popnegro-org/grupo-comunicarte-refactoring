@@ -3,16 +3,7 @@ import { db } from '../db/index.ts';
 import { supportTechnical } from '../db/schema.ts';
 import { inArray } from 'drizzle-orm';
 import { InventoryItem } from '../types.ts';
-
-/**
- * Public inventory DTO boundary.
- * Pricing is intentionally removed from all public catalog/detail responses.
- * Administrative pricing remains available through protected /api/admin/* pricing endpoints.
- */
-function sanitizePublicSupport(item: InventoryItem): InventoryItem {
-  const { pricing: _pricing, ...publicItem } = item as InventoryItem & { pricing?: unknown };
-  return publicItem as InventoryItem;
-}
+import { sanitizePublicSupport } from './publicSupportDto.ts';
 
 function monthlyImpactsFromMetadata(metadata: unknown): number | string | null {
   if (!metadata || typeof metadata !== 'object') return null;
@@ -63,14 +54,14 @@ async function enrichTechnicalMetadata(items: InventoryItem[]): Promise<Inventor
 export async function getAllSupportsFromDB(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
   const supports = await getSupportCatalog(options);
   const enriched = await enrichTechnicalMetadata(supports);
-  return enriched.map(sanitizePublicSupport);
+  return enriched.map((item) => sanitizePublicSupport(item, options?.includeUnassigned === true));
 }
 
 export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const support = await getSupportDetail(canonicalId, options);
   if (!support) return null;
   const [enriched] = await enrichTechnicalMetadata([support]);
-  return sanitizePublicSupport(enriched);
+  return sanitizePublicSupport(enriched, options?.includeUnassigned === true);
 }
 
 export async function validateSupportsForRequest(selectedIds: string[]): Promise<{

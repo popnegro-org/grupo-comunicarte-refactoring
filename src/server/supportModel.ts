@@ -4,13 +4,14 @@ import { db } from '../db/index.ts';
 import {
   supportFaces,
   supportLocations,
+  tenants,
   supportMedia,
   supportPricing,
   supports,
   supportRoutes,
   supportTechnical,
 } from '../db/schema.ts';
-import { isSupportEligibleForPublicCatalog } from './tenantAccess.ts';
+import { isSupportEligibleForPublicCatalog, resolveSupportTenantAssignment } from './tenantAccess.ts';
 import { withSupportFaceCount } from '../lib/supportTechnicalFacts.ts';
 import {
   Disponibilidad,
@@ -68,6 +69,9 @@ export interface SupportFaceInput {
 }
 
 export interface SupportWritePayload {
+  tenant_id?: string | null;
+  tenant_ownership_evidence?: string | null;
+  tenant_ownership_assigned_by?: string;
   name?: string;
   ciudad?: Plaza;
   family?: SupportFamily;
@@ -221,6 +225,10 @@ export function validateSupportPayload(payload: SupportWritePayload) {
     availableFrom: payload.availableFrom === undefined ? undefined : payload.availableFrom === null ? null : normalizeText(payload.availableFrom),
     isFeatured: payload.isFeatured ?? false,
     active: payload.active ?? true,
+    tenant_id: typeof payload.tenant_id === 'string' && payload.tenant_id.trim() ? payload.tenant_id.trim() : null,
+    tenant_ownership_evidence: typeof payload.tenant_ownership_evidence === 'string' && payload.tenant_ownership_evidence.trim()
+      ? payload.tenant_ownership_evidence.trim()
+      : null,
   };
 }
 
@@ -362,6 +370,8 @@ function rowToInventoryItem(
 
   const base = {
     canonical_id: row.canonicalId,
+    tenant_id: row.tenantId ?? null,
+    tenant_ownership_evidence: row.tenantOwnershipEvidence ?? null,
     name: row.name,
     ciudad: row.ciudad as Plaza,
     tipo_soporte: familyToTipoSoporte(family),
@@ -449,6 +459,10 @@ function buildSupportCoreValues(canonicalId: string, payload: SupportWritePayloa
   const normalized = validateSupportPayload(payload);
   return {
     canonicalId,
+    tenantId: normalized.tenant_id,
+    tenantOwnershipEvidence: normalized.tenant_ownership_evidence,
+    tenantOwnershipAssignedBy: (payload as any).tenant_ownership_assigned_by || null,
+    tenantOwnershipAssignedAt: normalized.tenant_id ? new Date() : null,
     name: normalized.name,
     ciudad: normalized.ciudad,
     tipoSoporte: normalized.tipo_soporte,
@@ -771,8 +785,52 @@ async function syncSupportMedia(canonicalId: string, payload: SupportWritePayloa
 }
 
 export async function upsertSupportRecord(canonicalId: string, payload: SupportWritePayload) {
-  const core = buildSupportCoreValues(canonicalId, payload);
-  const existing = await db.select({ canonicalId: supports.canonicalId }).from(supports).where(eq(supports.canonicalId, canonicalId));
+  const existing = await db.select({
+    canonicalId: supports.canonicalId,
+    tenantId: supports.tenantId,
+    tenantOwnershipEvidence: supports.tenantOwnershipEvidence,
+    tenantOwnershipAssignedBy: supports.tenantOwnershipAssignedBy,
+    tenantOwnershipAssignedAt: supports.tenantOwnershipAssignedAt,
+  }).from(supports).where(eq(supports.canonicalId, canonicalId));
+  const assignment = resolveSupportTenantAssignment(existing[0]?.tenantId, payload.tenant_id);
+  if (!assignment.allowed) {
+    throw new Error('El ownership asignado no puede cambiarse desde CRUD; requiere una corrección documental auditada.');
+  }
+  const requestedTenantId = assignment.tenantId;
+  const requestedEvidence = typeof payload.tenant_ownership_evidence === 'string' ? payload.tenant_ownership_evidence.trim() : '';
+  const existingEvidence = existing[0]?.tenantOwnershipEvidence ?? null;
+  if (requestedTenantId && !existing[0]?.tenantId && !requestedEvidence) {
+    throw new Error('evidencia de ownership requerida: indicá el PDF y la posición que acreditan la asignación.');
+  }
+  if (existing[0]?.tenantId && requestedEvidence && existingEvidence && requestedEvidence !== existingEvidence) {
+    throw new Error('La evidencia de ownership asignada no puede modificarse desde CRUD; requiere una corrección auditada.');
+  }
+  if (existing[0]?.tenantId && !existingEvidence) {
+    throw new Error('El soporte tiene ownership sin evidencia registrada; requiere conciliación auditada antes de editarse.');
+  }
+  if (existing.length === 0 && !requestedTenantId) {
+    throw new Error('tenant_id requerido: seleccioná explícitamente la unidad de negocio del soporte.');
+  }
+  if (requestedTenantId) {
+    const tenant = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, requestedTenantId));
+    if (tenant.length === 0) throw new Error('tenant_id inválido: el tenant indicado no existe.');
+  }
+  const effectiveEvidence = existing[0]?.tenantId ? existingEvidence : requestedTenantId ? requestedEvidence : existingEvidence;
+  const effectiveActor = existing[0]?.tenantId
+    ? existing[0].tenantOwnershipAssignedBy
+    : requestedTenantId
+      ? payload.tenant_ownership_assigned_by || 'shared-admin'
+      : null;
+  const effectiveAssignedAt = existing[0]?.tenantId
+    ? existing[0].tenantOwnershipAssignedAt
+    : requestedTenantId ? new Date() : null;
+  const core = buildSupportCoreValues(canonicalId, {
+    ...payload,
+    tenant_id: requestedTenantId,
+    tenant_ownership_evidence: effectiveEvidence,
+    tenant_ownership_assigned_by: effectiveActor || undefined,
+  });
+  core.tenantOwnershipAssignedAt = effectiveAssignedAt;
   if (existing.length === 0) {
     await db.insert(supports).values(core);
   } else {
@@ -797,7 +855,7 @@ export async function upsertSupportRecord(canonicalId: string, payload: SupportW
     await syncSupportMedia(canonicalId, payload);
   }
 
-  const item = await getSupportDetail(canonicalId, { includeInactive: true });
+  const item = await getSupportDetail(canonicalId, { includeInactive: true, includeUnassigned: true });
   if (!item) {
     throw new Error(`No se pudo reconstruir el soporte '${canonicalId}'.`);
   }
@@ -805,7 +863,7 @@ export async function upsertSupportRecord(canonicalId: string, payload: SupportW
 }
 
 export async function patchSupportRecord(canonicalId: string, payload: SupportWritePayload) {
-  const existing = await getSupportDetail(canonicalId, { includeInactive: true });
+  const existing = await getSupportDetail(canonicalId, { includeInactive: true, includeUnassigned: true });
   if (!existing) {
     throw new Error(`Soporte con ID '${canonicalId}' no encontrado.`);
   }
@@ -835,6 +893,9 @@ export async function patchSupportRecord(canonicalId: string, payload: SupportWr
       ? payload.isFeatured
       : coreSource.isFeatured,
     active: hasOwn(payload, 'active') ? payload.active : coreSource.active,
+    tenant_id: hasOwn(payload, 'tenant_id') ? payload.tenant_id : coreSource.tenant_id,
+    tenant_ownership_evidence: hasOwn(payload, 'tenant_ownership_evidence') ? payload.tenant_ownership_evidence : coreSource.tenant_ownership_evidence,
+    tenant_ownership_assigned_by: payload.tenant_ownership_assigned_by,
     technical: payload.technical,
     pricing: payload.pricing,
     ...(payload.route !== undefined ? { route: payload.route } : {}),
@@ -844,7 +905,7 @@ export async function patchSupportRecord(canonicalId: string, payload: SupportWr
 }
 
 export async function deleteSupportRecord(canonicalId: string) {
-  const existing = await getSupportDetail(canonicalId, { includeInactive: true });
+  const existing = await getSupportDetail(canonicalId, { includeInactive: true, includeUnassigned: true });
   if (!existing) {
     throw new Error(`Soporte con ID '${canonicalId}' no encontrado.`);
   }

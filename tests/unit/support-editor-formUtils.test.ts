@@ -30,6 +30,8 @@ test('normalize preserves editorial monthly impacts', () => {
 test('payloadFrom produces canonical numeric payloads', () => {
   const form = {
     ...emptyForm,
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01',
     publicName: 'Soporte test',
     tipo_soporte: 'tradicional' as const,
     traditional: {
@@ -46,6 +48,8 @@ test('payloadFrom produces canonical numeric payloads', () => {
     },
   };
   const payload = payloadFrom(form);
+  assert.equal(payload.tenant_id, 'tenant-ba');
+  assert.equal(payload.tenant_ownership_evidence, 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01');
   assert.equal(payload.technical.caras, 2);
   assert.equal(payload.technical.monthly_impacts, 123);
   assert.equal(payload.pricing.exhibition_price, 1000);
@@ -219,4 +223,54 @@ test('inventory adapter keeps legacy inactive state separate from reservation av
   const result = toInventoryPresentationItem(item);
   assert.equal(result.disponibilidad, 'Disponible');
   assert.equal(result.estadoOperativo, 'Inactivo');
+});
+
+
+test('normalize preserves persisted tenant ownership and dirty state tracks reassignment', () => {
+  const normalized = normalize({ name: 'Soporte test', tenant_id: 'tenant-ba', tenant_ownership_evidence: 'PDF fuente · posición 01' });
+  assert.equal(normalized.tenant_id, 'tenant-ba');
+  assert.equal(normalized.tenant_ownership_evidence, 'PDF fuente · posición 01');
+  assert.equal(isFormDirty(normalized, { ...normalized, tenant_id: 'tenant-default' }), true);
+});
+
+test('new support payload carries explicit tenant ownership without inferring it from city', () => {
+  const form = { ...emptyForm, publicName: 'Soporte sin asignación', ciudad: 'buenos-aires' as const };
+  const payload = payloadFrom(form);
+  assert.equal('tenant_id' in payload, false);
+  assert.throws(() => payloadFrom({ ...form, tenant_id: 'tenant-ba' }), /PDF y la posición/);
+  const assigned = payloadFrom({
+    ...form,
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01',
+  });
+  assert.equal(assigned.tenant_id, 'tenant-ba');
+  assert.ok(assigned.tenant_ownership_evidence);
+});
+
+
+test('public support DTO strips pricing and ownership while admin DTO preserves ownership only', async () => {
+  const { sanitizePublicSupport } = await import('../../src/server/publicSupportDto');
+  const item = {
+    canonical_id: 'qa-tenant-dto',
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'PDF privado · posición 01',
+    name: 'Soporte QA',
+    ciudad: 'buenos-aires',
+    tipo_soporte: 'tradicional',
+    lat: null,
+    lng: null,
+    address: '',
+    description: '',
+    characteristics: '',
+    mapa_url: '',
+    pricing: { exhibition_price: 123456, installation_price: 654321 },
+  } as import('../../src/types').InventoryItem;
+  const publicItem = sanitizePublicSupport(item);
+  assert.equal('tenant_id' in publicItem, false);
+  assert.equal('tenant_ownership_evidence' in publicItem, false);
+  assert.equal('pricing' in publicItem, false);
+  const adminItem = sanitizePublicSupport(item, true) as any;
+  assert.equal(adminItem.tenant_id, 'tenant-ba');
+  assert.equal(adminItem.tenant_ownership_evidence, 'PDF privado · posición 01');
+  assert.equal('pricing' in adminItem, false);
 });

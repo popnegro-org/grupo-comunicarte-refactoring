@@ -197,18 +197,18 @@ export async function createAdminSupport(data: SupportWritePayload & { canonical
     if (existing) {
       throw new Error(`canonical_id duplicado: ${canonicalId}`);
     }
-    return upsertSupportRecord(canonicalId, { ...canonicalData, family });
+    return upsertSupportRecord(canonicalId, { ...canonicalData, family, tenant_ownership_assigned_by: adminUser });
   }
 
   const baseCandidate = generateCanonicalId(canonicalData.name || '', canonicalData.ciudad || 'mendoza', family);
   const canonicalId = await ensureUniqueCanonicalId(baseCandidate);
-  return upsertSupportRecord(canonicalId, { ...canonicalData, family });
+  return upsertSupportRecord(canonicalId, { ...canonicalData, family, tenant_ownership_assigned_by: adminUser });
 }
 
 export async function updateSupportByAdmin(canonicalId: string, data: SupportWritePayload) {
   const canonicalData = canonicalizeEditorMedia(data);
   await assertFeaturedCapacity(canonicalId, canonicalData);
-  return patchSupportRecord(canonicalId, canonicalData);
+  return patchSupportRecord(canonicalId, { ...canonicalData, tenant_ownership_assigned_by: adminUser });
 }
 
 export async function deactivateSupportByAdmin(canonicalId: string) {

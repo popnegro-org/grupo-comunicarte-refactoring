@@ -79,3 +79,13 @@ Esta conciliación cierra la identificación documental de los 28 soportes elegi
 El administrador de este PMV es global y no existen usuarios tenant-scoped. `tenant_id` funciona como ownership/partición operativa y comercial, no como autorización entre usuarios. El rol runtime Preview `neondb_owner` tiene `rolbypassrls=true`; RLS no se declara activo y queda diferido hasta que se incorpore autenticación tenant-scoped y un rol DB sin BYPASSRLS.
 
 La QA autenticada de Media Kit, exportaciones y R2 sigue pendiente. No se hicieron cambios en Production, no se creó ningún usuario y no se modificó `main`.
+
+
+## 7. Registro de evidencia y auditoría (2026-11-09)
+
+En Neon Preview, los 28 soportes asignados ahora tienen:
+- tenant_ownership_evidence: ruta del PDF fuente y posición exacta descrita en esta matriz.
+- tenant_ownership_assigned_by: documented-reconciliation para el backfill de la conciliación existente.
+- tenant_ownership_assigned_at: 2026-11-01, fecha de la conciliación documental registrada en este documento.
+
+El CRUD no permite cambiar una asignación existente ni editar su evidencia. Las nuevas asignaciones requieren tenant válido y referencia PDF/posición; el actor y la fecha se registran en backend. Las 18 filas sin fuente continúan sin tenant y sin habilitación comercial.

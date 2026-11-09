@@ -84,3 +84,23 @@ La propuesta SQL no es una migración operativa lista para ejecutar: antes hay q
 ## Estado
 
 **Fundación y pruebas unitarias incorporadas; aislamiento efectivo aún NO habilitado.** No se ha ejecutado SQL ni backfill, no se han modificado datos productivos y main permanece intacta.
+
+
+## Estado vigente — revalidación 2026-11-09
+
+Esta sección prevalece sobre las auditorías históricas anteriores cuando describen el schema o runtime actual.
+
+- El modelo de acceso continúa siendo un único administrador global autenticado. No existen usuarios tenant-scoped; por tanto, tenant_id es ownership operativo/comercial y no un límite de autorización entre usuarios. El rol Preview neondb_owner mantiene rolbypassrls=true; RLS no se declara activo ni se promete aislamiento multiusuario.
+- El catálogo público solo devuelve soportes activos con tenant asignado. mza-trad-16 y las otras 17 filas pendientes continúan con tenant_id=NULL; no se infiere ownership por ciudad.
+- El CRUD administrativo expone ownership y evidencia solo al administrador. Las altas requieren tenant válido y referencia PDF/posición; las asignaciones existentes son inmutables desde CRUD. La corrección de ownership exige un flujo auditado separado.
+- supports persiste tenant_ownership_evidence, tenant_ownership_assigned_by y tenant_ownership_assigned_at. Los 28 soportes documentados se backfilled desde la matriz fuente; no se asignaron las 18 filas pendientes.
+- mediakit_items.tenant_id es NOT NULL y su FK compuesta (support_id, tenant_id) referencia (canonical_id, tenant_id) en supports. mediakit_request_items conserva NULL solo para líneas históricas pendientes; su FK compuesta protege las líneas asignadas.
+- Preview confirmó 28/28 soportes asignados con auditoría, 18 pendientes y cero mismatches de tenant en líneas de solicitud. mediakit_items estaba vacío al aplicar NOT NULL.
+- El DTO público elimina tenant_id, evidencia de ownership y pricing. El pricing permanece detrás de endpoints requireAdmin; PDF y PPTX no incluyen precios internos.
+- No se aplicó ninguna migración ni cambio de datos en Production; no se modificó main.
+
+Migraciones aplicadas solo a Neon Preview:
+- docs/pmv/migrations/20261109_tenant_ownership_audit.sql
+- docs/pmv/migrations/20261109_tenant_ownership_constraints.sql
+
+La suite autenticada ampliada está preparada en tests/deployment/deployment-smoke.spec.ts; el resultado de CI/Preview sobre el SHA actualizado es el gate final para acreditar el cierre funcional P0.

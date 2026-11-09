@@ -54,10 +54,18 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page.getByLabel('Usuario / Correo Electrónico')).toBeVisible();
   });
 
-  test('la API administrativa rechaza peticiones sin sesión', async ({ request }) => {
-    const response = await request.get('/api/admin/stats');
-    expect(response.status()).toBe(401);
-    expect(await response.json()).toMatchObject({ status: 'error' });
+  test('las rutas administrativas críticas rechazan peticiones sin sesión', async ({ request }) => {
+    for (const path of [
+      '/api/admin/stats',
+      '/api/admin/supports',
+      '/api/admin/support-pricing',
+      '/api/admin/requests',
+      '/api/admin/mediakits',
+    ]) {
+      const response = await request.get(path);
+      expect(response.status(), path).toBe(401);
+      expect(await response.json()).toMatchObject({ status: 'error' });
+    }
   });
 
   test('inventario público carga soportes y no desborda en anchos PMV', async ({ page }, testInfo) => {
@@ -140,6 +148,80 @@ test.describe('Preview deployment · PMV smoke', () => {
       });
       expect(adminStats.status).toBe(200);
       expect(adminStats.body.status).toBe('success');
+    });
+
+    test('ownership, tenant spoofing, quarantine and pricing remain fail-closed', async ({ page }) => {
+      test.skip(
+        !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
+        'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA autenticado.',
+      );
+
+      await page.goto('/login');
+      await page.getByLabel('Usuario / Correo Electrónico').fill(process.env.E2E_ADMIN_USER!);
+      await page.getByRole('textbox', { name: 'Contraseña' }).fill(process.env.E2E_ADMIN_PASSWORD!);
+      await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+      await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
+
+      const result = await page.evaluate(async () => {
+        const json = async (response: Response) => ({ status: response.status, body: await response.json() });
+        const [publicResponse, adminResponse] = await Promise.all([
+          fetch('/api/supports', { credentials: 'include' }),
+          fetch('/api/admin/supports', { credentials: 'include' }),
+        ]);
+        const publicData = await json(publicResponse);
+        const adminData = await json(adminResponse);
+        const pending = adminData.body.data?.find((item: any) => item.canonical_id === 'mza-trad-16');
+        const assigned = adminData.body.data?.find((item: any) => item.canonical_id === 'bue-trad-06');
+
+        const missingTenant = await json(await fetch('/api/admin/supports', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'QA sin tenant', ciudad: 'mendoza', tipo_soporte: 'tradicional', active: false }),
+        }));
+        const invalidTenant = await json(await fetch('/api/admin/supports', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'QA tenant inválido', ciudad: 'mendoza', tipo_soporte: 'tradicional', tenant_id: 'tenant-spoof', active: false }),
+        }));
+        const reassignment = await json(await fetch('/api/admin/supports/bue-trad-06', {
+          method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: 'tenant-default' }),
+        }));
+        const pendingKit = await json(await fetch('/api/admin/mediakits', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientName: 'QA Pending', supportIds: ['mza-trad-16'], tenantId: 'tenant-ba', status: 'draft' }),
+        }));
+        const pendingRequest = await json(await fetch('/api/admin/requests/REQ-2026-4997-9171', {
+          method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'closed' }),
+        }));
+        const reloadedAssigned = await json(await fetch('/api/admin/supports/bue-trad-06', { credentials: 'include' }));
+        return {
+          publicStatus: publicData.status,
+          publicHasPendingSupport: publicData.body.data?.some((item: any) => item.canonical_id === 'mza-trad-16'),
+          publicHasSensitiveKeys: JSON.stringify(publicData.body.data).match(/"[^"]*(tenant|pricing|price|cost|margin)[^"]*"/i) !== null,
+          adminStatus: adminData.status,
+          pendingTenant: pending?.tenant_id ?? null,
+          assignedTenant: assigned?.tenant_id ?? null,
+          missingTenantStatus: missingTenant.status,
+          invalidTenantStatus: invalidTenant.status,
+          reassignmentStatus: reassignment.status,
+          pendingKitStatus: pendingKit.status,
+          pendingRequestStatus: pendingRequest.status,
+          assignedTenantAfterAttempt: reloadedAssigned.body.data?.tenant_id ?? null,
+        };
+      });
+
+      expect(result.publicStatus).toBe(200);
+      expect(result.publicHasPendingSupport).toBe(false);
+      expect(result.publicHasSensitiveKeys).toBe(false);
+      expect(result.adminStatus).toBe(200);
+      expect(result.pendingTenant).toBe(null);
+      expect(result.assignedTenant).toBe('tenant-ba');
+      expect(result.missingTenantStatus).toBe(400);
+      expect(result.invalidTenantStatus).toBe(400);
+      expect(result.reassignmentStatus).toBe(400);
+      expect(result.pendingKitStatus).toBe(409);
+      expect(result.pendingRequestStatus).toBe(409);
+      expect(result.assignedTenantAfterAttempt).toBe('tenant-ba');
     });
   });
 });
