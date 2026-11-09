@@ -88,7 +88,8 @@ function sanitizeMediaKitMetadata(value: unknown): Record<string, unknown> {
   if (exports && typeof exports === 'object' && !Array.isArray(exports)) {
     metadata.exports = Object.fromEntries(Object.entries(exports as Record<string, unknown>).map(([format, asset]) => {
       if (!asset || typeof asset !== 'object' || Array.isArray(asset)) return [format, asset];
-      const { storageKey: _storageKey, ...safeAsset } = asset as Record<string, unknown>;
+      const safeAsset = { ...(asset as Record<string, unknown>) };
+      delete safeAsset.storageKey;
       return [format, safeAsset];
     }));
   }
@@ -621,7 +622,8 @@ export async function updateMediaKitStatus(
 
     const current = existing.rows[0];
     if (status === 'sent') {
-      if (!current.pdf_url || !current.ppt_url) {
+      const exportMetadata = current.metadata?.exports || {};
+      if (!current.pdf_url || !current.ppt_url || !exportMetadata.pdf?.storageKey || !exportMetadata.pptx?.storageKey) {
         throw new MediaKitDomainError('No se puede confirmar la entrega sin PDF y PPTX persistidos para recuperación.', 409);
       }
       if (current.source_request_id) {
