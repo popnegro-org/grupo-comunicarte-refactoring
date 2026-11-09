@@ -109,6 +109,10 @@ test.describe('Inventario · regresión visual', () => {
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ver soporte' }).first()).toBeVisible();
+    if (testInfo.project.name === 'chromium-mobile') {
+      // Give the card enough vertical viewport to capture it without the sticky header or fixed selection bar covering its edges.
+      await page.setViewportSize({ width: 390, height: 1000 });
+    }
     await page.locator('article').first().evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
     await page.locator('article').first().screenshot({ path: testInfo.outputPath('candidate-inventory-card-selected.png') });
     await expect(page.locator('article').first()).toHaveScreenshot('inventory-card-selected.png', { stylePath: 'tests/visual/screenshot.css' });
