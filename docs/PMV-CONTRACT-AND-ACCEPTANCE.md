@@ -126,18 +126,18 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [x] Media Kits y sus líneas persisten tenant_id por soporte; la cabecera de un kit multi-tenant queda global y las FK compuestas garantizan que cada línea coincida con el tenant de su soporte.
 ### P1 — cierre comercial
 - [x] Duraciones estándar (7, 15, 21 días y mensual) alineadas en ambos constructores y validadas también en backend; valores legacy no estándar requieren revisión explícita.
-- [ ] Cotización, PDF/PPT, entrega y registro trazables.
-- [ ] Exportación y recuperación probadas en desktop y móvil.
+- [x] Cotización, PDF/PPT, entrega y registro trazables (subalcance validado en Preview; evidencia en `docs/pmv/mediakit-export-delivery.md`).
+- [x] Exportación y recuperación probadas en desktop y móvil (smoke autenticado 9/9 sobre el SHA runtime validado; recuperación y UI móvil cubiertas por Playwright).
 - [ ] Integraciones incluidas en el alcance verificadas end-to-end; las no contratadas quedan fuera de alcance.
 - [x] Solicitudes públicas idempotentes: clave estable por payload, conflicto concurrente resuelto por `UNIQUE(request_id)` y prueba Preview concurrente 201/200 sin duplicados.
 
 ### P2 — calidad y release
-- [ ] Typecheck, unit tests, build y Playwright en el SHA exacto.
+- [x] Typecheck, unit tests, build y Playwright en el HEAD candidato `593e5d1`; el smoke autenticado corresponde al SHA runtime `231d87d`, sin cambios de código runtime posteriores.
 - [ ] QA visual/funcional real desktop y móvil, no solo mocks.
 - [ ] Accesibilidad: teclado, foco, labels, contraste y estados.
 - [ ] Rendimiento, bundle y consola revisados.
 - [ ] Documentos históricos marcados como obsoletos o enlazados aquí.
-- [ ] Evidencias adjuntas al PR.
+- [x] Evidencias adjuntas al PR.
 
 ## 9. Estado verificado tras conciliación (2026-11-01)
 
@@ -232,3 +232,16 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 **Este PASS no cierra todas las integraciones P1:** HubSpot sigue pendiente de pipeline/stage/owner/deduplicación; Resend/email transaccional y WhatsApp requieren credenciales, política de consentimiento y aprobación antes de enviar comunicaciones reales. P2 continúa abierto. La administración es un único administrador global; no se declara aislamiento multiusuario ni RLS.
 
 **Release:** PR #90 continúa Draft y abierto. GitHub main, Vercel Production, Render Production y bucket R2 Production no fueron modificados por esta iteración. No mergear ni desplegar Production sin HUMAN GATE.
+
+
+## 15. Revalidación incremental del candidato — 2026-11-09
+
+- HEAD revisado: `593e5d1b99b9b3a12297abf1df11c938dae1a109`.
+- Desde el SHA runtime con smoke autenticado `231d87d0dfe234bfc3fa34a4849b6a68e4526f28`, los cambios se limitan a workflows CI, documentación contractual/técnica y pruebas Playwright; no hay cambios de código de aplicación/runtime.
+- Ejecución local en el HEAD exacto: `npm ci` PASS (0 vulnerabilidades reportadas), `npm run lint` PASS, `npm run test:unit` PASS (81/81), `npm run build` PASS.
+- Regresión de asociación por `sourceRequestId` con ID no convencional `MK-ARBITRARY-2026-042`: Playwright PASS 2/2 (Chromium desktop y mobile).
+- GitHub Actions para el HEAD: CI Candidate PASS (run 42706158633), CI PASS (run 42706158974), Visual QA PASS (run 42706158829). Visual QA restauró snapshots desde el cache confiable de `main`; el baseline del mapa se capturó desde `main` en `244d2f3d4bc6f3094de56b013c0c33b04f1a6e70`. El checkout local no contiene esos PNG, por eso la suite local sin cache registra 6 fallos de snapshot; no se generaron ni aprobaron baselines automáticamente.
+- Preview Vercel `dpl_GaJAc7kRUXacPoJ9LSRQUXSUKcYy`: READY sobre el SHA runtime `231d87d0dfe234bfc3fa34a4849b6a68e4526f28`; `/api/health` respondió HTTP 200, `status=ok`, `database=connected` y commit exacto. El HEAD candidato no modifica el runtime.
+- Smoke autenticado de Preview: 9/9 PASS sobre ese mismo SHA runtime; se conserva la distinción entre SHA runtime probado y HEAD documental/de pruebas.
+- Permanecen abiertos en P2: revisión manual de accesibilidad, validación visual/funcional real integral en móvil, rendimiento/bundle y consola. No declarar el PMV completamente liberado mientras esos criterios sigan abiertos.
+- No se habilitó RLS, no se cambiaron roles runtime, no se enviaron comunicaciones y no se modificó Production en esta revalidación.
