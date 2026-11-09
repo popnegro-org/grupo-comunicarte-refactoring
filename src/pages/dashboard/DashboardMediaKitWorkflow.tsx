@@ -24,6 +24,8 @@ import { apiFetch } from '../../lib/api';
 import { formatProposalDuration, isProposalDurationValid, normalizeProposalDuration, proposalDurationFromOption, proposalDurationOption, ProposalDurationUnit } from '../../lib/mediakitDuration';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
 import {
+  createMediaKitPdf,
+  createMediaKitPpt,
   downloadMediaKitPdf,
   downloadMediaKitPpt,
   sendMediaKitToLead,
@@ -70,6 +72,10 @@ type RelatedMediaKit = {
   pptUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  metadata?: {
+    deliveryEvents?: Array<{ type: string; actor: string; channel: string; confirmedAt: string }>;
+    exports?: Record<string, { contentType?: string; size?: number; sha256?: string; uploadedAt?: string }>;
+  };
 };
 
 const labels: Record<WorkflowStatus, string> = {
@@ -106,7 +112,7 @@ export default function DashboardMediaKitWorkflow() {
   const [loading, setLoading] = useState(false);
   const [isFetchingLeads, setIsFetchingLeads] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [deliveryPrepared, setDeliveryPrepared] = useState(false);
+  const [deliveryPrepared, setDeliveryPrepared] = useState<'share_sheet' | 'mailto_draft' | null>(null);
   const [toast, setToast] = useState('');
 
   const notify = (m: string) => {
@@ -290,11 +296,12 @@ export default function DashboardMediaKitWorkflow() {
       notify('No se puede avanzar: la solicitud contiene soportes pendientes de ownership.');
       return;
     }
+    if (next === 'done' && !deliveryPrepared) {
+      notify('Prepará y persistí el PDF y el PPTX antes de confirmar la entrega.');
+      return;
+    }
     setBusy(true);
-    let mediaKitMarkedSent = false;
-    let requestStatusUpdated = false;
     try {
-      const persisted = next === 'request' ? 'pending' : next === 'in_progress' ? 'contactado' : 'enviado';
       if (next === 'done') {
         const saved = await persistMediaKit('ready');
         if (!saved) throw new Error('No pudimos guardar el Media Kit.');
@@ -302,45 +309,31 @@ export default function DashboardMediaKitWorkflow() {
         const kitStatusResponse = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(`KIT-${lead.requestId}`)}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'sent' }),
+          body: JSON.stringify({ status: 'sent', deliveryChannel: deliveryPrepared }),
         });
         const kitStatusResult = await kitStatusResponse.json().catch(() => null);
         if (!kitStatusResponse.ok || kitStatusResult?.status !== 'success') {
-          throw new Error(kitStatusResult?.message || 'No pudimos registrar el Media Kit como enviado.');
+          throw new Error(kitStatusResult?.message || 'No pudimos registrar la entrega y actualizar la solicitud.');
         }
-        mediaKitMarkedSent = true;
+        setRelatedMediaKit(kitStatusResult.data);
+        setDeliveryPrepared(null);
+      } else {
+        const persisted = next === 'request' ? 'pending' : 'contactado';
+        const r = await apiFetch(`/api/admin/requests/${encodeURIComponent(lead.requestId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: persisted }),
+        });
+        const j = await r.json().catch(() => null);
+        if (!r.ok || j?.status !== 'success') {
+          throw new Error(j?.message || 'No pudimos actualizar el estado de la solicitud.');
+        }
       }
-
-      const r = await apiFetch(`/api/admin/requests/${encodeURIComponent(lead.requestId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: persisted }),
-      });
-      const j = await r.json().catch(() => null);
-      if (!r.ok || j?.status !== 'success') {
-        throw new Error(j?.message || 'No pudimos actualizar el estado de la solicitud.');
-      }
-      requestStatusUpdated = true;
 
       await load();
       setSelected((x) => (x ? { ...x, status: next } : null));
       notify(`Solicitud ${labels[next]}`);
     } catch (e: any) {
-      if (mediaKitMarkedSent && !requestStatusUpdated) {
-        try {
-          const rollbackResponse = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(`KIT-${lead.requestId}`)}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'ready' }),
-          });
-          const rollbackResult = await rollbackResponse.json().catch(() => null);
-          if (!rollbackResponse.ok || rollbackResult?.status !== 'success') {
-            console.error('Could not roll back Media Kit status after request update failed:', rollbackResult?.message || rollbackResponse.status);
-          }
-        } catch (rollbackError) {
-          console.error('Could not roll back Media Kit status after request update failed:', rollbackError);
-        }
-      }
       notify(e.message || 'Error al actualizar.');
     } finally {
       setBusy(false);
@@ -349,7 +342,7 @@ export default function DashboardMediaKitWorkflow() {
 
   const open = async (lead: LeadRequest) => {
     setSelected(lead);
-    setDeliveryPrepared(false);
+    setDeliveryPrepared(null);
     setSupports([]);
     setApprovedPrices({});
     setPeriod({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
@@ -459,11 +452,38 @@ export default function DashboardMediaKitWorkflow() {
     try {
       const saved = await persistMediaKit('ready');
       if (!saved) return;
+      const kitId = `KIT-${selected.requestId}`;
+      const pdf = await createMediaKitPdf(lead, exportSupports, selected.requestId);
+      const pptx = await createMediaKitPpt(lead, exportSupports, selected.requestId);
+      const upload = async (format: 'pdf' | 'pptx', blob: Blob) => {
+        const contentType = format === 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        const response = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(kitId)}/exports/${format}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': contentType },
+          body: blob,
+        });
+        const result = await response.json().catch(() => null);
+        if (!response.ok || result?.status !== 'success') {
+          throw new Error(result?.message || `No pudimos guardar el archivo ${format.toUpperCase()}.`);
+        }
+      };
+      await upload('pdf', pdf);
+      await upload('pptx', pptx);
+
+      const relatedResponse = await apiFetch(`/api/admin/mediakits/by-request/${encodeURIComponent(selected.requestId)}`);
+      const relatedResult = await relatedResponse.json().catch(() => null);
+      if (relatedResponse.ok && relatedResult?.status === 'success') {
+        setRelatedMediaKit(relatedResult.data);
+      }
+
       const result = await sendMediaKitToLead(lead, exportSupports, selected.requestId);
-      setDeliveryPrepared(true);
+      const channel = result === 'shared' ? 'share_sheet' : 'mailto_draft';
+      setDeliveryPrepared(channel);
       notify(result === 'shared'
-        ? 'Archivos preparados para compartir. Confirmá la entrega cuando hayas completado el envío.'
-        : 'PDF y PPTX descargados; revisá el borrador de correo, adjuntá ambos archivos y envialo. Luego confirmá la entrega.');
+        ? 'PDF y PPTX guardados en el Media Kit y preparados para compartir. Confirmá la entrega después de completar el envío.'
+        : 'PDF y PPTX guardados en el Media Kit y descargados; revisá el borrador de correo, adjuntá ambos archivos y envialo. Luego confirmá la entrega.');
     } catch (e: any) {
       notify(e.message || 'No pudimos preparar los materiales para la entrega.');
     } finally {
@@ -619,8 +639,9 @@ export default function DashboardMediaKitWorkflow() {
                   <ol className="space-y-3">
                     <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700"><Inbox className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Solicitud recibida</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(selected.createdAt)} · {selected.requestId}</p></div></li>
                     {relatedMediaKit && <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><FileText className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Media Kit actualizado</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(relatedMediaKit.updatedAt)} · {relatedMediaKit.kitId}</p></div></li>}
+                    {relatedMediaKit?.metadata?.deliveryEvents?.map((event, index) => <li key={`${event.confirmedAt}-${index}`} className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Mail className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Entrega confirmada · Administrador global</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(event.confirmedAt)} · {event.channel === 'share_sheet' ? 'Compartir' : event.channel === 'mailto_draft' ? 'Correo manual' : 'Registro manual'}</p></div></li>)}
                   </ol>
-                  <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] leading-4 text-slate-500">Se muestran únicamente eventos deducibles de registros persistidos. El sistema todavía no dispone de un registro independiente de llamadas, reuniones o tareas.</p>
+                  <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] leading-4 text-slate-500">Se registran la solicitud, el Media Kit, las exportaciones persistidas y la confirmación de entrega. No se registran llamadas, reuniones o tareas.</p>
                 </section>
 
                 <section aria-labelledby="commercial-mediakit-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -629,8 +650,8 @@ export default function DashboardMediaKitWorkflow() {
                     <p className="font-semibold text-slate-900">{relatedMediaKit.kitId}</p>
                     <div className="mt-2 grid grid-cols-2 gap-3 text-xs"><div><p className="text-slate-500">Soportes</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.supportIds?.length ?? 0}</p></div><div><p className="text-slate-500">Importe global</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.totalAmount == null ? 'Sin definir' : `${relatedMediaKit.currency || 'ARS'} ${Number(relatedMediaKit.totalAmount).toLocaleString('es-AR')}`}</p></div></div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {relatedMediaKit.pdfUrl && /^https?:\/\//i.test(relatedMediaKit.pdfUrl) && <a href={relatedMediaKit.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">PDF <ExternalLink className="h-3 w-3"/></a>}
-                      {relatedMediaKit.pptUrl && /^https?:\/\//i.test(relatedMediaKit.pptUrl) && <a href={relatedMediaKit.pptUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">Presentación <ExternalLink className="h-3 w-3"/></a>}
+                      {relatedMediaKit.pdfUrl && /^(https?:\/\/|\/api\/admin\/mediakits\/)/i.test(relatedMediaKit.pdfUrl) && <a href={relatedMediaKit.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">PDF <ExternalLink className="h-3 w-3"/></a>}
+                      {relatedMediaKit.pptUrl && /^(https?:\/\/|\/api\/admin\/mediakits\/)/i.test(relatedMediaKit.pptUrl) && <a href={relatedMediaKit.pptUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">Presentación <ExternalLink className="h-3 w-3"/></a>}
                     </div>
                   </> : <p className="text-xs leading-5 text-slate-500">No hay un Media Kit vinculado mediante sourceRequestId. Podés preparar una cotización desde esta solicitud; no se asociarán documentos por coincidencia de nombres o códigos.</p>}
                 </section>
