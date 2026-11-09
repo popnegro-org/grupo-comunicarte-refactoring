@@ -5,8 +5,8 @@ import {
   ALLOWED_MEDIA_MIME_TYPES,
   MAX_DOCUMENT_UPLOAD_BYTES,
   createMediaKitAssetKey,
+  isValidMediaKitExportPayload,
 } from '../../src/server/r2StorageAdapter.ts';
-import { isValidMediaKitExportPayload } from '../../src/server/mediakitExports.ts';
 
 test('Media Kit export keys are isolated by kit and format', () => {
   assert.equal(createMediaKitAssetKey('KIT-REQ-001', 'pdf'), 'mediakit/KIT-REQ-001/exports/pdf.pdf');
