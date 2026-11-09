@@ -203,6 +203,12 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 
 ### Evidencia de ejecución Preview — 2026-11-09
 
-- Commit candidato desplegado: 801d55fd5b513f591229d10ae14a1d0c5b44c325.
-- Vercel Preview: deployment dpl_EXTamJWLjPNZ8N4gghkRKFXK2r2e, estado READY; no es Production.
-- CI Candidate run 42685509159: validación, audit, typecheck, unit tests y build PASS. El job autenticado quedó skipped porque el deployment exacto aún no estaba READY al terminar el primer intento; se debe reejecutar tras disponer del Preview exacto.
+- SHA candidato validado: 2c54df771700b474d1c6d847d7d2bc7ca767873e.
+- Vercel Preview: deployment dpl_itz7E3pkghguTZ6DZBiaEwbTQVxj, READY; health HTTP 200, DB connected y commit exacto. No es Production.
+- GitHub Actions CI Candidate run 42686323500: validate PASS y Authenticated Preview Smoke PASS, 8/8 Playwright tests.
+- GitHub Actions CI run 42686323448: PASS. Visual QA run 42686323692: PASS.
+- El smoke autenticado comprobó rutas admin sin sesión 401; catálogo público de 28 soportes sin ownership/pricing y sin mza-trad-16; admin ve ownership/evidencia; altas sin tenant/evidencia 400; tenant inválido 400; reasignación de tenant 400; Media Kit con soporte pendiente 409; avance de solicitud con ítem pendiente 409.
+- Después de las pruebas, Neon Preview conserva 46 soportes: 28 asignados con auditoría y 18 pendientes; solicitud histórica probada conserva status enviado; mediakit_items sigue en 0 filas; no se crearon soportes QA. Cero mismatches en mediakit_request_items.
+- No se generaron artifacts en el run autenticado. No se descargaron ni expusieron credenciales.
+- RLS continúa deliberadamente desactivado: current_user neondb_owner, rolbypassrls=true. El modelo es un único administrador global, no aislamiento entre usuarios tenant-scoped.
+- P0 cerrado para el alcance PMV documentado. P1/P2 siguen abiertos; no se autoriza merge ni promoción a Production. Las migraciones Production requieren aprobación humana independiente.
