@@ -61,13 +61,13 @@ export function InventoryToolbar({
         />
       </div>
 
-      <button type="button" onClick={onNearMe} disabled={locating} className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${nearMeActive ? "border-gray-950 bg-gray-950 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"} disabled:cursor-wait disabled:opacity-60`} aria-label="Buscar soportes cerca de mi ubicación">
+      <button type="button" onClick={onNearMe} disabled={locating} className={`flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${nearMeActive ? "border-gray-950 bg-gray-950 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"} disabled:cursor-wait disabled:opacity-60`} aria-label="Buscar soportes cerca de mi ubicación">
         <LocateFixed className={`h-3.5 w-3.5 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
         {locating ? 'Ubicando...' : nearMeActive ? 'Cerca de tu ubicación' : 'Cerca de mí'}
       </button>
 
       {nearMeActive && onClearNearMe && (
-        <button type="button" onClick={onClearNearMe} className="flex h-10 shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Quitar búsqueda cerca de mi ubicación">
+        <button type="button" onClick={onClearNearMe} className="flex h-11 shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Quitar búsqueda cerca de mi ubicación">
           <X className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Quitar</span>
         </button>
@@ -77,7 +77,7 @@ export function InventoryToolbar({
         value={selectedPlaza}
         onChange={(event) => setSelectedPlaza(event.target.value as Plaza | 'todos')}
         aria-label="Filtrar por plaza"
-        className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
+        className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
       >
         <option value="todos">Todas las plazas</option>
         <option value="mendoza">Mendoza</option>
@@ -88,7 +88,7 @@ export function InventoryToolbar({
         value={selectedTipo}
         onChange={(event) => setSelectedTipo(event.target.value as InventoryTypeFilter)}
         aria-label="Filtrar por tipo de soporte"
-        className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
+        className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
       >
         <option value="todos">Todos los tipos</option>
         <option value="tradicional">Tradicionales</option>
@@ -101,7 +101,7 @@ export function InventoryToolbar({
         value={selectedDisponibilidad}
         onChange={(event) => setSelectedDisponibilidad(event.target.value as DisponibilidadFilter)}
         aria-label="Filtrar por disponibilidad"
-        className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
+        className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-500 focus-visible:ring-2 focus-visible:ring-gray-950/20"
       >
         <option value="todos">Toda disponibilidad</option>
         <option value="disponible">Disponibles</option>
@@ -109,7 +109,7 @@ export function InventoryToolbar({
       </select>
 
       {hasActiveFilters && (
-        <button type="button" onClick={onClearFilters} className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Limpiar todos los filtros">
+        <button type="button" onClick={onClearFilters} className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Limpiar todos los filtros">
           <X className="h-3.5 w-3.5" aria-hidden="true" />
           Limpiar filtros
         </button>
