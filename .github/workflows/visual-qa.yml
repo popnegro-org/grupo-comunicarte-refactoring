@@ -60,14 +60,14 @@ jobs:
         id: reviewed_baseline
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
-            message="$(git show -s --format=%s FETCH_HEAD)"
+            message="$(git show -s --format=%s "$PR_HEAD_SHA")"
           else
             message="$(git log -1 --format=%s)"
           fi
+          echo "Detected commit message: $message" >> "$GITHUB_STEP_SUMMARY"
           if [[ "$message" == visual-baseline:* ]]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
@@ -130,6 +130,15 @@ jobs:
       - name: Run visual regression
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != '' && steps.reviewed_baseline.outputs.enabled != 'true'
         run: npx playwright test
+
+      - name: Mark reviewed PR baseline
+        if: github.event_name == 'pull_request' && steps.reviewed_baseline.outputs.enabled == 'true' && success()
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p tests/visual/__snapshots__
+          printf 'reviewed-head=%s\\nbase-ref=%s\\n' "$PR_HEAD_SHA" "$BASE_REF" > tests/visual/__snapshots__/map-baseline-source.txt
 
       - name: Save PR baseline for subsequent comparisons
         if: github.event_name == 'pull_request' && success()
