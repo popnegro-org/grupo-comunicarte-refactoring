@@ -409,7 +409,7 @@ test('Media Kit asociado distingue el estado Enviado de Cotizado', async ({ page
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ status: 'success', data: {
-        kitId: 'KIT-SENT-STATUS',
+        kitId: 'MK-ARBITRARY-2026-042',
         sourceRequestId: 'REQ-SENT-STATUS',
         status: 'sent',
         totalAmount: '10000',
@@ -425,7 +425,7 @@ test('Media Kit asociado distingue el estado Enviado de Cotizado', async ({ page
   await page.getByRole('button', { name: 'Ver solicitud' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText('KIT-SENT-STATUS', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('MK-ARBITRARY-2026-042', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Enviado', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Cotizado', { exact: true })).toHaveCount(0);
 });
