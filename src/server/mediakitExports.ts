@@ -27,7 +27,7 @@ function safeKitSegment(kitId: string): string {
   return kitId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100);
 }
 
-function hasValidSignature(format: MediaKitExportFormat, body: Buffer): boolean {
+export function isValidMediaKitExportPayload(format: MediaKitExportFormat, body: Buffer): boolean {
   if (format === 'pdf') return body.subarray(0, 5).toString('ascii') === '%PDF-';
   return body.length >= 4 && body[0] === 0x50 && body[1] === 0x4b && body[2] === 0x03 && body[3] === 0x04;
 }
@@ -51,7 +51,7 @@ export async function handleMediaKitExportUpload(req: Request, res: Response) {
     if (body.length > MAX_DOCUMENT_UPLOAD_BYTES) {
       return res.status(413).json({ status: 'error', message: 'El documento supera el límite de 4 MB.' });
     }
-    if (!hasValidSignature(format, body)) {
+    if (!isValidMediaKitExportPayload(format, body)) {
       return res.status(415).json({ status: 'error', message: 'El contenido del archivo no coincide con el formato declarado.' });
     }
 
