@@ -60,9 +60,11 @@ jobs:
         id: reviewed_baseline
         env:
           EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
             message="$(git show -s --format=%s "$PR_HEAD_SHA")"
           else
             message="$(git log -1 --format=%s)"
