@@ -255,16 +255,35 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
 
     const kitId = 'KIT-QA-EXPORT-RECOVERY';
     let kitSaved = false;
+    let requestId: string | null = null;
     const pdfBytes = Buffer.from('%PDF-1.4\\n% Grupo Comunicarte QA export\\n1 0 obj <<>> endobj\\ntrailer <<>>\\n%%EOF', 'ascii');
     // The storage smoke validates ZIP signature and round-trip bytes. Real PPTX generation
     // is covered by the dedicated export unit tests and browser workflow tests.
     const pptxBytes = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
 
     try {
+      const requestResponse = await page.request.post('/api/mediakit/request', {
+        data: {
+          lead: {
+            name: 'QA Export Recovery',
+            email: 'qa-export-recovery@example.invalid',
+            company: 'QA',
+            phone: '',
+            message: 'Solicitud sintética para validar persistencia y recuperación de exportaciones.',
+          },
+          selectedIds: [support.canonical_id],
+          idempotencyKey: 'qa-export-recovery-2026',
+        },
+      });
+      expect([200, 201]).toContain(requestResponse.status());
+      const requestPayload = await requestResponse.json();
+      requestId = requestPayload.requestId;
+      expect(requestId).toBeTruthy();
+
       const save = await page.request.post('/api/admin/mediakits', {
         data: {
           kitId,
-          sourceRequestId: null,
+          sourceRequestId: requestId,
           status: 'ready',
           clientName: 'QA Export Recovery',
           clientEmail: 'qa-export-recovery@example.invalid',
@@ -322,11 +341,20 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
         channel: 'manual',
       });
       expect(sentPayload.metadata.deliveryEvents.at(-1).confirmedAt).toBeTruthy();
+
+      const requestsResponse = await page.request.get('/api/admin/requests');
+      expect(requestsResponse.status()).toBe(200);
+      const requestsPayload = await requestsResponse.json();
+      const sentRequest = (requestsPayload.data || []).find((item: any) => item.requestId === requestId);
+      expect(sentRequest?.status).toBe('enviado');
     } finally {
       if (kitSaved) {
         await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { data: { status: 'draft' } }).catch(() => null);
         await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`).catch(() => null);
         await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`).catch(() => null);
+      }
+      if (requestId) {
+        await page.request.patch(`/api/admin/requests/${requestId}`, { data: { status: 'pending' } }).catch(() => null);
       }
     }
   });
