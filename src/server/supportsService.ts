@@ -4,6 +4,33 @@ import { supportTechnical } from '../db/schema.ts';
 import { inArray } from 'drizzle-orm';
 import { InventoryItem } from '../types.ts';
 import { sanitizePublicSupport } from './publicSupportDto.ts';
+import { getStorageAdapter, isSafeSupportMediaKey } from './r2StorageAdapter.ts';
+
+const R2_URI_PREFIX = 'r2://';
+
+/** Resolve private R2 object references into short-lived read URLs for public catalog imagery. */
+function resolvePublicMediaUrl(canonicalId: string, media: { url: string; metadata?: Record<string, unknown>; media_type?: string }): string | null {
+  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\\/\\//i.test(media.url) ? media.url : null;
+  const metadataKey = typeof media.metadata?.storage_key === 'string' ? media.metadata.storage_key : '';
+  const key = metadataKey || media.url.slice(R2_URI_PREFIX.length);
+  if (!isSafeSupportMediaKey(canonicalId, key)) return null;
+  try {
+    return getStorageAdapter().getAssetUrl(key, 300);
+  } catch (error) {
+    console.warn(`Unable to sign public support image for ${canonicalId}:`, error);
+    return null;
+  }
+}
+
+function withPublicMediaUrls(item: InventoryItem): InventoryItem {
+  const media = (item.media || [])
+    .filter((entry) => entry.active !== false && (entry.media_type === 'image' || entry.media_type === 'video'))
+    .map((entry) => ({ ...entry, url: resolvePublicMediaUrl(item.canonical_id, entry) }))
+    .filter((entry): entry is typeof entry & { url: string } => Boolean(entry.url));
+  const imageUrls = media.filter((entry) => entry.media_type === 'image').map((entry) => entry.url);
+  const legacyImageUrls = (item.imageUrls || []).filter((url) => /^https?:\\/\\//i.test(url));
+  return { ...item, media, imageUrls: imageUrls.length ? imageUrls : legacyImageUrls } as InventoryItem;
+}
 
 function monthlyImpactsFromMetadata(metadata: unknown): number | string | null {
   if (!metadata || typeof metadata !== 'object') return null;
@@ -54,14 +81,14 @@ async function enrichTechnicalMetadata(items: InventoryItem[]): Promise<Inventor
 export async function getAllSupportsFromDB(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
   const supports = await getSupportCatalog(options);
   const enriched = await enrichTechnicalMetadata(supports);
-  return enriched.map((item) => sanitizePublicSupport(item, options?.includeUnassigned === true));
+  return enriched.map((item) => withPublicMediaUrls(sanitizePublicSupport(item, options?.includeUnassigned === true)));
 }
 
 export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const support = await getSupportDetail(canonicalId, options);
   if (!support) return null;
   const [enriched] = await enrichTechnicalMetadata([support]);
-  return sanitizePublicSupport(enriched, options?.includeUnassigned === true);
+  return withPublicMediaUrls(sanitizePublicSupport(enriched, options?.includeUnassigned === true));
 }
 
 export async function validateSupportsForRequest(selectedIds: string[]): Promise<{
