@@ -77,7 +77,7 @@ jobs:
           fi
 
           changed_files="$(git diff --name-only HEAD^ HEAD)"
-          if printf '%s\\n' "$changed_files" | grep -Ev '^(docs/|\\.github/workflows/|.*\\.md$)' | grep -q .; then
+          if printf '%s\n' "$changed_files" | grep -Ev '^(docs/|\.github/workflows/|.*\.md$)' | grep -q .; then
             echo "runtime_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "runtime_changed=false" >> "$GITHUB_OUTPUT"
