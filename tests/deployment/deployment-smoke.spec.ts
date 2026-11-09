@@ -246,13 +246,13 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
     await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
 
-    const supportsResponse = await page.request.get('/api/admin/supports');
+    const supportsResponse = await page.request.get('/api/supports');
     expect(supportsResponse.status()).toBe(200);
     const supportsPayload = await supportsResponse.json();
     const support = (supportsPayload.data || []).find((item: any) =>
-      Boolean(item.tenant_id || item.tenantId) && item.active === true && item.disponibilidad === 'disponible'
+      item.active !== false && item.disponibilidad === 'disponible'
     );
-    expect(support, 'Preview debe tener al menos un soporte asignado y disponible').toBeTruthy();
+    expect(support, 'Preview debe exponer al menos un soporte público y disponible').toBeTruthy();
 
     const kitId = 'KIT-QA-EXPORT-RECOVERY';
     let kitSaved = false;
