@@ -104,3 +104,57 @@ Migraciones aplicadas solo a Neon Preview:
 - docs/pmv/migrations/20261109_tenant_ownership_constraints.sql
 
 La suite autenticada ampliada en tests/deployment/deployment-smoke.spec.ts se ejecutó sobre Preview: 8/8 Playwright PASS en CI Candidate run 42686838519 (HEAD documental 085cf42b11732e34b98791774c4afdccd24e3dc7; código funcional validado en 2c54df771700b474d1c6d847d7d2bc7ca767873e).
+
+
+## Revalidación y migración de Production — 2026-11-09
+
+Esta sección prevalece sobre las notas históricas anteriores que indicaban que Production aún no tenía migraciones.
+
+### Decisión de acceso
+
+- Modelo confirmado por el usuario: **un único administrador global**.
+- No existen usuarios tenant-scoped ni se implementa aislamiento de autorización entre usuarios.
+- `tenant_id` representa ownership operativo/comercial y procedencia documental, no una frontera de acceso de usuarios.
+- RLS permanece desactivado deliberadamente. El rol conectado es `neondb_owner` con `rolbypassrls=true`; no se cambió el rol runtime ni se afirmó aislamiento RLS.
+
+### Ejecución
+
+- Neon project: `grupocomunicarte-serverless` (`mute-math-07036388`).
+- Branch productiva: `main` (`br-wandering-sky-aunq6lad`).
+- La migración completa se preparó y ejecutó en un branch temporal derivado de Production, se validó y luego se aplicó a la rama padre con el runner de migraciones.
+- Script versionado: `docs/pmv/migrations/20261109_production_ownership_and_login_rate_limit.sql`.
+- Se agregaron columnas de ownership, evidencia, actor y fecha; ownership por línea de solicitud; scope de cabecera; ownership obligatorio en líneas de Media Kit; FKs compuestas; índices y `admin_login_attempts`.
+- No se alteraron credenciales, usuarios, estados de solicitudes, disponibilidad, precios ni contenido comercial.
+- No se activó RLS, no se cambió el rol runtime y no se desplegó código a Production.
+
+### Postflight verificado en Neon Production
+
+| Entidad | Resultado |
+|---|---:|
+| Soportes totales | 46 |
+| Soportes `tenant-ba` | 10 |
+| Soportes `tenant-default` | 18 |
+| Soportes en cuarentena (`tenant_id IS NULL`) | 18 |
+| Líneas de solicitud `tenant-ba` | 5 |
+| Líneas de solicitud `tenant-default` | 25 |
+| Líneas históricas pendientes | 2 |
+| Solicitudes con scope `tenant` | 14 |
+| Solicitudes con scope `global` | 2 |
+| Solicitudes sin clasificar por ownership pendiente | 2 |
+| Líneas de Media Kit persistidas | 0 |
+| Intentos de login al aplicar | 0 |
+
+- Auditoría de los 28 soportes asignados: 28/28 con evidencia, actor y fecha.
+- Mismatches de ownership en líneas de solicitud: 0.
+- Mismatches en líneas de Media Kit: 0.
+- Filas huérfanas de solicitud: 0.
+- Los 18 soportes sin evidencia permanecen sin asignación; incluye `mza-trad-16` y filas legacy/QA. No se infirió ownership por ciudad.
+- Los estados históricos de solicitudes se preservaron: 1 `cerrado`, 1 `contactado`, 4 `enviado`, 12 `pending`.
+- Conteos preservados: 46 supports, 18 requests, 32 request items, 3 mediakits, 0 mediakit_items y 35 filas de pricing.
+
+### Límites del release
+
+- La migración de esquema y backfill de ownership en Neon Production quedó aplicada y verificada.
+- El código candidato aún no se desplegó en Vercel Production ni se integró en GitHub `main`.
+- La migración es aditiva: no elimina ni modifica columnas preexistentes. El proyecto Neon rechazó crear un branch de backup adicional por límite de branches; el script probado y los resultados de preflight/postflight quedan versionados aquí.
+- Mantener bloqueados merge a `main`, deploy Production, cambios de Render Production y activación de RLS hasta completar sus respectivos gates.
