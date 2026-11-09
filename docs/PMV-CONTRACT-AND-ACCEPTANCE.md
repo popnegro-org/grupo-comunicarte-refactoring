@@ -199,3 +199,10 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 - QA autenticado ampliado en tests/deployment/deployment-smoke.spec.ts: rutas admin sin sesión 401; lectura pública sin tenant/pricing; lectura admin con ownership; altas sin tenant/evidencia rechazadas; tenant spoof/reasignación rechazada; Media Kit con soporte pendiente y avance de solicitud pendiente rechazados. Debe ejecutarse en el deployment Preview del SHA final para acreditar el cierre funcional.
 - Alcance explícito: administrador único global; no hay aislamiento de acceso entre usuarios tenant-scoped y no se activa RLS con un rol BYPASSRLS. Esta decisión no debe presentarse como aislamiento multiusuario.
 - Este cierre P0 no cierra P1/P2 ni autoriza merge o promoción a Production. Las migraciones Production requieren aprobación humana independiente.
+
+
+### Evidencia de ejecución Preview — 2026-11-09
+
+- Commit candidato desplegado: 801d55fd5b513f591229d10ae14a1d0c5b44c325.
+- Vercel Preview: deployment dpl_EXTamJWLjPNZ8N4gghkRKFXK2r2e, estado READY; no es Production.
+- CI Candidate run 42685509159: validación, audit, typecheck, unit tests y build PASS. El job autenticado quedó skipped porque el deployment exacto aún no estaba READY al terminar el primer intento; se debe reejecutar tras disponer del Preview exacto.
