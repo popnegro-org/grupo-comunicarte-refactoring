@@ -272,11 +272,11 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
             message: 'Solicitud sintética para validar persistencia y recuperación de exportaciones.',
           },
           selectedIds: [support.canonical_id],
-          idempotencyKey: 'qa-export-recovery-2026',
+          idempotencyKey: 'a7f18d2c-4e91-4b5f-9a83-2f7c6d5e4b10',
         },
       });
-      expect([200, 201]).toContain(requestResponse.status());
       const requestPayload = await requestResponse.json();
+      expect([200, 201], JSON.stringify(requestPayload)).toContain(requestResponse.status());
       requestId = requestPayload.requestId;
       expect(requestId).toBeTruthy();
       await page.request.patch(`/api/admin/requests/${requestId}`, { data: { status: 'pending' } });
