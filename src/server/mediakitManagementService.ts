@@ -7,6 +7,8 @@ import { isProposalDurationValid, toLegacyMediaKitState } from '../lib/mediakitD
 
 
 export type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
+export type MediaKitExportFormat = 'pdf' | 'pptx';
+export type MediaKitDeliveryChannel = 'share_sheet' | 'mailto_draft' | 'manual';
 
 export interface SaveMediaKitInput {
   kitId?: string;
@@ -78,6 +80,21 @@ function normalizeStatus(value: unknown): MediaKitStatus {
   return value === 'ready' || value === 'sent' || value === 'archived' ? value : 'draft';
 }
 
+function sanitizeMediaKitMetadata(value: unknown): Record<string, unknown> {
+  const metadata = value && typeof value === 'object' && !Array.isArray(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {};
+  const exports = metadata.exports;
+  if (exports && typeof exports === 'object' && !Array.isArray(exports)) {
+    metadata.exports = Object.fromEntries(Object.entries(exports as Record<string, unknown>).map(([format, asset]) => {
+      if (!asset || typeof asset !== 'object' || Array.isArray(asset)) return [format, asset];
+      const { storageKey: _storageKey, ...safeAsset } = asset as Record<string, unknown>;
+      return [format, safeAsset];
+    }));
+  }
+  return metadata;
+}
+
 function normalizeSupportIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return Array.from(new Set(value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
@@ -89,6 +106,9 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
   const supportIds = normalizeSupportIds(input.supportIds);
   const status = normalizeStatus(input.status);
+  const metadata = { ...(input.metadata || {}) };
+  delete metadata.exports;
+  delete metadata.deliveryEvents;
   const proposalPeriod = input.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
   if ((status === 'ready' || status === 'sent') && !isProposalDurationValid({
     duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
@@ -269,9 +289,9 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
          total_amount = EXCLUDED.total_amount,
          currency = EXCLUDED.currency,
          notes = EXCLUDED.notes,
-         metadata = EXCLUDED.metadata,
-         pdf_url = EXCLUDED.pdf_url,
-         ppt_url = EXCLUDED.ppt_url,
+         metadata = COALESCE(mediakits.metadata, '{}'::jsonb) || COALESCE(EXCLUDED.metadata, '{}'::jsonb),
+         pdf_url = COALESCE(EXCLUDED.pdf_url, mediakits.pdf_url),
+         ppt_url = COALESCE(EXCLUDED.ppt_url, mediakits.ppt_url),
          nombre = EXCLUDED.nombre,
          cliente_id = EXCLUDED.cliente_id,
          cliente_nombre = EXCLUDED.cliente_nombre,
@@ -298,7 +318,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         Number.isFinite(totalAmount as number) ? totalAmount : null,
         currency === 'POR DEFINIR' ? 'Por definir' : currency,
         input.notes || null,
-        JSON.stringify(input.metadata || {}),
+        JSON.stringify(metadata),
         input.pdfUrl || null,
         input.pptUrl || null,
         'Media Kit ' + kitId, clientId, clientCompany, legacyCity,
@@ -332,7 +352,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       totalAmount: row.total_amount,
       currency: row.currency,
       notes: row.notes,
-      metadata: row.metadata || {},
+      metadata: sanitizeMediaKitMetadata(row.metadata),
       pdfUrl: row.pdf_url,
       pptUrl: row.ppt_url,
       createdAt: new Date(row.created_at).toISOString(),
@@ -372,7 +392,7 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
     totalAmount: row.total_amount,
     currency: row.currency,
     notes: row.notes,
-    metadata: row.metadata || {},
+    metadata: sanitizeMediaKitMetadata(row.metadata),
     pdfUrl: row.pdf_url,
     pptUrl: row.ppt_url,
     createdAt: new Date(row.created_at).toISOString(),
@@ -410,7 +430,7 @@ export async function getMediaKitBySourceRequestId(sourceRequestId: string): Pro
     totalAmount: row.total_amount,
     currency: row.currency,
     notes: row.notes,
-    metadata: row.metadata || {},
+    metadata: sanitizeMediaKitMetadata(row.metadata),
     pdfUrl: row.pdf_url,
     pptUrl: row.ppt_url,
     createdAt: new Date(row.created_at).toISOString(),
@@ -441,7 +461,7 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
     totalAmount: row.total_amount,
     currency: row.currency,
     notes: row.notes,
-    metadata: row.metadata || {},
+    metadata: sanitizeMediaKitMetadata(row.metadata),
     pdfUrl: row.pdf_url,
     pptUrl: row.ppt_url,
     createdAt: new Date(row.created_at).toISOString(),
@@ -449,11 +469,116 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
   }));
 }
 
-export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus): Promise<MediaKitRecord | null> {
+export async function attachMediaKitExport(
+  kitId: string,
+  format: MediaKitExportFormat,
+  storageKey: string,
+  contentType: string,
+  size: number,
+  sha256: string,
+): Promise<{ url: string; previousStorageKey: string | null } | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const column = format === 'pdf' ? 'pdf_url' : 'ppt_url';
+  const url = `/api/admin/mediakits/${encodeURIComponent(kitId)}/exports/${format}`;
+  const result = await pool.query(
+    `WITH previous AS (
+       SELECT metadata->'exports'-> $3 ->> 'storageKey' AS previous_storage_key
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE
+     )
+     UPDATE mediakits
+        SET ${column} = $2,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{exports}',
+              (CASE
+                 WHEN jsonb_typeof(metadata->'exports') = 'object' THEN metadata->'exports'
+                 ELSE '{}'::jsonb
+               END) || jsonb_build_object(
+                 $3,
+                 jsonb_build_object(
+                   'storageKey', $4,
+                   'contentType', $5,
+                   'size', $6,
+                   'sha256', $7,
+                   'uploadedAt', CURRENT_TIMESTAMP,
+                   'actor', 'global_admin'
+                 )
+               ),
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+      WHERE kit_id = $1
+      RETURNING (SELECT previous_storage_key FROM previous) AS previous_storage_key`,
+    [kitId, url, format, storageKey, contentType, size, sha256],
+  );
+  if (!result.rows[0]) return null;
+  return { url, previousStorageKey: result.rows[0].previous_storage_key || null };
+}
+
+export async function getMediaKitExportStorageKey(
+  kitId: string,
+  format: MediaKitExportFormat,
+): Promise<string | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const result = await pool.query(
+    `SELECT metadata->'exports'-> $2 ->> 'storageKey' AS storage_key
+       FROM mediakits
+      WHERE kit_id = $1
+      LIMIT 1`,
+    [kitId, format],
+  );
+  return result.rows[0]?.storage_key || null;
+}
+
+export async function removeMediaKitExport(
+  kitId: string,
+  format: MediaKitExportFormat,
+): Promise<string | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const column = format === 'pdf' ? 'pdf_url' : 'ppt_url';
+  const result = await pool.query(
+    `WITH previous AS (
+       SELECT metadata->'exports'-> $2 ->> 'storageKey' AS storage_key
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE
+     )
+     UPDATE mediakits
+        SET ${column} = NULL,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{exports}',
+              (CASE
+                 WHEN jsonb_typeof(metadata->'exports') = 'object' THEN metadata->'exports'
+                 ELSE '{}'::jsonb
+               END) - $2,
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+      WHERE kit_id = $1
+      RETURNING (SELECT storage_key FROM previous) AS storage_key`,
+    [kitId, format],
+  );
+  return result.rows[0]?.storage_key || null;
+}
+
+export async function updateMediaKitStatus(
+  kitId: string,
+  status: MediaKitStatus,
+  deliveryChannel: MediaKitDeliveryChannel = 'manual',
+): Promise<MediaKitRecord | null> {
   if (!isDatabaseConfigured) return null;
   await ensureTables();
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
     throw new MediaKitDomainError('Estado de Media Kit inválido.', 400);
+  }
+  if (status === 'sent' && !['share_sheet', 'mailto_draft', 'manual'].includes(deliveryChannel)) {
+    throw new MediaKitDomainError('Canal de entrega inválido.', 400);
   }
 
   const client = await pool.connect();
@@ -483,7 +608,7 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
     }
 
     const existing = await client.query(
-      `SELECT kit_id, tenant_id, source_request_id, metadata, support_ids
+      `SELECT kit_id, tenant_id, source_request_id, status, metadata, support_ids, pdf_url, ppt_url
          FROM mediakits
         WHERE kit_id = $1
         FOR UPDATE`,
@@ -495,6 +620,21 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
     }
 
     const current = existing.rows[0];
+    if (status === 'sent') {
+      if (!current.pdf_url || !current.ppt_url) {
+        throw new MediaKitDomainError('No se puede confirmar la entrega sin PDF y PPTX persistidos para recuperación.', 409);
+      }
+      if (current.source_request_id) {
+        const requestUpdate = await client.query(
+          `UPDATE mediakit_requests SET status = 'enviado', updated_at = CURRENT_TIMESTAMP
+           WHERE request_id = $1 RETURNING request_id`,
+          [current.source_request_id],
+        );
+        if (!requestUpdate.rows[0]) {
+          throw new MediaKitDomainError('No se encontró la solicitud de origen para registrar la entrega.', 409);
+        }
+      }
+    }
     if (status === 'ready' || status === 'sent') {
       const proposalPeriod = current.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
       if (!isProposalDurationValid({
@@ -541,11 +681,27 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
     }
 
     const result = await client.query(
-      `UPDATE mediakits SET status = $2, estado = $3, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
+      `UPDATE mediakits
+          SET status = $2,
+              estado = $3,
+              updated_at = CURRENT_TIMESTAMP,
+              metadata = CASE
+                WHEN $2 = 'sent' AND status IS DISTINCT FROM 'sent' THEN
+                  jsonb_set(
+                    COALESCE(metadata, '{}'::jsonb),
+                    '{deliveryEvents}',
+                    COALESCE(metadata->'deliveryEvents', '[]'::jsonb) || jsonb_build_array(
+                      jsonb_build_object('type', 'delivery_confirmed', 'actor', 'global_admin', 'channel', $4, 'confirmedAt', CURRENT_TIMESTAMP)
+                    ),
+                    true
+                  )
+                ELSE COALESCE(metadata, '{}'::jsonb)
+              END
+        WHERE kit_id = $1
        RETURNING kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
                  support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
                  created_at, updated_at`,
-      [kitId, status, toLegacyMediaKitState(status)],
+      [kitId, status, toLegacyMediaKitState(status), deliveryChannel],
     );
     await client.query('COMMIT');
     const row = result.rows[0];
@@ -563,7 +719,7 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
       totalAmount: row.total_amount,
       currency: row.currency,
       notes: row.notes,
-      metadata: row.metadata || {},
+      metadata: sanitizeMediaKitMetadata(row.metadata),
       pdfUrl: row.pdf_url,
       pptUrl: row.ppt_url,
       createdAt: new Date(row.created_at).toISOString(),
