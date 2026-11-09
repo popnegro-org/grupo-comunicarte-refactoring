@@ -459,3 +459,76 @@ test('Media Kit constructor mobile no genera overflow horizontal', async ({ page
   expect(dimensions.document).toBe(dimensions.viewport);
   expect(dimensions.body).toBe(dimensions.viewport);
 });
+
+
+test('Media Kit: recuperación de PDF/PPTX accesible en móvil', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/admin/stats', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+  await page.route('**/api/admin/requests', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'success', data: [{
+        id: 902,
+        requestId: 'REQ-MOBILE-EXPORT',
+        requesterName: 'Cliente móvil',
+        requesterEmail: 'mobile@example.invalid',
+        requesterCompany: 'QA móvil',
+        status: 'enviado',
+        supportIds: ['SUP-MOBILE'],
+        supportNames: ['Soporte móvil'],
+        createdAt: '2026-11-09T10:00:00.000Z',
+      }] }),
+    });
+  });
+  await page.route('**/api/admin/mediakits/by-request/REQ-MOBILE-EXPORT', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'success', data: {
+        kitId: 'KIT-REQ-MOBILE-EXPORT',
+        sourceRequestId: 'REQ-MOBILE-EXPORT',
+        status: 'sent',
+        totalAmount: 25000,
+        currency: 'ARS',
+        supportIds: ['SUP-MOBILE'],
+        createdAt: '2026-11-09T10:00:00.000Z',
+        updatedAt: '2026-11-09T11:00:00.000Z',
+        pdfUrl: '/api/admin/mediakits/KIT-REQ-MOBILE-EXPORT/exports/pdf',
+        pptUrl: '/api/admin/mediakits/KIT-REQ-MOBILE-EXPORT/exports/pptx',
+        metadata: {
+          deliveryEvents: [{
+            type: 'delivery_confirmed',
+            actor: 'global_admin',
+            channel: 'mailto_draft',
+            confirmedAt: '2026-11-09T11:00:00.000Z',
+          }],
+        },
+      } }),
+    });
+  });
+  await page.route('**/api/supports', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: [] }) });
+  });
+  await page.route('**/api/admin/support-pricing', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', data: {} }) });
+  });
+
+  await page.goto('/dashboard/solicitudes');
+  await page.getByRole('button', { name: 'Ver solicitud' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Entrega confirmada · Administrador global')).toBeVisible();
+  const pdfLink = dialog.getByRole('link', { name: 'PDF' });
+  const pptLink = dialog.getByRole('link', { name: 'Presentación' });
+  await expect(pdfLink).toHaveAttribute('href', '/api/admin/mediakits/KIT-REQ-MOBILE-EXPORT/exports/pdf');
+  await expect(pptLink).toHaveAttribute('href', '/api/admin/mediakits/KIT-REQ-MOBILE-EXPORT/exports/pptx');
+  expect((await pdfLink.boundingBox())?.height || 0).toBeGreaterThanOrEqual(44);
+  expect((await pptLink.boundingBox())?.height || 0).toBeGreaterThanOrEqual(44);
+  const dimensions = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    document: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.document).toBe(dimensions.viewport);
+});
