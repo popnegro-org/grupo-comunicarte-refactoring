@@ -500,10 +500,10 @@ export async function attachMediaKitExport(
                END) || jsonb_build_object(
                  $3,
                  jsonb_build_object(
-                   'storageKey', $4,
-                   'contentType', $5,
-                   'size', $6,
-                   'sha256', $7,
+                   'storageKey', $4::text,
+                   'contentType', $5::text,
+                   'size', $6::integer,
+                   'sha256', $7::text,
                    'uploadedAt', CURRENT_TIMESTAMP,
                    'actor', 'global_admin'
                  )
@@ -693,7 +693,7 @@ export async function updateMediaKitStatus(
                     COALESCE(metadata, '{}'::jsonb),
                     '{deliveryEvents}',
                     COALESCE(metadata->'deliveryEvents', '[]'::jsonb) || jsonb_build_array(
-                      jsonb_build_object('type', 'delivery_confirmed', 'actor', 'global_admin', 'channel', $4, 'confirmedAt', CURRENT_TIMESTAMP)
+                      jsonb_build_object('type', 'delivery_confirmed', 'actor', 'global_admin', 'channel', $4::text, 'confirmedAt', CURRENT_TIMESTAMP)
                     ),
                     true
                   )
