@@ -128,7 +128,7 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [x] Duraciones estándar (7, 15, 21 días y mensual) alineadas en ambos constructores y validadas también en backend; valores legacy no estándar requieren revisión explícita.
 - [x] Cotización, PDF/PPT, entrega y registro trazables (subalcance validado en Preview; evidencia en `docs/pmv/mediakit-export-delivery.md`).
 - [x] Exportación y recuperación probadas en desktop y móvil (smoke autenticado 9/9 sobre el SHA runtime validado; recuperación y UI móvil cubiertas por Playwright).
-- [ ] Integraciones incluidas en el alcance verificadas end-to-end; las no contratadas quedan fuera de alcance.
+- [x] Integraciones incluidas en el alcance verificadas end-to-end; las no contratadas quedan fuera de alcance (Neon/Vercel Preview, R2 y Leaflet/OpenStreetMap; evidencia en las secciones 14–16).
 - [x] Solicitudes públicas idempotentes: clave estable por payload, conflicto concurrente resuelto por `UNIQUE(request_id)` y prueba Preview concurrente 201/200 sin duplicados.
 
 ### P2 — calidad y release
@@ -245,3 +245,15 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 - Smoke autenticado de Preview: 9/9 PASS sobre ese mismo SHA runtime; se conserva la distinción entre SHA runtime probado y HEAD documental/de pruebas.
 - Permanecen abiertos en P2: revisión manual de accesibilidad, validación visual/funcional real integral en móvil, rendimiento/bundle y consola. No declarar el PMV completamente liberado mientras esos criterios sigan abiertos.
 - No se habilitó RLS, no se cambiaron roles runtime, no se enviaron comunicaciones y no se modificó Production en esta revalidación.
+
+
+## 16. Verificación de integraciones y mapa real en Preview — 2026-11-09
+
+- Vercel Preview `dpl_GaJAc7kRUXacPoJ9LSRQUXSUKcYy` está READY y corresponde al código runtime `231d87d0dfe234bfc3fa34a4849b6a68e4526f28`.
+- `GET /api/health` devolvió HTTP 200, `status=ok`, `database=connected` y el SHA runtime esperado.
+- Navegación real a `/inventario` en desktop (1440×900) y móvil (390×844): HTTP 200; mapa Leaflet presente; 24 marcadores y tiles OpenStreetMap cargados; cero errores JavaScript de página; ancho de documento igual al viewport en ambas resoluciones.
+- La vista móvil mantuvo el mapa visible con altura de 561 px y sin overflow horizontal. Los marcadores observados no se interpretan como conteo de soportes: la vista contiene 28 resultados comerciales y parte de los soportes no tiene coordenadas publicables.
+- R2: smoke autenticado 9/9 PASS sobre el mismo SHA runtime; incluye persistencia y recuperación de PDF/PPTX privados, URLs firmadas y confirmación de entrega.
+- Neon: health check conectado y consultas/operaciones autenticadas verificadas por el smoke Preview; ownership y cuarentena se mantienen conforme a las secciones 9 y 13.
+- Integraciones no contratadas (HubSpot, Resend/email transaccional, WhatsApp API y Drive/Slides) permanecen fuera del alcance de aceptación; no se simula su integración.
+- Esta evidencia cierra el criterio P1 de integraciones incluidas. No cierra P2: falta revisión manual de accesibilidad, QA funcional integral del flujo móvil, rendimiento/bundle y revisión de consola en todas las rutas.
