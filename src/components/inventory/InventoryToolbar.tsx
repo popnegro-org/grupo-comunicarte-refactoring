@@ -57,7 +57,7 @@ export function InventoryToolbar({
           onChange={(event) => setSearchText(event.target.value)}
           placeholder="Buscar soporte o ubicación..."
           aria-label="Buscar soportes"
-          className="h-10 rounded-xl bg-gray-50 pl-9 text-sm transition-colors focus:bg-white"
+          className="h-11 rounded-xl bg-gray-50 pl-9 text-sm transition-colors focus:bg-white"
         />
       </div>
 

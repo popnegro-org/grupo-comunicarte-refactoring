@@ -58,10 +58,32 @@ test.describe('Dashboard · estructura responsive', () => {
       const topbarBox = await page.locator('header').first().boundingBox();
       expect(topbarBox?.height).toBe(60);
     } else {
-      await page.getByRole('button', { name: 'Abrir menú' }).click();
+      const menuButton = page.getByRole('button', { name: 'Abrir menú' });
+      const menuBounds = await menuButton.boundingBox();
+      expect(menuBounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(menuBounds?.width ?? 0).toBeGreaterThanOrEqual(44);
+      await menuButton.click();
       const sidebarBox = await sidebar.boundingBox();
       expect(sidebarBox?.width).toBe(256);
       await expect(sidebar.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
+      const closeButton = sidebar.getByRole('button', { name: 'Cerrar menú' });
+      const closeBounds = await closeButton.boundingBox();
+      expect(closeBounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(closeBounds?.width ?? 0).toBeGreaterThanOrEqual(44);
+    }
+
+    const navLinks = sidebar.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link');
+    for (let index = 0; index < await navLinks.count(); index += 1) {
+      const bounds = await navLinks.nth(index).boundingBox();
+      expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    for (const control of [
+      sidebar.getByRole('link', { name: 'Inventario público' }),
+      sidebar.getByRole('button', { name: 'Cerrar sesión' }),
+      page.getByRole('link', { name: '0 solicitudes nuevas' }),
+    ]) {
+      const bounds = await control.boundingBox();
+      expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
     }
 
     const hasHorizontalOverflow = await page.evaluate(() =>

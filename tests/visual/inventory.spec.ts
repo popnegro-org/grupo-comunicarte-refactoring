@@ -119,6 +119,24 @@ test.describe('Inventario · regresión visual', () => {
   });
 
 
+  test('los controles del inventario respetan objetivos táctiles de 44px en móvil', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-mobile', 'Targets táctiles solo en proyecto mobile');
+    const controls = [
+      page.getByRole('textbox', { name: 'Buscar soportes' }),
+      page.getByRole('button', { name: 'Buscar soportes cerca de mi ubicación' }),
+      page.getByRole('combobox', { name: 'Filtrar por plaza' }),
+      page.getByRole('combobox', { name: 'Filtrar por tipo de soporte' }),
+      page.getByRole('combobox', { name: 'Filtrar por disponibilidad' }),
+      page.getByRole('radio', { name: 'Mapa' }),
+      page.getByRole('radio', { name: 'Catálogo' }),
+    ];
+    for (const control of controls) {
+      await expect(control).toBeVisible();
+      const bounds = await control.boundingBox();
+      expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test('la barra de selección acompaña al catálogo y abre el Media Kit', async ({ page }) => {
     await expect(page.getByText('soportes seleccionados', { exact: false })).toHaveCount(0);
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
