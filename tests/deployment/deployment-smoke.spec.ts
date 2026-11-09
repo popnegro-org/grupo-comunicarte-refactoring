@@ -244,8 +244,10 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     await page.getByRole('textbox', { name: 'Contraseña' }).fill(process.env.E2E_ADMIN_PASSWORD!);
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
     await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
+    const authCookieHeader = (await page.context().cookies()).map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+    const authHeaders = { Cookie: authCookieHeader };
 
-    const supportsResponse = await page.request.get('/api/supports');
+    const supportsResponse = await page.request.get('/api/supports', { headers: authHeaders });
     expect(supportsResponse.status()).toBe(200);
     const supportsPayload = await supportsResponse.json();
     const support = (supportsPayload.data || []).find((item: any) =>
@@ -263,6 +265,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
 
     try {
       const requestResponse = await page.request.post('/api/mediakit/request', {
+        headers: authHeaders,
         data: {
           lead: {
             name: 'QA Export Recovery',
@@ -279,9 +282,10 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
       expect([200, 201], JSON.stringify(requestPayload)).toContain(requestResponse.status());
       requestId = requestPayload.requestId;
       expect(requestId).toBeTruthy();
-      await page.request.patch(`/api/admin/requests/${requestId}`, { data: { status: 'pending' } });
+      await page.request.patch(`/api/admin/requests/${requestId}`, { headers: authHeaders, data: { status: 'pending' } });
 
       const save = await page.request.post('/api/admin/mediakits', {
+        headers: authHeaders,
         data: {
           kitId,
           sourceRequestId: requestId,
@@ -302,18 +306,18 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
 
       const pdfUpload = await page.request.put(`/api/admin/mediakits/${kitId}/exports/pdf`, {
         data: pdfBytes,
-        headers: { 'Content-Type': 'application/pdf' },
+        headers: { ...authHeaders, 'Content-Type': 'application/pdf' },
       });
       expect(pdfUpload.status()).toBe(201);
       expect((await pdfUpload.json()).data.url).toBe(`/api/admin/mediakits/${kitId}/exports/pdf`);
 
       const pptUpload = await page.request.put(`/api/admin/mediakits/${kitId}/exports/pptx`, {
         data: pptxBytes,
-        headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+        headers: { ...authHeaders, 'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
       });
       expect(pptUpload.status()).toBe(201);
 
-      const saved = await page.request.get(`/api/admin/mediakits/${kitId}`);
+      const saved = await page.request.get(`/api/admin/mediakits/${kitId}`, { headers: authHeaders });
       expect(saved.status()).toBe(200);
       const savedPayload = (await saved.json()).data;
       expect(savedPayload.pdfUrl).toBe(`/api/admin/mediakits/${kitId}/exports/pdf`);
@@ -322,15 +326,16 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
       expect(savedPayload.metadata.exports.pptx.sha256).toMatch(/^[a-f0-9]{64}$/);
       expect(JSON.stringify(savedPayload.metadata)).not.toContain('storageKey');
 
-      const pdfDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pdf`);
+      const pdfDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pdf`, { headers: authHeaders });
       expect(pdfDownload.status()).toBe(200);
       expect((await pdfDownload.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
 
-      const pptDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pptx`);
+      const pptDownload = await page.request.get(`/api/admin/mediakits/${kitId}/exports/pptx`, { headers: authHeaders });
       expect(pptDownload.status()).toBe(200);
       expect((await pptDownload.body()).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
 
       const sent = await page.request.patch(`/api/admin/mediakits/${kitId}/status`, {
+        headers: authHeaders,
         data: { status: 'sent', deliveryChannel: 'manual' },
       });
       expect(sent.status()).toBe(200);
@@ -343,19 +348,19 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
       });
       expect(sentPayload.metadata.deliveryEvents.at(-1).confirmedAt).toBeTruthy();
 
-      const requestsResponse = await page.request.get('/api/admin/requests');
+      const requestsResponse = await page.request.get('/api/admin/requests', { headers: authHeaders });
       expect(requestsResponse.status()).toBe(200);
       const requestsPayload = await requestsResponse.json();
       const sentRequest = (requestsPayload.data || []).find((item: any) => item.requestId === requestId);
       expect(sentRequest?.status).toBe('enviado');
     } finally {
       if (kitSaved) {
-        await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { data: { status: 'draft' } }).catch(() => null);
-        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`).catch(() => null);
-        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`).catch(() => null);
+        await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { headers: authHeaders, data: { status: 'draft' } }).catch(() => null);
+        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`, { headers: authHeaders }).catch(() => null);
+        await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pptx`, { headers: authHeaders }).catch(() => null);
       }
       if (requestId) {
-        await page.request.patch(`/api/admin/requests/${requestId}`, { data: { status: 'pending' } }).catch(() => null);
+        await page.request.patch(`/api/admin/requests/${requestId}`, { headers: authHeaders, data: { status: 'pending' } }).catch(() => null);
       }
     }
   });
