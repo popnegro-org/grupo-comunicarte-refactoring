@@ -128,11 +128,13 @@ export async function handleMediaKitExportDelete(req: Request, res: Response) {
     const format = parseFormat(req.params.format);
     if (!kitId || !format) return res.status(400).json({ status: 'error', message: 'Formato PDF/PPTX inválido.' });
 
-    const key = await removeMediaKitExport(kitId, format);
-    if (!key) return res.status(404).json({ status: 'error', message: 'Documento del Media Kit no encontrado.' });
-    if (!key.startsWith(`mediakit/${safeKitSegment(kitId)}/exports/`)) {
+    const existingKey = await getMediaKitExportStorageKey(kitId, format);
+    if (!existingKey) return res.status(404).json({ status: 'error', message: 'Documento del Media Kit no encontrado.' });
+    if (!existingKey.startsWith(`mediakit/${safeKitSegment(kitId)}/exports/`)) {
       return res.status(409).json({ status: 'error', message: 'La referencia de almacenamiento no pertenece al Media Kit.' });
     }
+    const key = await removeMediaKitExport(kitId, format);
+    if (!key) return res.status(409).json({ status: 'error', message: 'No se pudo liberar la referencia del documento.' });
     await getStorageAdapter().delete(key);
     return res.status(200).json({ status: 'success', data: { format, removed: true } });
   } catch (error) {
