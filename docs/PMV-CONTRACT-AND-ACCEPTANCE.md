@@ -212,3 +212,23 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 - No se generaron artifacts en el run autenticado. No se descargaron ni expusieron credenciales.
 - RLS continúa deliberadamente desactivado: current_user neondb_owner, rolbypassrls=true. El modelo es un único administrador global, no aislamiento entre usuarios tenant-scoped.
 - P0 cerrado para el alcance PMV documentado. P1/P2 siguen abiertos; no se autoriza merge ni promoción a Production. Las migraciones Production requieren aprobación humana independiente.
+
+
+## 14. Revalidación P1 — Media Kit exportable y entrega trazable (2026-11-09)
+
+- Subalcance de exportación/recuperación: **PASS** en el SHA exacto 231d87d0dfe234bfc3fa34a4849b6a68e4526f28.
+- PDF/PPTX se persisten en R2 privado antes de compartir; se validan MIME, firma y tamaño. Las rutas de recuperación requieren sesión administrativa y generan URL firmada temporal. Las claves de almacenamiento no se exponen en DTOs.
+- La confirmación de entrega exige ambos documentos, registra actor global, canal y timestamp, y actualiza el estado de la solicitud a enviado en la misma transacción.
+- La UI permite recuperar ambos documentos desde la ficha de solicitud en desktop y móvil. No envía comunicaciones automáticamente.
+- Evidencia:
+  - CI: PASS; audit de dependencias de producción: 0 vulnerabilidades altas/críticas (run 42696946283).
+  - CI Candidate: PASS (run 42696946710).
+  - Visual QA: 38 PASS / 2 SKIP (run 42696934483).
+  - Authenticated Preview Smoke: 9/9 PASS (run 42696934488).
+  - Vercel Preview dpl_GaJAc7kRUXacPoJ9LSRQUXSUKcYy: READY en SHA exacto.
+  - Bucket R2 Preview gc-mediakit-qa: sin objetos residuales tras el test de upload/download/delete.
+- El detalle técnico y el fixture sintético Preview están documentados en docs/pmv/mediakit-export-delivery.md.
+
+**Este PASS no cierra todas las integraciones P1:** HubSpot sigue pendiente de pipeline/stage/owner/deduplicación; Resend/email transaccional y WhatsApp requieren credenciales, política de consentimiento y aprobación antes de enviar comunicaciones reales. P2 continúa abierto. La administración es un único administrador global; no se declara aislamiento multiusuario ni RLS.
+
+**Release:** PR #90 continúa Draft y abierto. GitHub main, Vercel Production, Render Production y bucket R2 Production no fueron modificados por esta iteración. No mergear ni desplegar Production sin HUMAN GATE.
