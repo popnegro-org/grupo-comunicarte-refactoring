@@ -114,6 +114,24 @@ test.describe('Inventario · regresión visual', () => {
   });
 
 
+  test('la barra de selección acompaña al catálogo y abre el Media Kit', async ({ page }) => {
+    await expect(page.getByText('soportes seleccionados', { exact: false })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Seleccionar' }).first().click();
+    const selectionBar = page.locator('div.fixed.inset-x-0.bottom-0').filter({ has: page.getByRole('link', { name: 'Revisar selección' }) });
+    await expect(selectionBar).toBeVisible();
+    await expect(selectionBar).toContainText('1 soporte seleccionado');
+    await selectionBar.getByRole('link', { name: 'Revisar selección' }).click();
+    await expect(page).toHaveURL(/\/mediakits$/);
+    await expect(page.getByText('1 soporte', { exact: false }).first()).toBeVisible();
+  });
+
+  test('la barra de selección no tapa el mapa y solo aparece en catálogo', async ({ page }) => {
+    await page.getByRole('button', { name: 'Seleccionar' }).first().click();
+    await expect(page.getByRole('link', { name: 'Revisar selección' })).toBeVisible();
+    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await expect(page.getByRole('link', { name: 'Revisar selección' })).toHaveCount(0);
+  });
+
   test('limpiar filtros aparece con filtros activos y restaura el inventario', async ({ page }) => {
     const plaza = page.getByRole('combobox', { name: 'Filtrar por plaza' });
     const clear = page.getByRole('button', { name: 'Limpiar todos los filtros' });
