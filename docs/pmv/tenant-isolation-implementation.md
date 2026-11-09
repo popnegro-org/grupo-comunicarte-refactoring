@@ -103,4 +103,4 @@ Migraciones aplicadas solo a Neon Preview:
 - docs/pmv/migrations/20261109_tenant_ownership_audit.sql
 - docs/pmv/migrations/20261109_tenant_ownership_constraints.sql
 
-La suite autenticada ampliada está preparada en tests/deployment/deployment-smoke.spec.ts; el resultado de CI/Preview sobre el SHA actualizado es el gate final para acreditar el cierre funcional P0.
+La suite autenticada ampliada en tests/deployment/deployment-smoke.spec.ts se ejecutó sobre Preview: 8/8 Playwright PASS en CI Candidate run 42686838519 (HEAD documental 085cf42b11732e34b98791774c4afdccd24e3dc7; código funcional validado en 2c54df771700b474d1c6d847d7d2bc7ca767873e).
