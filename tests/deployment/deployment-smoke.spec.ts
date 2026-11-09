@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// Avoid recording browser state, form values or traces in deployment artifacts.
+// The suite keeps its explicit non-sensitive screenshots via page.screenshot().
+test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
 test.describe('Preview deployment · PMV smoke', () => {
   test('health y catálogo público están disponibles sin exponer datos internos', async ({ request }) => {
     const healthResponse = await request.get('/api/health');
@@ -94,25 +98,48 @@ test.describe('Preview deployment · PMV smoke', () => {
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
   });
 
-  test('administrador global puede iniciar sesión cuando se configuró la cuenta QA', async ({ page }) => {
-    test.skip(
-      !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
-      'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD como secretos del repositorio para habilitar el login autenticado.',
-    );
+  test.describe('Autenticación administrativa', () => {
+    test('administrador global puede iniciar sesión cuando se configuró la cuenta QA', async ({ page }) => {
+      test.skip(
+        !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
+        'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD como secretos del repositorio para habilitar el login autenticado.',
+      );
 
-    await page.goto('/login');
-    await page.getByLabel('Usuario / Correo Electrónico').fill(process.env.E2E_ADMIN_USER!);
-    await page.getByRole('textbox', { name: 'Contraseña' }).fill(process.env.E2E_ADMIN_PASSWORD!);
-    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+      await page.goto('/login');
+      const passwordInput = page.getByRole('textbox', { name: 'Contraseña' });
+      await page.getByLabel('Usuario / Correo Electrónico').fill(process.env.E2E_ADMIN_USER!);
+      await passwordInput.fill(process.env.E2E_ADMIN_PASSWORD!);
+      await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+      const alert = page.getByRole('alert');
+      const outcome = await Promise.race([
+        page.waitForURL(/\/dashboard$/, { timeout: 20_000 }).then(() => 'authenticated' as const).catch(() => 'timeout' as const),
+        alert.waitFor({ state: 'visible', timeout: 20_000 }).then(() => 'rejected' as const).catch(() => 'timeout' as const),
+      ]);
 
-    const adminStats = await page.evaluate(async () => {
-      const response = await fetch('/api/admin/stats', { credentials: 'include' });
-      return { status: response.status, body: await response.json() };
+      if (outcome === 'rejected') {
+        const message = (await alert.innerText()).toLowerCase();
+        await passwordInput.fill('');
+        throw new Error(
+          message.includes('credenciales inválidas') || message.includes('credenciales invalidas')
+            ? 'El backend rechazó las credenciales QA configuradas. Verificar que coincidan con ADMIN_USER y ADMIN_PASSWORD del entorno Preview.'
+            : 'El inicio de sesión fue rechazado. Revisar el estado de autenticación sin registrar credenciales.',
+        );
+      }
+
+      if (outcome === 'timeout') {
+        await passwordInput.fill('');
+        throw new Error('El inicio de sesión no completó la redirección al dashboard dentro del plazo esperado.');
+      }
+
+      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+
+      const adminStats = await page.evaluate(async () => {
+        const response = await fetch('/api/admin/stats', { credentials: 'include' });
+        return { status: response.status, body: await response.json() };
+      });
+      expect(adminStats.status).toBe(200);
+      expect(adminStats.body.status).toBe('success');
     });
-    expect(adminStats.status).toBe(200);
-    expect(adminStats.body.status).toBe('success');
   });
 });
