@@ -141,13 +141,6 @@ jobs:
           mkdir -p tests/visual/__snapshots__
           printf 'reviewed-head=%s\\nbase-ref=%s\\n' "$PR_HEAD_SHA" "$BASE_REF" > tests/visual/__snapshots__/map-baseline-source.txt
 
-      - name: Save PR baseline for subsequent comparisons
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/cache/save@v4
-        with:
-          path: tests/visual/__snapshots__
-          key: visual-baseline-${{ github.event.pull_request.head.ref }}-${{ github.sha }}
-
       - name: Bootstrap trusted baseline and validate Playwright
         if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key == ''
         run: |
@@ -169,6 +162,13 @@ jobs:
             echo "## Visual QA: reviewed baseline refresh"
             echo "Only changed snapshots were refreshed after manual inspection of the inventory card, mobile toolbar and responsive map diffs."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save PR baseline after reviewed refresh
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/cache/save@v4
+        with:
+          path: tests/visual/__snapshots__
+          key: visual-baseline-${{ github.event.pull_request.head.ref }}-${{ github.sha }}
 
       - name: Compare against previous trusted baseline
         if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
