@@ -245,7 +245,8 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
     await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
     const authCookieHeader = (await page.context().cookies()).map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
-    const authHeaders = { Cookie: authCookieHeader };
+    const appOrigin = new URL(page.url()).origin;
+    const authHeaders = { Cookie: authCookieHeader, Origin: appOrigin, Referer: page.url() };
 
     const supportsResponse = await page.request.get('/api/supports', { headers: authHeaders });
     expect(supportsResponse.status()).toBe(200);
