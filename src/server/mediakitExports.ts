@@ -12,6 +12,7 @@ import {
   MAX_DOCUMENT_UPLOAD_BYTES,
   createMediaKitAssetKey,
   getStorageAdapter,
+  isValidMediaKitExportPayload,
 } from './r2StorageAdapter';
 
 const MIME_BY_FORMAT: Record<MediaKitExportFormat, string> = {
@@ -25,11 +26,6 @@ function parseFormat(value: string | undefined): MediaKitExportFormat | null {
 
 function safeKitSegment(kitId: string): string {
   return kitId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100);
-}
-
-export function isValidMediaKitExportPayload(format: MediaKitExportFormat, body: Buffer): boolean {
-  if (format === 'pdf') return body.subarray(0, 5).toString('ascii') === '%PDF-';
-  return body.length >= 4 && body[0] === 0x50 && body[1] === 0x4b && body[2] === 0x03 && body[3] === 0x04;
 }
 
 export async function handleMediaKitExportUpload(req: Request, res: Response) {
