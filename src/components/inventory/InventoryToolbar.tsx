@@ -1,7 +1,7 @@
 import { Search, SlidersHorizontal, LocateFixed, X } from 'lucide-react';
 import { Plaza, TipoSoporte, Disponibilidad } from '../../types';
 
-export type InventoryTypeFilter = TipoSoporte | 'pantallas_led' | 'pendiente_mapeo' | 'todos';
+export type InventoryTypeFilter = TipoSoporte | 'pantallas_led' | 'todos';
 import { Input } from '../ui/Input';
 import { ViewModeToggle, ViewMode } from './ViewModeToggle';
 
@@ -16,7 +16,6 @@ interface InventoryToolbarProps {
   setSelectedDisponibilidad: (value: DisponibilidadFilter) => void;
   searchText: string;
   setSearchText: (value: string) => void;
-  resultsCount: number;
   selectedCount: number;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
@@ -37,7 +36,6 @@ export function InventoryToolbar({
   setSelectedDisponibilidad,
   searchText,
   setSearchText,
-  resultsCount,
   selectedCount,
   viewMode,
   onViewModeChange,
@@ -94,7 +92,6 @@ export function InventoryToolbar({
         <option value="tradicional">Tradicionales</option>
         <option value="pantallas_led">Pantallas LED</option>
         <option value="led_movil">LED móvil</option>
-        <option value="pendiente_mapeo">Pendiente de mapeo (clasificación interna)</option>
       </select>
 
       <select
@@ -116,10 +113,12 @@ export function InventoryToolbar({
       )}
 
       <div className="ml-auto flex w-full shrink-0 items-center justify-between gap-2 border-t border-gray-100 pt-2 md:w-auto md:justify-end md:border-0 md:pt-0">
-        <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-gray-500">
-          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-          {nearMeActive ? `${resultsCount} cercanos` : selectedCount > 0 ? `${selectedCount} seleccionados` : `${resultsCount} resultados`}
-        </span>
+        {(nearMeActive || selectedCount > 0) && (
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-gray-500">
+            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+            {nearMeActive ? 'Cerca de mí' : `${selectedCount} seleccionados`}
+          </span>
+        )}
         <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
       </div>
     </div>
