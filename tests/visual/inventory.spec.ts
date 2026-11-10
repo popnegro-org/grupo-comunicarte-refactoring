@@ -33,7 +33,7 @@ test.describe('Inventario · regresión visual', () => {
       await expect(page.getByText('12 × 5 m')).toBeVisible();
       await expect(page.getByText('P6')).toBeVisible();
       await expect(page.getByText('8 h')).toBeVisible();
-      await expect(page.getByRole('article').nth(1).getByText('Pendiente de mapeo')).toBeVisible();
+      await expect(page.getByRole('article').nth(1).getByText('Pantallas LED')).toBeVisible();
     }
     await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-desktop.png') });
     await expect(page).toHaveScreenshot('inventory-catalog-desktop.png', { stylePath: 'tests/visual/screenshot.css' });
@@ -79,7 +79,17 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.locator('.leaflet-tooltip').first()).toContainText('Tradicional');
     await markers.nth(1).click();
     await expect(page.getByText('Soporte seleccionado')).toBeVisible();
-    await expect(page.getByRole('article').getByText('Pendiente de mapeo')).toBeVisible();
+    await expect(page.getByRole('article').getByText('Pantallas LED')).toBeVisible();
+  });
+
+  test('elimina encabezado redundante y contadores duplicados del mapa y toolbar', async ({ page }) => {
+    await expect(page.getByText('Grupo Comunicarte · OOH')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Inventario de soportes', exact: true })).toHaveCount(0);
+    await expect(page.getByText('Explorá ubicaciones, compará formatos y armá tu selección.')).toHaveCount(0);
+    await expect(page.getByText(/\d+ resultados/)).toHaveCount(0);
+    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.getByText(/\d+ soportes en esta vista/)).toHaveCount(0);
   });
 
   test('soporte destacado muestra la etiqueta editorial', async ({ page }) => {
@@ -94,14 +104,13 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.getByRole('article').first().getByText('Destacado')).toBeVisible();
   });
 
-  test('el filtro distingue Pantallas LED de registros heredados sin mapear', async ({ page }) => {
+  test('el filtro comercial muestra las Pantallas LED tipificadas en Neon y oculta estados internos', async ({ page }) => {
     const typeFilter = page.getByRole('combobox', { name: 'Filtrar por tipo de soporte' });
     await typeFilter.selectOption('pantallas_led');
-    await expect(page.getByText('Sin resultados con estos filtros')).toBeVisible();
-    await expect(page.getByText('Con los filtros actuales no hay soportes confirmados como Pantallas LED.')).toBeVisible();
-    await typeFilter.selectOption('pendiente_mapeo');
     await expect(page.getByRole('article')).toHaveCount(1);
-    await expect(page.getByRole('article').getByText('Pendiente de mapeo')).toBeVisible();
+    await expect(page.getByRole('article').getByText('Pantallas LED')).toBeVisible();
+    await expect(typeFilter.locator('option')).toHaveCount(4);
+    await expect(typeFilter.locator('option', { hasText: 'Pendiente de mapeo' })).toHaveCount(0);
     await expect(page.getByText('Pórtico Acceso Norte')).toHaveCount(0);
   });
 
