@@ -65,14 +65,16 @@ jobs:
       options: --user 1001
     timeout-minutes: 20
     env:
-      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app
+      # Temporary QA fallback: runtime parity is verified before testing.
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-1bygd3rpc-popnegros-projects.vercel.app
       E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-      EXPECTED_COMMIT_SHA: ${{ github.sha }}
+      EXPECTED_COMMIT_SHA: 76885346bc554fbdd24f9675ae626b5abaaf6217
     steps:
       - name: Checkout trusted candidate push
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node
@@ -84,10 +86,38 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Verify READY Preview runtime matches candidate source
+        shell: bash
+        run: |
+          if ! git merge-base --is-ancestor "$EXPECTED_COMMIT_SHA" "$GITHUB_SHA"; then
+            echo "::error::Pinned READY Preview commit is not an ancestor of this candidate."
+            exit 1
+          fi
+
+          changed_files="$(git diff --name-only "$EXPECTED_COMMIT_SHA" "$GITHUB_SHA")"
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              tests/*|docs/*|.github/workflows/*|README.md|.env.example) ;;
+              *)
+                echo "::error::Runtime parity is not established; changed file: $path"
+                exit 1
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to claim authenticated QA."
+            exit 1
+          fi
+
+          echo "Runtime parity verified against $EXPECTED_COMMIT_SHA; only tests/docs/workflows differ."
+          echo "QA credentials are present; values are intentionally not logged."
+
       - name: Build expected frontend artifact
         run: npm run build
 
-      - name: Wait for exact Vercel Preview commit
+      - name: Wait for pinned READY Vercel Preview runtime
         shell: bash
         run: |
           expected_asset="$(grep -oE '/assets/[^"]+\.js' dist/index.html | head -1)"
@@ -96,21 +126,21 @@ jobs:
             exit 1
           fi
 
-          echo "Waiting for exact Preview commit $EXPECTED_COMMIT_SHA"
+          echo "Waiting for READY Preview runtime $EXPECTED_COMMIT_SHA"
           for attempt in $(seq 1 60); do
             html="$(curl --silent --show-error --fail --max-time 15 "$PLAYWRIGHT_BASE_URL/" 2>/dev/null || true)"
             health="$(curl --silent --show-error --fail --max-time 15 "$PLAYWRIGHT_BASE_URL/api/health" 2>/dev/null || true)"
             if [ -n "$health" ]; then
               read -r actual_commit database_status < <(node -e 'const h=JSON.parse(process.argv[1]); console.log(`${h.commit || ""} ${h.database || ""}`)' "$health" 2>/dev/null || true)
               if [[ "$actual_commit" == "$EXPECTED_COMMIT_SHA" && "$database_status" == "connected" && "$html" == *"$expected_asset"* ]]; then
-                echo "Preview serves exact commit with a connected database."
+                echo "Preview serves the pinned runtime with a connected database and matching frontend asset."
                 exit 0
               fi
             fi
             sleep 10
           done
 
-          echo "Preview did not serve the exact commit with a connected database."
+          echo "Preview did not serve the pinned runtime with a connected database."
           exit 1
 
       - name: Verify public smoke, authenticated dashboard and admin API
