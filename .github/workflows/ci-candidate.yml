@@ -62,7 +62,11 @@ jobs:
 
   authenticated-preview-smoke:
     name: Authenticated Preview Smoke
-    if: github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate'
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     needs: [validate]
     runs-on: ubuntu-latest
     container:
@@ -73,6 +77,7 @@ jobs:
       - name: Checkout exact candidate commit
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -92,8 +97,8 @@ jobs:
         id: preview
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.sha }}
-          EXPECTED_REF: ${{ github.ref_name }}
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
         run: |
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
@@ -166,7 +171,7 @@ jobs:
       - name: Verify public smoke, authenticated dashboard and admin API
         env:
           PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
-          EXPECTED_COMMIT_SHA: ${{ github.sha }}
+          EXPECTED_COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
