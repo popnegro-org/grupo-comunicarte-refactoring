@@ -54,13 +54,13 @@ test('Media Kit builder: accessible controls, keyboard flow and mobile touch tar
   await expect(page.getByRole('status').filter({ hasText: 'No encontramos soportes que coincidan con la búsqueda.' })).toBeVisible();
   await search.clear();
 
-  const supportToggle = page.getByRole('button', { name: 'Agregar Soporte Demo Accesible' });
+  const supportToggle = page.getByRole('group', { name: 'Soportes del inventario' }).getByRole('button').first();
   await search.focus();
   await page.keyboard.press('Tab');
   await expect(supportToggle).toBeFocused();
   await expect(supportToggle).toHaveAttribute('aria-pressed', 'false');
   await supportToggle.click();
-  await expect(page.getByRole('button', { name: 'Quitar Soporte Demo Accesible', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(supportToggle).toHaveAttribute('aria-pressed', 'true');
 
   const remove = page.getByRole('button', { name: 'Quitar Soporte Demo Accesible del Media Kit' });
   const removeBox = await remove.boundingBox();
