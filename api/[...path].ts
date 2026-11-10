@@ -1,3 +1,5 @@
+import { normalizeIncomingRequestUrl } from '../src/server/normalizeIncomingRequestUrl';
+
 function useNeonPooler(connectionString: string): string {
   try {
     const url = new URL(connectionString);
@@ -68,6 +70,9 @@ async function getApp() {
 }
 
 export default async function handler(req: any, res: any) {
+  if (!normalizeIncomingRequestUrl(req)) {
+    return res.status(400).json({ status: 'error', message: 'URL de solicitud inválida.' });
+  }
   try {
     const app = await getApp();
     return app(req, res);
