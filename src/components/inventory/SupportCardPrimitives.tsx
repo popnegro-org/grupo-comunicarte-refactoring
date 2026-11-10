@@ -83,13 +83,13 @@ export function TypeBadge({ item }: { item: InventoryItem }) {
   return <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600"><Monitor className="h-3.5 w-3.5" />{label}</span>;
 }
 
-export function SupportMedia({ slides, index, onPrevious, onNext, onSelect, alt }: {
-  slides: { url: string; kind: string }[]; index: number; onPrevious: () => void; onNext: () => void; onSelect: (index: number) => void; alt: string;
+export function SupportMedia({ slides, index, onPrevious, onNext, onSelect, alt, priority = false }: {
+  slides: { url: string; kind: string }[]; index: number; onPrevious: () => void; onNext: () => void; onSelect: (index: number) => void; alt: string; priority?: boolean;
 }) {
   const active = slides[index];
   return <div className="relative h-full w-full bg-slate-100">
     {active?.kind === 'video' ? <div className="relative h-full w-full"><video src={active.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><span className="absolute inset-0 flex items-center justify-center"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white"><Play className="h-4 w-4 fill-current" /></span></span></div>
-      : active ? <img src={active.url} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+      : active ? <img src={active.url} alt={alt} className="h-full w-full object-cover" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} />
       : <div className="flex h-full items-center justify-center"><MapPin className="h-8 w-8 text-slate-300" /></div>}
     {slides.length > 1 && <>
       <button type="button" aria-label="Imagen anterior" onClick={onPrevious} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white hover:bg-black/75"><ArrowLeft className="h-4 w-4" /></button>
