@@ -114,4 +114,4 @@ jobs:
           exit 1
 
       - name: Verify public smoke, authenticated dashboard and admin API
-        run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed"
+        run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
