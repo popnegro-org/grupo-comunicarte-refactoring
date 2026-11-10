@@ -45,9 +45,10 @@ function mapType(item: InventoryItem): InventoryPresentationType {
   if (item.tipo_soporte === 'tradicional') return 'Tradicional';
   if (item.tipo_soporte === 'led_movil') return 'LED móvil';
   if ((item.tipo_soporte as string) === 'pantallas_led') return 'Pantallas LED';
+  if (item.tipo_soporte === 'led' && item.family === 'led') return 'Pantallas LED';
 
-  // Legacy "led" does not distinguish fixed LED screens from other LED
-  // inventory. Do not guess a commercial classification.
+  // Unknown legacy values remain internal; never expose them as a public
+  // support type or infer a commercial family from a display name.
   return 'Pendiente de mapeo';
 }
 
