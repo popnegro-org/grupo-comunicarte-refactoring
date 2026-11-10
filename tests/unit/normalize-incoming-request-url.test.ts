@@ -111,3 +111,41 @@ test("is idempotent", () => {
   assert.equal(normalizeIncomingRequestUrl(request), true);
   assert.equal(request.url, "/api/supports");
 });
+
+
+test("precomputes req.query with WHATWG URL before Express accesses Vercel's legacy getter", () => {
+  const urlModule = require("url") as { parse: (...args: any[]) => any };
+  const originalParse = urlModule.parse;
+  const expressQuery = require("express/lib/middleware/query")();
+  let legacyParseCalls = 0;
+
+  urlModule.parse = (...args: any[]) => {
+    legacyParseCalls += 1;
+    return originalParse(...args);
+  };
+
+  const request = Object.create({
+    get query() {
+      return urlModule.parse(this.url, true).query;
+    },
+  });
+  request.url = "/api/media/64?variant=thumbnail&tag=one&tag=two";
+
+  try {
+    assert.equal(normalizeIncomingRequestUrl(request), true);
+    expressQuery(request, {}, () => undefined);
+    assert.equal(legacyParseCalls, 0);
+    assert.equal(request.query.variant, "thumbnail");
+    assert.deepEqual(request.query.tag, ["one", "two"]);
+  } finally {
+    urlModule.parse = originalParse;
+  }
+});
+
+test("precomputes an empty query object when the request has no query string", () => {
+  const request = { url: "/api/health" };
+
+  assert.equal(normalizeIncomingRequestUrl(request), true);
+  assert.equal(Object.hasOwn(request, "query"), true);
+  assert.deepEqual(Object.keys(request.query), []);
+});
