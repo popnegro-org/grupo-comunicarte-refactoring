@@ -161,3 +161,33 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 ### QA añadida
 - tests/visual/aesthetic-phases.spec.ts: navbar 1024–1440 px, menú en 900 px, imágenes y overflow en páginas comerciales desktop/mobile, listado sincronizado del mapa en desktop y oculto en móvil.
 - Preview del SHA candidato validado: 46/46 pruebas Playwright desktop/mobile PASS; rutas públicas sin overflow horizontal ni errores JavaScript y activos gráficos cargados.\n- El workflow remoto Visual QA aún figura pendiente y sin jobs reportados; no se regeneraron snapshots ausentes del checkout local.\n- HUMAN GATE final pendiente: revisión visual y aprobación humana del Preview.
+
+
+## Revalidación autónoma de fases A–F — 2026-11-10
+
+**Código desplegado en Preview:** `5d5e95f5b08e780f594499d120d078f9a9674066`  
+**HEAD documental de la rama:** `e4893202f98d1fa61fdd475b7023986ebb0a82e5`  
+**Preview:** https://grupo-comunicarte-refactoring-qj88kmas5-popnegros-projects.vercel.app
+
+### Validación reproducida
+
+- `npm ci --no-audit --no-fund`: PASS.
+- `npm run lint` (TypeScript): PASS.
+- `npm run test:unit`: 83/83 PASS.
+- `npm run build`: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+- `git diff --check`: PASS.
+- `aesthetic-phases.spec.ts`: 8/8 PASS local y 8/8 PASS contra Preview (desktop y mobile).
+- `home-navigation.spec.ts`, `inventory-selection-bar.spec.ts` y `inventory-map-lazy.spec.ts`: 14/14 PASS contra Preview (desktop y mobile).
+- `dashboard-layout.spec.ts`: 2/2 PASS contra Preview (desktop y mobile).
+- Inspección de rutas públicas a 390, 900, 1050 y 1440 px: sin overflow horizontal ni errores JavaScript observados; imágenes hero y familias de soporte cargan con dimensiones naturales válidas.
+- El inventario Preview muestra 28 registros; los soportes con multimedia asignada cargan thumbnails WebP. No se interpretan espacios de medios sin asignación como errores de carga.
+- Deployment Vercel `dpl_B4HMDQirEZHut8Ymhnr7BzNfYQvb`: READY, SHA `5d5e95f5b08e780f594499d120d078f9a9674066`.
+- CI y CI Candidate del SHA: PASS. Visual QA remoto del SHA: CANCELLED; no se atribuye como aprobado.
+
+### Restricciones y HUMAN GATE
+
+- La prueba `mediakit-builder-accessibility.spec.ts` no puede validar el constructor completo en Preview sin una sesión autenticada: el proyecto redirige a Login. No se usaron credenciales inventadas ni se modificó autenticación para eludir el control.
+- Dashboard shell responsive validado; la revisión manual autenticada de flujos administrativos continúa pendiente de sesión QA autorizada.
+- No se ejecutó merge a `main`, deploy Production, ni comunicación real.
+- **Estado:** fases estéticas A–F implementadas y QA visual público reproducido. Queda pendiente únicamente la revisión humana final del Preview y la comprobación autenticada del Dashboard/Media Kit antes de solicitar el HUMAN GATE de release.
