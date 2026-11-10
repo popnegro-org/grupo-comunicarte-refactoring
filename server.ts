@@ -100,6 +100,21 @@ export async function createApp() {
       const asset = await getPublicSupportMediaAsset(mediaId);
       if (!asset) return res.status(404).json({ status: 'error', message: 'Recurso multimedia no encontrado.' });
       const signedUrl = (await import('./src/server/r2StorageAdapter.ts')).getStorageAdapter().getAssetUrl(asset.storageKey, 300);
+      if (req.query.variant === 'thumbnail' && asset.mimeType?.startsWith('image/')) {
+        try {
+          const original = await fetch(signedUrl, { signal: AbortSignal.timeout(12_000) });
+          if (!original.ok) throw new Error(`R2 devolvió HTTP ${original.status} al generar miniatura.`);
+          const source = Buffer.from(await original.arrayBuffer());
+          const { createSupportMediaThumbnail } = await import('./src/server/mediaThumbnail.ts');
+          const thumbnail = await createSupportMediaThumbnail(source);
+          res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=300');
+          res.setHeader('Content-Type', 'image/webp');
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          return res.status(200).send(thumbnail);
+        } catch (thumbnailError) {
+          console.warn('Thumbnail generation failed; falling back to original media:', thumbnailError);
+        }
+      }
       res.setHeader('Cache-Control', 'private, max-age=60');
       res.setHeader('Referrer-Policy', 'no-referrer');
       if (asset.mimeType) res.setHeader('Content-Type', asset.mimeType);
