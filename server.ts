@@ -127,10 +127,17 @@ export async function createApp() {
 
   app.get('/api/health', async (_req, res) => {
     try {
-      await pool.query('SELECT 1');
+      const databaseIdentity = await pool.query(`
+        SELECT
+          current_setting('neon.branch_id', true) AS branch_id,
+          current_setting('neon.endpoint_id', true) AS endpoint_id
+      `);
+      const identity = databaseIdentity.rows[0] || {};
       res.status(200).json({
         status: 'ok',
         database: 'connected',
+        databaseBranch: identity.branch_id || null,
+        databaseEndpoint: identity.endpoint_id || null,
         commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
       });
     } catch (err: any) {
