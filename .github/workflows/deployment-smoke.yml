@@ -1,13 +1,11 @@
 name: Deployment Smoke
 
 on:
-  push:
-    branches: [pmv-validation-candidate]
   workflow_dispatch:
     inputs:
       base_url:
-        description: Vercel Preview URL (leave empty to use the candidate branch alias)
-        required: false
+        description: Exact Vercel Preview URL for the selected candidate commit
+        required: true
         type: string
 
 permissions:
@@ -26,9 +24,7 @@ jobs:
       options: --user 1001
     timeout-minutes: 20
     env:
-      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app' }}
-      E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
-      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
       EXPECTED_COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: Checkout candidate
@@ -46,6 +42,9 @@ jobs:
       - name: Build expected frontend artifact
         run: npm run build
 
+      - name: Validate supplied Preview URL
+        run: |
+          node -e 'const u = new URL(process.env.PLAYWRIGHT_BASE_URL); if (u.protocol !== "https:" || !u.hostname.endsWith(".vercel.app")) process.exit(1)'
       - name: Wait for this exact candidate deployment to reach Vercel Preview
         shell: bash
         run: |
@@ -73,6 +72,9 @@ jobs:
           exit 1
 
       - name: Run deployment smoke and PMV E2E
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts
 
       - name: Upload deployment QA evidence
