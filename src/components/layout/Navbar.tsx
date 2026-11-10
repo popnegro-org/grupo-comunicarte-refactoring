@@ -28,7 +28,6 @@ export function Navbar() {
   }, []);
 
   const links = [
-    ['Inicio', '/'],
     ['Inventario', '/inventario'],
     ['Soportes', '/soportes'],
     ['Soluciones', '/soluciones'],
@@ -42,19 +41,19 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
           <Link to="/" className="shrink-0" aria-label="Grupo Comunicarte, inicio">
-            <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-9 w-auto max-w-[220px] object-contain" />
+            <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-8 w-auto max-w-[190px] object-contain" />
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Navegación principal">
+          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Navegación principal">
             {links.map(([name, path]) => (
               <Link
                 key={path}
                 to={path}
                 aria-current={isActive(path) ? 'page' : undefined}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950',
+                  'whitespace-nowrap rounded-lg px-2 py-2 text-[13px] font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950',
                   isActive(path) && 'bg-zinc-100 font-semibold text-zinc-950'
                 )}
               >
@@ -63,7 +62,7 @@ export function Navbar() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-1.5 lg:flex">
             <button
               onClick={() => setSearchOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
@@ -95,14 +94,14 @@ export function Navbar() {
 
             <Link
               to="/login"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+              className="hidden h-10 w-10 xl:flex items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
               aria-label="Iniciar sesión"
             >
               <User className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
               onClick={() => setMediakitOpen(true)}
