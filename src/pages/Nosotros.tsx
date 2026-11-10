@@ -46,6 +46,8 @@ export default function Nosotros() {
         eyebrow="Acerca de nosotros"
         title="Conectamos marcas con audiencias en movimiento."
         description="Especialistas en comunicación exterior y pantallas digitales. Conectamos anunciantes con las ubicaciones más transitadas de Mendoza y Buenos Aires mediante una gestión ágil y transparente."
+        imageSrc="/images/soportes-tradicionales-mendoza.webp"
+        imageAlt="Publicidad exterior tradicional en Mendoza"
         actions={
           <>
             <Link to="/inventario" className={buttonStyles()}>Explorar inventario <ArrowRight className="h-4 w-4" /></Link>
@@ -62,8 +64,8 @@ export default function Nosotros() {
               <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Soportes disponibles en las plazas activas</span>
             </div>
             <div className="border-b border-gray-200 p-6 md:border-b-0 md:border-r md:p-7">
-              <span className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl">Puntos clave</span>
-              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Ubicaciones de máxima visibilidad urbana</span>
+              <span className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl">OOH + DOOH</span>
+              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Formatos tradicionales y digitales</span>
             </div>
             <div className="p-6 md:p-7">
               <span className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl">{plazaCount}</span>
