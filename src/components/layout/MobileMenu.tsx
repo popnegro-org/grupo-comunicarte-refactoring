@@ -23,7 +23,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
 
   if (!open) return null;
   return (
-    <div className="md:hidden fixed inset-0 z-[3000]">
+    <div className="lg:hidden fixed inset-0 z-[3000]">
       <button className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xs" onClick={onClose} aria-label="Cerrar menú" />
       <div className="absolute inset-x-0 top-20 bottom-0 overflow-y-auto bg-white/95 backdrop-blur-xl">
         <div className="space-y-3 p-4">
@@ -31,7 +31,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
             <Search className="h-5 w-5 text-zinc-400" />
             <span><span className="block text-sm font-semibold text-zinc-900">Buscar soportes</span><span className="block text-xs text-zinc-500">Nombre, código, dirección o tipo</span></span>
           </button>
-          <nav className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+          <nav aria-label="Navegación principal" className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
             {links.map(({ name, path, icon: Icon, sub }) => (
               <Link key={path} to={path} onClick={onClose} className="flex items-center gap-3 border-b border-zinc-100 px-4 py-4 last:border-0">
                 <Icon className="h-5 w-5 text-zinc-500" />
