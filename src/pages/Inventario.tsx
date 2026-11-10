@@ -32,8 +32,8 @@ export default function Inventario() {
   const plazaParam = searchParams.get('plaza') as Plaza | 'todos' | null;
   const rawTipoParam = searchParams.get('tipo');
   const tipoParam: InventoryTypeFilter | null = rawTipoParam === 'led'
-    ? 'pendiente_mapeo'
-    : rawTipoParam === 'tradicional' || rawTipoParam === 'led_movil' || rawTipoParam === 'pantallas_led' || rawTipoParam === 'pendiente_mapeo'
+    ? 'pantallas_led'
+    : rawTipoParam === 'tradicional' || rawTipoParam === 'led_movil' || rawTipoParam === 'pantallas_led'
       ? rawTipoParam
       : null;
   const dispParam = searchParams.get('disponibilidad') as DisponibilidadFilter | null;
@@ -112,7 +112,6 @@ export default function Inventario() {
     if (selectedTipo === 'todos') return true;
     const canonicalType = toInventoryPresentationItem(item).tipo;
     if (selectedTipo === 'pantallas_led') return canonicalType === 'Pantallas LED';
-    if (selectedTipo === 'pendiente_mapeo') return canonicalType === 'Pendiente de mapeo';
     return item.tipo_soporte === selectedTipo;
   }, [selectedTipo]);
   const matchesDisponibilidad = useCallback((item: InventoryItem) => {
@@ -147,14 +146,6 @@ export default function Inventario() {
     <div className="relative flex h-[calc(100dvh-5rem)] overflow-hidden">
       <h1 className="sr-only">Inventario de soportes publicitarios</h1>
       <div className="relative z-10 flex h-full min-w-0 flex-grow flex-col">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 md:px-5">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">Grupo Comunicarte · OOH</p>
-            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-950 sm:text-xl">Inventario de soportes</h2>
-            <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">Explorá ubicaciones, compará formatos y armá tu selección.</p>
-          </div>
-          <span className="hidden rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600 sm:inline-flex">{allFilteredItems.length} {allFilteredItems.length === 1 ? 'soporte' : 'soportes'}</span>
-        </div>
         <InventoryToolbar
           selectedPlaza={selectedPlaza}
           setSelectedPlaza={setSelectedPlaza}
@@ -164,7 +155,6 @@ export default function Inventario() {
           setSelectedDisponibilidad={setSelectedDisponibilidad}
           searchText={searchText}
           setSearchText={setSearchText}
-          resultsCount={allFilteredItems.length}
           selectedCount={selectedCount}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
@@ -181,10 +171,8 @@ export default function Inventario() {
               <p className="text-base font-semibold text-gray-950">Sin resultados con estos filtros</p>
               <p className="max-w-sm text-sm text-gray-600">
                 {selectedTipo === 'pantallas_led'
-                  ? 'Con los filtros actuales no hay soportes confirmados como Pantallas LED. Los registros LED heredados aparecen como “Pendiente de mapeo”.'
-                  : selectedTipo === 'pendiente_mapeo'
-                    ? 'No hay registros pendientes de mapeo con los filtros actuales. Probá cambiar plaza o disponibilidad.'
-                    : 'Probá ampliar la búsqueda o limpiar plaza, tipo y disponibilidad para ver el inventario completo.'}
+                  ? 'No hay pantallas LED con los filtros actuales. Probá cambiar plaza o disponibilidad.'
+                  : 'Probá ampliar la búsqueda o limpiar plaza, tipo y disponibilidad para ver el inventario completo.'}
               </p>
               <Button onClick={handleResetFilters} className="mt-2 min-h-10 rounded-lg px-4">
                 Limpiar filtros
