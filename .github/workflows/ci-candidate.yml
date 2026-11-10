@@ -100,13 +100,14 @@ jobs:
 
           const expectedSha = process.env.EXPECTED_SHA;
           const expectedRef = process.env.EXPECTED_REF;
+          // Stable branch alias; health.commit is the authoritative deployment identity.
           const previewUrl = new URL('https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app');
 
           if (!/^[0-9a-f]{40}$/i.test(expectedSha || '') || expectedRef !== 'pmv-validation-candidate') {
             throw new Error('Missing or invalid candidate SHA/branch.');
           }
 
-          const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\\/assets\\/[^"]+\\.js/) || [])[0];
+          const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\\/assets\\/[^\"]+\\.js/) || [])[0];
           if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
           async function sleep(ms) {
@@ -132,9 +133,9 @@ jobs:
                   health.database === 'connected' &&
                   html.includes(expectedAsset)
                 ) {
-                  appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl.origin}\\n`);
-                  appendFileSync(process.env.GITHUB_OUTPUT, `sha=${expectedSha}\\n`);
-                  console.log(`Verified stable branch Preview alias serves exact SHA ${expectedSha}.`);
+                  appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + previewUrl.origin + '\\n');
+                  appendFileSync(process.env.GITHUB_OUTPUT, 'sha=' + expectedSha + '\\n');
+                  console.log('Verified stable branch Preview alias serves exact SHA ' + expectedSha + '.');
                   console.log('Health, connected database, and built frontend asset match this candidate.');
                   process.exit(0);
                 }
@@ -143,11 +144,11 @@ jobs:
               // The alias can briefly serve the previous deployment while Vercel promotes the new Preview.
             }
 
-            console.log(`Waiting for Preview SHA ${expectedSha}; attempt ${attempt}/60; observed SHA: ${lastObservedCommit}`);
+            console.log('Waiting for Preview SHA ' + expectedSha + '; attempt ' + attempt + '/60; observed SHA: ' + lastObservedCommit);
             await sleep(10000);
           }
 
-          throw new Error(`Vercel branch alias did not serve exact SHA ${expectedSha}; last observed SHA: ${lastObservedCommit}`);
+          throw new Error('Vercel branch alias did not serve exact SHA ' + expectedSha + '; last observed SHA: ' + lastObservedCommit);
           NODE
 
       - name: Verify QA credentials are configured
