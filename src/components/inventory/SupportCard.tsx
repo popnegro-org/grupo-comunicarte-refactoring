@@ -22,7 +22,7 @@ interface SupportCardProps {
   imagePriority?: boolean;
 }
 
-const cardBase = 'overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md';
+const cardBase = 'overflow-hidden rounded-2xl border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md';
 
 export function SupportCard({ item, variant = 'catalog', selectable = false, onRemove, imagePriority = false }: SupportCardProps) {
   const navigate = useNavigate();
