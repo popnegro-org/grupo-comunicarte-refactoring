@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import InventoryMap from '../components/map/InventoryMap';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { Plaza, Disponibilidad, InventoryItem } from '../types';
 import { ViewMode } from '../components/inventory/ViewModeToggle';
@@ -12,6 +11,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 
 type DisponibilidadFilter = Disponibilidad | 'todos';
+
+const InventoryMap = lazy(() => import('../components/map/InventoryMap'));
 
 function distanceKm(from: [number, number], item: InventoryItem) {
   const lat = 'lat' in item ? item.lat : item.waypoints[0]?.lat;
@@ -38,11 +39,15 @@ export default function Inventario() {
   const dispParam = searchParams.get('disponibilidad') as DisponibilidadFilter | null;
   const vistaParam = searchParams.get('vista') as ViewMode | null;
   const queryParam = searchParams.get('q') ?? '';
+  const selectedSoporteId = searchParams.get('soporte');
   const [selectedPlaza, setSelectedPlaza] = useState<Plaza | 'todos'>(plazaParam || 'todos');
   const [selectedTipo, setSelectedTipo] = useState<InventoryTypeFilter>(tipoParam || 'todos');
   const [selectedDisponibilidad, setSelectedDisponibilidad] = useState<DisponibilidadFilter>(dispParam || 'todos');
-  const [viewMode, setViewMode] = useState<ViewMode>(vistaParam === 'catalogo' ? 'catalogo' : 'mapa');
-  const selectedSoporteId = searchParams.get('soporte');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (vistaParam === 'catalogo') return 'catalogo';
+    if (vistaParam === 'mapa' || selectedSoporteId) return 'mapa';
+    return window.matchMedia('(max-width: 767px)').matches ? 'catalogo' : 'mapa';
+  });
   const [searchText, setSearchText] = useState(queryParam);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locating, setLocating] = useState(false);
@@ -186,7 +191,9 @@ export default function Inventario() {
               </Button>
             </div>
           ) : viewMode === 'mapa' ? (
-            <InventoryMap locations={filteredLocations} routes={filteredRoutes} initialSelectedId={selectedSoporteId} selectedPlaza={selectedPlaza} onResetFilters={handleResetFilters} userLocation={userLocation} />
+            <Suspense fallback={<div className="flex h-full items-center justify-center bg-gray-50 text-sm font-medium text-gray-500" role="status" aria-live="polite">Cargando mapa...</div>}>
+              <InventoryMap locations={filteredLocations} routes={filteredRoutes} initialSelectedId={selectedSoporteId} selectedPlaza={selectedPlaza} onResetFilters={handleResetFilters} userLocation={userLocation} />
+            </Suspense>
           ) : (
             <SupportCardGrid items={allFilteredItems} onResetFilters={handleResetFilters} />
           )}
