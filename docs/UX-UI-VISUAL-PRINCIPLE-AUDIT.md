@@ -208,7 +208,7 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Los dos registros `led` activos se llaman “Pantalla LED Acceso Este y Dorrego” y “Pantalla LED Panamericana y Pueyrredón”; ambos tienen media activa. La interfaz ahora los presenta y filtra como `Pantallas LED`, sin alterar los valores persistidos.
 - El registro `led_movil` activo (“Camión LED Móvil”) tiene familia `led_mobile`, media activa, datos técnicos y ruta activa con waypoints. Se presenta como `LED móvil`.
 - Los 26 registros tradicionales activos se presentan como `Tradicionales`.
-- Hallazgos de datos que no se modificaron: las dos pantallas LED no tienen lat/lng en `supports` ni fila de `support_technical`; la ruta móvil sí tiene geometría y waypoints en `support_routes`. En el inventario completo hay registros inactivos históricos con tipo/familia vacíos; no se exponen en el catálogo público.
+- Hallazgos de datos que no se modificaron: 14 de los 26 tradicionales activos no tienen lat/lng; las dos pantallas LED tampoco tienen coordenadas ni fila de `support_technical`; la ruta móvil no tiene lat/lng propio, pero sí geometría y waypoints en `support_routes`. Los 29 activos tienen tipología/familia reconocibles y multimedia asignada (incluida la ruta móvil vía `support_media`). En el inventario completo hay registros inactivos históricos con tipo/familia vacíos; no se exponen en el catálogo público.
 
 ### QA
 - Se añadió prueba unitaria de mapeo `led` + `family=led` a `Pantallas LED`.
