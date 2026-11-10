@@ -107,7 +107,7 @@ jobs:
             throw new Error('Missing or invalid candidate SHA/branch.');
           }
 
-          const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\\/assets\\/[^\"]+\\.js/) || [])[0];
+          const expectedAsset = readFileSync('dist/index.html', 'utf8').split('\"').find(value => value.startsWith('/assets/') && value.endsWith('.js'));
           if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
           async function sleep(ms) {
