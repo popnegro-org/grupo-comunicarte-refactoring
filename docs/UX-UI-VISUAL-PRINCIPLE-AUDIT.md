@@ -160,4 +160,4 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 
 ### QA añadida
 - tests/visual/aesthetic-phases.spec.ts: navbar 1024–1440 px, menú en 900 px, imágenes y overflow en páginas comerciales desktop/mobile, listado sincronizado del mapa en desktop y oculto en móvil.
-- Pendiente de ejecución final en Preview del nuevo SHA y revisión visual final.
+- Preview del SHA candidato validado: 46/46 pruebas Playwright desktop/mobile PASS; rutas públicas sin overflow horizontal ni errores JavaScript y activos gráficos cargados.\n- El workflow remoto Visual QA aún figura pendiente y sin jobs reportados; no se regeneraron snapshots ausentes del checkout local.\n- HUMAN GATE final pendiente: revisión visual y aprobación humana del Preview.
