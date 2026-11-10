@@ -154,7 +154,7 @@ test.describe('Preview deployment · PMV smoke', () => {
       await expect(page).toHaveURL(new RegExp('/dashboard/soportes
       await expect(page.getByRole('heading', { name: 'Gestión de Soportes' })).toBeVisible();
 
-      await page.getByRole('link', { name: 'Solicitudes Media Kits', exact: true }).first().click();
+      await page.getByRole('link', { name: /Solicitudes Media Kits/ }).first().click();
       await expect(page).toHaveURL(new RegExp('/dashboard/solicitudes
       await expect(page.getByRole('heading', { name: 'Solicitudes de Media Kit' })).toBeVisible();
 
