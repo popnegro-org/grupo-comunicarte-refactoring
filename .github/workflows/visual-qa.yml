@@ -46,7 +46,8 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4173/ >/dev/null
 
-      - name: Restore visual baseline
+      - name: Restore trusted visual baseline
+        if: github.event_name == 'push'
         id: baseline
         uses: actions/cache/restore@v4
         with:
@@ -67,17 +68,7 @@ jobs:
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: |
           echo "## Visual QA: baseline bootstrap" >> "$GITHUB_STEP_SUMMARY"
-          echo "No cached baseline was available for this PR branch. Playwright validates the snapshots committed with the candidate and generates only missing snapshots; this first run establishes the branch baseline. Snapshot changes remain visible in the PR diff." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Summarize visual regression comparison
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
-        run: |
-          echo "## Visual QA: baseline comparison" >> "$GITHUB_STEP_SUMMARY"
-          echo "The Playwright visual tests are comparing against the previous trusted snapshot cache for this candidate branch: ${{ steps.baseline.outputs.cache-matched-key }}." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Run visual regression
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
-        run: npx playwright test
+          echo "PR visual QA uses the snapshots committed in this candidate branch and generates only missing snapshots. No cache from another commit or base branch can overwrite the reviewed candidate baseline." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bootstrap trusted baseline and validate Playwright
         if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key == ''
@@ -98,13 +89,6 @@ jobs:
             echo "## Visual QA: reviewed baseline refresh"
             echo "Only changed snapshots were refreshed by an explicitly named visual-baseline commit."
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Save PR baseline after visual QA
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/cache/save@v4
-        with:
-          path: tests/visual/__snapshots__
-          key: visual-baseline-${{ github.event.pull_request.head.ref }}-${{ github.sha }}
 
       - name: Compare against previous trusted baseline
         if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
