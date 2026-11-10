@@ -58,7 +58,11 @@ jobs:
 
       - name: Bootstrap missing baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
-        run: npx playwright test --update-snapshots
+        run: npx playwright test --update-snapshots=missing
+
+      - name: Ensure committed visual snapshots were not overwritten
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
+        run: git diff --exit-code -- tests/visual/__snapshots__
 
       - name: Validate bootstrapped baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
@@ -68,7 +72,7 @@ jobs:
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: |
           echo "## Visual QA: baseline bootstrap" >> "$GITHUB_STEP_SUMMARY"
-          echo "PR visual QA uses the snapshots committed in this candidate branch and generates only missing snapshots. No cache from another commit or base branch can overwrite the reviewed candidate baseline." >> "$GITHUB_STEP_SUMMARY"
+          echo "PR visual QA compares against snapshots committed in this candidate branch. It generates only missing snapshots, asserts that committed snapshots were not modified, and never imports a cache from another commit or base branch." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate candidate snapshots on push
         if: github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate'
