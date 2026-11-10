@@ -122,7 +122,6 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
       <aside aria-label="Listado de soportes del mapa" className="absolute left-4 top-4 z-[800] hidden w-[276px] max-h-[min(72vh,620px)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm xl:flex">
         <div className="border-b border-gray-100 px-4 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">Explorá en el mapa</p>
-          <p className="mt-1 text-sm font-semibold text-gray-950">{locations.length + routes.length} soportes en esta vista</p>
         </div>
         <ul className="min-h-0 divide-y divide-gray-100 overflow-y-auto">
           {[...locations, ...routes].map((item) => {
