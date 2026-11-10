@@ -7,6 +7,7 @@ import { prefetchInventory } from './hooks/useInventory';
 
 if (window.location.pathname === '/inventario') {
   void prefetchInventory();
+  void import('./pages/Inventario');
 }
 
 initClarity();
