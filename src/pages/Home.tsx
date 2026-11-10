@@ -1,9 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useRef } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, MapPin, MoveRight, Search, Target, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, MapPin, MoveRight, Target, TrendingUp, Users } from 'lucide-react';
 import { useInventory } from '../hooks/useInventory';
 import { InventoryItem } from '../types';
-import { Button } from '../components/ui/Button';
 import { SupportCard } from '../components/inventory/SupportCard';
 
 export default function Home() {
@@ -36,8 +35,8 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/35" />
         </div>
 
-        <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl items-center px-4 pb-16 sm:px-6 md:pb-24 lg:px-8">
-          <div className="mx-auto w-full max-w-3xl -translate-y-6 text-center text-white md:-translate-y-8">
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-3xl text-center text-white">
             <div className="mb-5 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-800">Espacios Publicitarios Premium</span>
             </div>
@@ -57,27 +56,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-1/2 md:right-auto md:w-[min(700px,calc(100%-3rem))] md:-translate-x-1/2">
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const query = new FormData(event.currentTarget).get('q')?.toString().trim();
-                navigate(query ? `/inventario?q=${encodeURIComponent(query)}` : '/inventario');
-              }}
-              className="rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
-            >
-              <div className="flex items-stretch gap-1.5">
-                <label className="flex min-h-12 flex-1 items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-3.5 focus-within:border-black focus-within:ring-1 focus-within:ring-black/10">
-                  <Search className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
-                  <span className="sr-only">Buscar soportes</span>
-                  <input name="q" type="search" autoComplete="off" placeholder="Buscá por ubicación, soporte o ciudad" className="min-w-0 w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400" />
-                </label>
-                <Button type="submit" size="lg" className="min-h-12 whitespace-nowrap rounded-lg px-5 text-sm">
-                  Buscar <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </form>
-          </div>
+
         </div>
 
         <div className="absolute inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white">
