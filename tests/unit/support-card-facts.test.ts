@@ -47,6 +47,13 @@ test('formats manually supplied monthly impacts', () => {
   assert.equal(facts[2]?.value, '+180 K');
 });
 
+test('renders an explicitly approved zero without a positive prefix', () => {
+  const facts = getCardFacts(support({
+    technical: { monthly_impacts: 0, spot_duration_seconds: 10 },
+  }));
+  assert.equal(facts[2]?.value, '0');
+});
+
 test('traditional and fixed LED families also preserve three canonical facts', () => {
   const traditional = support({
     tipo_soporte: 'tradicional',
