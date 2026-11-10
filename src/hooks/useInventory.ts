@@ -26,6 +26,7 @@ function normalizeItems(rawItems: InventoryItem[]): InventoryItem[] {
 }
 
 function loadInventory(force = false): Promise<InventoryLoadResult> {
+  if (force) inventoryCache = null;
   const cached = !force ? getFreshInventoryCache() : null;
   if (cached) return Promise.resolve(cached);
 
