@@ -12,22 +12,20 @@ test.describe('Inicio · navegación principal', () => {
     await page.goto('/');
   });
 
-  test('ofrece accesos directos a inventario y ventas desde el hero', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 1, name: 'Tu marca, en los lugares que todos ven.' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Explorar inventario' }).first()).toHaveAttribute('href', '/inventario');
-    await expect(page.getByRole('link', { name: 'Hablar con ventas' }).first()).toHaveAttribute('href', '/contacto');
-    await expect(page.getByRole('searchbox', { name: 'Buscar soportes' })).toBeVisible();
+  test('presenta el mensaje principal y accesos directos a inventario y ventas', async ({ page }) => {
+    const heading = page.getByRole('heading', {
+      level: 1,
+      name: 'Tu marca, en los lugares que todos ven.',
+    });
+    await expect(heading).toBeVisible();
+
+    const hero = page.locator('section').filter({ has: heading });
+    await expect(hero.getByRole('link', { name: 'Explorar inventario' })).toHaveAttribute('href', '/inventario');
+    await expect(hero.getByRole('link', { name: 'Hablar con ventas' })).toHaveAttribute('href', '/contacto');
+    await expect(hero.getByRole('searchbox')).toHaveCount(0);
   });
 
-  test('no genera desbordamiento horizontal en desktop ni móvil', async ({ page }) => {
-    const dimensions = await page.evaluate(() => ({
-      viewport: document.documentElement.clientWidth,
-      content: document.documentElement.scrollWidth,
-    }));
-    expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
-  });
-
-  test('el CTA del hero queda separado del buscador y funciona en todos los anchos PMV', async ({ page }) => {
+  test('no genera desbordamiento horizontal y mantiene visible el CTA en anchos PMV', async ({ page }) => {
     for (const viewport of [
       { width: 320, height: 800 },
       { width: 390, height: 844 },
@@ -36,28 +34,35 @@ test.describe('Inicio · navegación principal', () => {
     ]) {
       await page.setViewportSize(viewport);
       await page.goto('/');
-      const cta = page.getByRole('link', { name: 'Explorar inventario' }).first();
-      const searchForm = page.locator('form').first();
+
+      const heading = page.getByRole('heading', {
+        level: 1,
+        name: 'Tu marca, en los lugares que todos ven.',
+      });
+      const hero = page.locator('section').filter({ has: heading });
+      const cta = hero.getByRole('link', { name: 'Explorar inventario' });
       await expect(cta).toBeVisible();
-      await expect(searchForm).toBeVisible();
+
+      const dimensions = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        content: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
+
       const ctaBox = await cta.boundingBox();
-      const searchBox = await searchForm.boundingBox();
       expect(ctaBox).not.toBeNull();
-      expect(searchBox).not.toBeNull();
-      expect(searchBox!.y).toBeGreaterThanOrEqual(ctaBox!.y + ctaBox!.height + 12);
-      const hasHorizontalOverflow = await page.evaluate(() =>
-        document.documentElement.scrollWidth > window.innerWidth
-      );
-      expect(hasHorizontalOverflow).toBe(false);
-      await cta.click();
-      await expect(page).toHaveURL(/\/inventario$/);
+      expect(ctaBox!.x).toBeGreaterThanOrEqual(0);
+      expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(viewport.width);
     }
   });
 
-  test('el buscador del hero envía la consulta al inventario', async ({ page }) => {
-    await page.getByRole('searchbox', { name: 'Buscar soportes' }).fill('Mendoza');
-    await page.getByRole('button', { name: 'Buscar', exact: true }).click();
-    await expect(page).toHaveURL(/\/inventario\?q=Mendoza$/);
+  test('el CTA principal navega al inventario', async ({ page }) => {
+    const heading = page.getByRole('heading', {
+      level: 1,
+      name: 'Tu marca, en los lugares que todos ven.',
+    });
+    const hero = page.locator('section').filter({ has: heading });
+    await hero.getByRole('link', { name: 'Explorar inventario' }).click();
+    await expect(page).toHaveURL(/\/inventario$/);
   });
-
 });
