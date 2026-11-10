@@ -99,7 +99,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           node <<'NODE'
-          const fs = require('node:fs');
+          import { appendFileSync, readFileSync } from 'node:fs';
 
           const expectedSha = process.env.EXPECTED_SHA;
           const expectedRef = process.env.EXPECTED_REF;
@@ -160,7 +160,7 @@ jobs:
                   throw new Error('GitHub returned a non-Preview or untrusted deployment URL.');
                 }
 
-                const expectedAsset = (fs.readFileSync('dist/index.html', 'utf8').match(/\/assets\/[^"]+\.js/) || [])[0];
+                const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\/assets\/[^"]+\.js/) || [])[0];
                 if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
                 let runtimeReady = false;
@@ -189,9 +189,9 @@ jobs:
                 }
 
                 if (runtimeReady) {
-                  fs.appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl.origin}\n`);
-                  fs.appendFileSync(process.env.GITHUB_OUTPUT, `deployment_id=${deployment.id}\n`);
-                  fs.appendFileSync(process.env.GITHUB_OUTPUT, `sha=${expectedSha}\n`);
+                  appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl.origin}\n`);
+                  appendFileSync(process.env.GITHUB_OUTPUT, `deployment_id=${deployment.id}\n`);
+                  appendFileSync(process.env.GITHUB_OUTPUT, `sha=${expectedSha}\n`);
                   console.log(`Verified Preview deployment ${deployment.id} for exact SHA ${expectedSha}.`);
                   console.log('Health endpoint, connected database, and frontend asset all match this candidate.');
                   process.exit(0);
