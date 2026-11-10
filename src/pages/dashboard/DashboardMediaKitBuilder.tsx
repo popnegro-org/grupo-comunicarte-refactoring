@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardShell } from '../../components/dashboard/DashboardShell';
 import { Input, Label } from '../../components/ui/Input';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
-import { downloadMediaKitPdf, downloadMediaKitPpt, ExportSupport } from '../../lib/adminMediaKitExport';
+import type { ExportSupport } from '../../lib/adminMediaKitExport';
 import { apiFetch } from '../../lib/api';
 import { formatProposalDuration, isProposalDurationValid, normalizeProposalDuration, proposalDurationFromOption, proposalDurationOption, ProposalDurationUnit } from '../../lib/mediakitDuration';
 
@@ -220,6 +220,7 @@ export default function DashboardMediaKitBuilder() {
     setBusy(true);
     try {
       await persist('ready');
+      const { downloadMediaKitPdf } = await import('../../lib/adminMediaKitExport');
       await downloadMediaKitPdf(lead, exportSupports, requestId);
       notify('PDF generado.');
     } catch (e: any) { notify(e.message || 'No pudimos exportar el PDF.'); }
@@ -231,6 +232,7 @@ export default function DashboardMediaKitBuilder() {
     setBusy(true);
     try {
       await persist('ready');
+      const { downloadMediaKitPpt } = await import('../../lib/adminMediaKitExport');
       await downloadMediaKitPpt(lead, exportSupports, requestId);
       notify('PPT generado.');
     } catch (e: any) { notify(e.message || 'No pudimos exportar el PPT.'); }
@@ -242,21 +244,21 @@ export default function DashboardMediaKitBuilder() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <button type="button" onClick={() => navigate('/dashboard/mediakits')} className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-950">
+            <button type="button" onClick={() => navigate('/dashboard/mediakits')} className="mb-2 inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20">
               <ArrowLeft className="h-3.5 w-3.5" /> Media Kits
             </button>
             <h1 className="text-xl font-semibold tracking-tight text-gray-950">Constructor de Media Kit</h1>
             <p className="mt-1 text-xs text-gray-500">ID: {requestId}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={saving} onClick={saveDraft} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            <button type="button" disabled={saving} onClick={saveDraft} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               Guardar borrador
             </button>
-            <button type="button" disabled={busy || !canExport} onClick={exportPdf} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            <button type="button" disabled={busy || !canExport} onClick={exportPdf} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20">
               <Download className="h-3.5 w-3.5" /> PDF
             </button>
-            <button type="button" disabled={busy || !canExport} onClick={exportPpt} className="inline-flex items-center gap-2 rounded-lg bg-gray-950 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50">
+            <button type="button" disabled={busy || !canExport} onClick={exportPpt} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gray-950 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30 focus-visible:ring-offset-2">
               <Download className="h-3.5 w-3.5" /> PPT
             </button>
           </div>
@@ -272,10 +274,10 @@ export default function DashboardMediaKitBuilder() {
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cliente</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div><Label htmlFor="mediakit-client-name">Nombre *</Label><Input id="mediakit-client-name" autoComplete="name" value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} placeholder="Nombre *" /></div>
-                  <div><Label htmlFor="mediakit-client-company">Empresa</Label><Input id="mediakit-client-company" autoComplete="organization" value={client.company} onChange={(e) => setClient((c) => ({ ...c, company: e.target.value }))} placeholder="Empresa" /></div>
-                  <div><Label htmlFor="mediakit-client-email">Email</Label><Input id="mediakit-client-email" type="email" autoComplete="email" value={client.email} onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} placeholder="Email" /></div>
-                  <div><Label htmlFor="mediakit-client-phone">Teléfono</Label><Input id="mediakit-client-phone" type="tel" autoComplete="tel" value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" /></div>
+                  <div><Label htmlFor="mediakit-client-name">Nombre *</Label><Input id="mediakit-client-name" className="h-11" autoComplete="name" value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} placeholder="Nombre *" /></div>
+                  <div><Label htmlFor="mediakit-client-company">Empresa</Label><Input id="mediakit-client-company" className="h-11" autoComplete="organization" value={client.company} onChange={(e) => setClient((c) => ({ ...c, company: e.target.value }))} placeholder="Empresa" /></div>
+                  <div><Label htmlFor="mediakit-client-email">Email</Label><Input id="mediakit-client-email" className="h-11" type="email" autoComplete="email" value={client.email} onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} placeholder="Email" /></div>
+                  <div><Label htmlFor="mediakit-client-phone">Teléfono</Label><Input id="mediakit-client-phone" className="h-11" type="tel" autoComplete="tel" value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" /></div>
                 </div>
               </div>
 
@@ -283,10 +285,10 @@ export default function DashboardMediaKitBuilder() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Monto global acordado</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="block text-xs font-medium text-gray-600">Monto total
-                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900 disabled:bg-gray-100" />
+                    <input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15 disabled:bg-gray-100" />
                   </label>
                   <label className="block text-xs font-medium text-gray-600">Moneda
-                    <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                    <select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15">
                       <option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option><option value="Por definir">Por definir</option>
                     </select>
                   </label>
@@ -300,15 +302,15 @@ export default function DashboardMediaKitBuilder() {
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="block text-xs font-medium text-gray-600">
                     Fecha de inicio
-                    <input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                    <input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15" />
                   </label>
                   <label className="block text-xs font-medium text-gray-600">
                     Fecha de finalización
-                    <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus:border-gray-900" />
+                    <input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15" />
                   </label>
                   <label className="block text-xs font-medium text-gray-600 sm:col-span-2">
                     Duración contratada
-                    <select value={proposalDurationOption(period)} onChange={(e) => setPeriod((p) => ({ ...p, ...proposalDurationFromOption(e.target.value) }))} className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-900">
+                    <select value={proposalDurationOption(period)} onChange={(e) => setPeriod((p) => ({ ...p, ...proposalDurationFromOption(e.target.value) }))} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15">
                       <option value="">Seleccionar duración</option>
                       <option value="7:días">7 días</option>
                       <option value="15:días">15 días</option>
@@ -327,16 +329,16 @@ export default function DashboardMediaKitBuilder() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inventario</p>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                    <input type="search" aria-label="Buscar soportes del inventario" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-9 rounded-lg border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-gray-900" />
+                    <input type="search" aria-label="Buscar soportes del inventario" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-11 min-w-0 rounded-lg border border-gray-200 pl-8 pr-3 text-xs outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15" />
                   </div>
                 </div>
-                <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+                <div role="group" aria-label="Soportes del inventario" className="mt-3 max-h-80 space-y-2 overflow-y-auto">
                   {filtered.length === 0 && <p role="status" aria-live="polite" className="rounded-lg bg-gray-50 px-3 py-4 text-center text-xs text-gray-500">{allSupports.length === 0 ? "No hay soportes disponibles en el inventario." : "No encontramos soportes que coincidan con la búsqueda."}</p>}
                   {filtered.map((s) => {
                     const on = selectedIds.includes(s.canonical_id);
                     const available = s.disponibilidad === 'disponible';
                     return (
-                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} aria-pressed={on} aria-label={`${on ? 'Quitar' : 'Agregar'} ${s.name}${available ? '' : ' (no disponible)'}`} className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-gray-200 hover:bg-gray-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
+                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} aria-pressed={on} aria-label={`${on ? 'Quitar' : 'Agregar'} ${s.name}${available ? '' : ' (no disponible)'}`} className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-gray-200 hover:bg-gray-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
                         <span className="min-w-0">
                           <span className="block truncate font-semibold text-gray-950">{s.name}</span>
                           <span className="text-gray-500">{s.ciudad} · {s.tipo_soporte}{available ? '' : ` · ${s.disponibilidad === 'reservado' ? 'Reservado' : 'Inactivo'}`}</span>
@@ -353,7 +355,7 @@ export default function DashboardMediaKitBuilder() {
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selección ({selected.length})</p>
-                  <button type="button" onClick={applyBasePrices} className="text-[11px] font-semibold text-gray-600 hover:text-gray-950">Aplicar tarifas base</button>
+                  <button type="button" onClick={applyBasePrices} className="inline-flex min-h-11 items-center rounded-md px-2 text-[11px] font-semibold text-gray-600 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20">Aplicar tarifas base</button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {selected.length === 0 && <p className="text-xs text-gray-500">Elegí soportes del inventario.</p>}
@@ -370,7 +372,7 @@ export default function DashboardMediaKitBuilder() {
                         min={0}
                         value={prices[s.canonical_id] || ''}
                         onChange={(e) => setPrices((p) => ({ ...p, [s.canonical_id]: e.target.value }))}
-                        className="mt-1 h-8 w-full rounded-md border border-gray-200 px-2 text-xs outline-none focus:border-gray-900"
+                        className="mt-1 h-11 w-full rounded-md border border-gray-200 px-2 text-xs outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-black/15"
                       />
                       <p className="mt-1 text-[10px] text-gray-500">Base: {formatSupportCurrency(calculateSupportTotal(s.pricing))}</p>
                     </div>
