@@ -17,6 +17,7 @@ export function formatImpacts(value?: number | string | null): string | null {
   if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) return null;
   const numeric = Number(String(value).trim().replace(/\./g, '').replace(',', '.'));
   if (!Number.isFinite(numeric)) return String(value);
+  if (numeric === 0) return '0';
   if (numeric >= 1_000_000) return `+${(numeric / 1_000_000).toFixed(1).replace('.', ',')} M`;
   if (numeric >= 1_000) return `+${Math.round(numeric / 1_000)} K`;
   return `+${Math.round(numeric).toLocaleString('es-AR')}`;
