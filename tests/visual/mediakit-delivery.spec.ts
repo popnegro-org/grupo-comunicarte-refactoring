@@ -365,7 +365,10 @@ test('solicitud con ownership pendiente queda en cuarentena comercial', async ({
   });
 
   await page.goto('/dashboard/solicitudes');
-  await expect(page.getByText('Ownership pendiente')).toBeVisible();
+  const ownershipLabel = (page.viewportSize()?.width ?? 0) < 768
+    ? page.locator('[aria-label="Solicitudes en tarjetas"]').getByText('Ownership pendiente')
+    : page.locator('tbody').getByText('Ownership pendiente');
+  await expect(ownershipLabel).toBeVisible();
   await page.getByRole('button', { name: 'Ver solicitud' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Solicitud en cuarentena comercial', { exact: false })).toBeVisible();
