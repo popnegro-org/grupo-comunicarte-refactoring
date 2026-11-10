@@ -104,3 +104,13 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Sin cambios en endpoints, payloads, reglas comerciales ni persistencia.
 - Validación local sobre el árbol de trabajo: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
 - QA visual autenticado y navegación por teclado en Preview pendientes de ejecución CI/sesión autorizada; no se declaran verificados.
+
+## P2 — endurecimiento de accesibilidad móvil y carga diferida de exportación (2026-11-09)
+
+- Se ampliaron a 44 px los objetivos táctiles del constructor: navegación de retorno, acciones de guardado/exportación, campos de cliente, monto, período, búsqueda, selección de inventario y precios por soporte.
+- Se añadieron indicadores de foco visibles para navegación por teclado en las acciones y controles del constructor.
+- El módulo de generación PDF/PPT (`adminMediaKitExport`) ahora se importa al solicitar la exportación, no al abrir el constructor. El chunk de exportación permanece separado y se descarga bajo demanda.
+- Se añadió `tests/visual/mediakit-builder-accessibility.spec.ts`: labels, tipos semánticos, estado `aria-pressed`, estado de búsqueda vacía, recorrido de foco, áreas táctiles, ausencia de overflow y errores de consola.
+- Build de referencia: constructor 18.48 kB (5.19 kB gzip); módulo de exportación 404.45 kB (134.67 kB gzip), cargado dinámicamente al exportar. No se declara reducción del tamaño total descargable, sino de la carga inicial al entrar al constructor.
+- Validación local: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
+- La ejecución local de Playwright no pudo iniciar Chromium por la dependencia del contenedor `libglib-2.0.so.0`; no se cuenta como prueba aprobada. La validación visual queda delegada al workflow remoto de la rama candidata.
