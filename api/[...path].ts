@@ -1,4 +1,4 @@
-import { normalizeIncomingRequestUrl } from "../src/server/normalizeIncomingRequestUrl";
+import { normalizeIncomingRequestUrl } from "../src/server/normalizeIncomingRequestUrl.js";
 
 function useNeonPooler(connectionString: string): string {
   try {
