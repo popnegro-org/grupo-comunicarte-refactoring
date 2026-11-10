@@ -8,6 +8,13 @@ type InventoryLoadResult = {
 };
 
 let inFlightInventoryRequest: Promise<InventoryLoadResult> | null = null;
+let inventoryCache: { result: InventoryLoadResult; cachedAt: number } | null = null;
+const INVENTORY_CACHE_TTL_MS = 10_000;
+
+function getFreshInventoryCache() {
+  if (!inventoryCache || Date.now() - inventoryCache.cachedAt > INVENTORY_CACHE_TTL_MS) return null;
+  return inventoryCache.result;
+}
 
 function normalizeItems(rawItems: InventoryItem[]): InventoryItem[] {
   const seen = new Set<string>();
@@ -18,7 +25,10 @@ function normalizeItems(rawItems: InventoryItem[]): InventoryItem[] {
   });
 }
 
-function loadInventory(): Promise<InventoryLoadResult> {
+function loadInventory(force = false): Promise<InventoryLoadResult> {
+  const cached = !force ? getFreshInventoryCache() : null;
+  if (cached) return Promise.resolve(cached);
+
   if (!inFlightInventoryRequest) {
     inFlightInventoryRequest = (async () => {
       try {
@@ -40,7 +50,9 @@ function loadInventory(): Promise<InventoryLoadResult> {
         const items = normalizeItems(json.data).filter(
           (item: InventoryItem) => getDisponibilidad(item) !== 'inactivo',
         );
-        return { items, error: null };
+        const result = { items, error: null };
+        inventoryCache = { result, cachedAt: Date.now() };
+        return result;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'No se pudo cargar el inventario.';
         console.error('Inventory fetch failed:', message);
@@ -54,15 +66,20 @@ function loadInventory(): Promise<InventoryLoadResult> {
   return inFlightInventoryRequest;
 }
 
-export function useInventory() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+export function prefetchInventory() {
+  return loadInventory();
+}
 
-  const fetchInventory = useCallback(async () => {
+export function useInventory() {
+  const cached = getFreshInventoryCache();
+  const [items, setItems] = useState<InventoryItem[]>(() => cached?.items ?? []);
+  const [loading, setLoading] = useState<boolean>(() => !cached);
+  const [error, setError] = useState<string | null>(() => cached?.error ?? null);
+
+  const fetchInventory = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
-    const result = await loadInventory();
+    const result = await loadInventory(force);
     setItems(result.items);
     setError(result.error);
     setLoading(false);
@@ -78,6 +95,6 @@ export function useInventory() {
     mobileRoutes: items.filter((item) => 'waypoints' in item) as any[],
     loading,
     error,
-    refetch: fetchInventory,
+    refetch: () => fetchInventory(true),
   };
 }
