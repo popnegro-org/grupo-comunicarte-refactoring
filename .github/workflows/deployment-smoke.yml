@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   smoke:
+    if: github.ref == 'refs/heads/pmv-validation-candidate'
     name: Live Preview E2E
     runs-on: ubuntu-latest
     container:
