@@ -10,7 +10,7 @@ function normalizeTarget(target: string): string | null {
 
   // Vercel's adapter may forward an absolute-form request target. Express 4's
   // parseurl fallback calls the deprecated url.parse() for these values.
-  if (!/^[a-z][a-z\\d+.-]*:\\/\\//i.test(target)) return null;
+  if (!target.includes("://")) return null;
 
   try {
     const parsed = new URL(target);
