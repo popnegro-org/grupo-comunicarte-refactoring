@@ -1,5 +1,5 @@
 import { createApp } from "../dist/server.cjs";
-import { normalizeIncomingRequestUrl } from "../src/server/normalizeIncomingRequestUrl";
+import { normalizeIncomingRequestUrl } from "../src/server/normalizeIncomingRequestUrl.js";
 
 const appPromise = createApp();
 
