@@ -54,7 +54,6 @@ jobs:
           key: visual-baseline-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.sha }}
           restore-keys: |
             visual-baseline-${{ github.event.pull_request.head.ref || github.ref_name }}-
-            visual-baseline-${{ github.base_ref || github.ref_name }}-
 
       - name: Bootstrap missing baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
@@ -64,50 +63,17 @@ jobs:
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: npx playwright test
 
-      - name: Capture map baseline from base branch
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
-        run: |
-          marker="tests/visual/__snapshots__/map-baseline-source.txt"
-          if [ ! -f "$marker" ]; then
-            git fetch --no-tags origin "${{ github.base_ref }}"
-            git worktree add --detach /tmp/gc-baseline FETCH_HEAD
-            cp tests/visual/inventory.spec.ts /tmp/gc-baseline/tests/visual/inventory.spec.ts
-            cp tests/visual/screenshot.css /tmp/gc-baseline/tests/visual/screenshot.css
-            cp playwright.config.ts /tmp/gc-baseline/playwright.config.ts
-            ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/gc-baseline/node_modules
-            cd /tmp/gc-baseline
-            npm run build
-            nohup npm run preview -- --host 0.0.0.0 --port 4174 > /tmp/gc-baseline-preview.log 2>&1 &
-            for i in $(seq 1 30); do
-              curl -fsS http://127.0.0.1:4174/ >/dev/null && break
-              sleep 1
-            done
-            curl -fsS http://127.0.0.1:4174/ >/dev/null
-            PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npx playwright test -g "mapa responsive: marcadores y encuadre" --update-snapshots
-            mkdir -p "$GITHUB_WORKSPACE/tests/visual/__snapshots__/chromium-desktop/inventory.spec.ts"
-            mkdir -p "$GITHUB_WORKSPACE/tests/visual/__snapshots__/chromium-mobile/inventory.spec.ts"
-            cp tests/visual/__snapshots__/chromium-desktop/inventory.spec.ts/inventory-map-responsive.png "$GITHUB_WORKSPACE/tests/visual/__snapshots__/chromium-desktop/inventory.spec.ts/"
-            cp tests/visual/__snapshots__/chromium-mobile/inventory.spec.ts/inventory-map-responsive.png "$GITHUB_WORKSPACE/tests/visual/__snapshots__/chromium-mobile/inventory.spec.ts/"
-            printf 'base-ref=%s\nbase-sha=%s\n' "${{ github.base_ref }}" "$(git -C /tmp/gc-baseline rev-parse HEAD)" > "$GITHUB_WORKSPACE/$marker"
-            {
-              echo "## Visual QA: map baseline from base branch"
-              echo "The responsive map screenshot was captured from the base branch before running the PR regression suite; map layout is now compared against that historical rendering."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Map baseline already established for this PR: $(cat "$marker")"
-          fi
-
       - name: Summarize baseline bootstrap
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: |
           echo "## Visual QA: baseline bootstrap" >> "$GITHUB_STEP_SUMMARY"
-          echo "No cached baseline was available from this PR branch or its base branch. This run validates the generated screenshots but is not a visual regression comparison against main. The snapshots are cached for subsequent commits to this PR." >> "$GITHUB_STEP_SUMMARY"
+          echo "No cached baseline was available for this PR branch. Playwright validates the snapshots committed with the candidate and generates only missing snapshots; this first run establishes the branch baseline. Snapshot changes remain visible in the PR diff." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summarize visual regression comparison
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
         run: |
           echo "## Visual QA: baseline comparison" >> "$GITHUB_STEP_SUMMARY"
-          echo "The Playwright visual tests are comparing against the restored baseline: ${{ steps.baseline.outputs.cache-matched-key }}." >> "$GITHUB_STEP_SUMMARY"
+          echo "The Playwright visual tests are comparing against the previous trusted snapshot cache for this candidate branch: ${{ steps.baseline.outputs.cache-matched-key }}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run visual regression
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key != ''
