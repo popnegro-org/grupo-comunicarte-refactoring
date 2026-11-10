@@ -71,7 +71,8 @@ test.describe('Preview deployment · PMV smoke', () => {
   test('inventario público carga soportes y no desborda en anchos PMV', async ({ page }, testInfo) => {
     await page.goto('/inventario?vista=catalogo');
     await expect(page.getByRole('heading', { name: 'Inventario de soportes publicitarios' })).toBeVisible();
-    await expect(page.getByText(/\d+ resultados/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
+    await expect(page.getByText('Av. J. B. Justo y Lope de Vega')).toBeVisible();
 
     for (const viewport of [
       { width: 320, height: 800 },
