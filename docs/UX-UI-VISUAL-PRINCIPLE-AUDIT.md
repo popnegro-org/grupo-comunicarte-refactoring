@@ -85,3 +85,11 @@ La referencia conceptual es el lenguaje de dashboards operativos: jerarquía exp
 ## Criterio de release
 
 Este bloque no modifica `main` ni contratos backend. La validación final requiere build/typecheck/tests y revisión visual responsive en Preview antes de cerrar el HUMAN GATE visual.
+
+## Continuación UX/UI — bandeja comercial (2026-11-09)
+
+- `/dashboard/solicitudes`: la tabla desktop se mantiene; en mobile se presenta una lista de tarjetas con cliente, empresa, estado, cantidad de soportes, fecha y acción contextual `Ver solicitud`.
+- La acción móvil tiene un objetivo táctil de al menos 44 px y evita obligar al usuario a desplazarse horizontalmente por una tabla de ancho fijo.
+- La bandeja diferencia explícitamente error de carga, ausencia total de solicitudes y ausencia de resultados por filtros. El estado de error ofrece `Reintentar`.
+- No se alteran endpoints, estados comerciales, ownership, reglas de cotización, asociación de Media Kit ni persistencia.
+- QA automatizado añadido en `tests/visual/dashboard-requests-responsive.spec.ts` para desktop/mobile, overflow horizontal, reintento y estado vacío.
