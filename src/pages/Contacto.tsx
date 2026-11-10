@@ -14,11 +14,12 @@ export default function Contacto() {
         eyebrow={isMediaKit ? 'Media Kit' : 'Contacto'}
         title={isMediaKit ? 'Tu selección, lista para avanzar.' : 'Hablemos de tu próxima campaña.'}
         description={isMediaKit ? 'Este es el cierre de tu selección: completá tus datos y enviá la solicitud para que el equipo comercial prepare tu propuesta.' : 'Contanos qué necesitás comunicar y te ayudamos a encontrar la solución OOH o DOOH adecuada.'}
+        compact
         actions={<Link to="/inventario" className={buttonStyles({ variant: 'outline' })}>Volver al inventario</Link>}
       />
 
-      <div className="page-container py-12 md:py-16">
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="page-container py-7 md:py-9">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <ContactForm isMediaKit={isMediaKit} />
           <aside className="grid gap-3 lg:sticky lg:top-24">
             {isMediaKit && (
