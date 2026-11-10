@@ -19,11 +19,12 @@ interface SupportCardProps {
   variant?: 'showcase' | 'catalog' | 'selectable' | 'dashboard' | 'map';
   selectable?: boolean;
   onRemove?: (item: InventoryItem) => void;
+  imagePriority?: boolean;
 }
 
 const cardBase = 'overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md';
 
-export function SupportCard({ item, variant = 'catalog', selectable = false, onRemove }: SupportCardProps) {
+export function SupportCard({ item, variant = 'catalog', selectable = false, onRemove, imagePriority = false }: SupportCardProps) {
   const navigate = useNavigate();
   const { isSelected, toggleSelect } = useSelection();
   const status = getDisponibilidad(item);
@@ -51,6 +52,7 @@ export function SupportCard({ item, variant = 'catalog', selectable = false, onR
         onNext={() => setSlide((index + 1) % slides.length)}
         onSelect={setSlide}
         alt={alt}
+        priority={imagePriority}
       />
       <div className="absolute left-3 top-3"><StatusBadge item={item} /></div>
       {item.isFeatured && (
