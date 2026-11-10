@@ -17,7 +17,6 @@ concurrency:
 # This workflow executes repository code. Grant only read access needed to resolve GitHub deployment records.
 permissions:
   contents: read
-  deployments: read
 
 jobs:
   validate:
@@ -89,122 +88,66 @@ jobs:
       - name: Build expected frontend artifact
         run: npm run build
 
-      - name: Resolve and verify the exact READY Vercel Preview for this SHA
+      - name: Wait for stable Vercel branch alias to serve the exact candidate SHA
         id: preview
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           EXPECTED_SHA: ${{ github.sha }}
           EXPECTED_REF: ${{ github.ref_name }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
 
           const expectedSha = process.env.EXPECTED_SHA;
           const expectedRef = process.env.EXPECTED_REF;
-          const repository = process.env.GITHUB_REPOSITORY;
-          const token = process.env.GITHUB_TOKEN;
-          const apiBase = `https://api.github.com/repos/${repository}`;
+          const previewUrl = new URL('https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app');
 
-          if (!/^[0-9a-f]{40}$/i.test(expectedSha || '') || !expectedRef || !token) {
-            throw new Error('Missing or invalid GitHub deployment verification inputs.');
+          if (!/^[0-9a-f]{40}$/i.test(expectedSha || '') || expectedRef !== 'pmv-validation-candidate') {
+            throw new Error('Missing or invalid candidate SHA/branch.');
           }
 
-          async function github(path) {
-            const response = await fetch(`${apiBase}${path}`, {
-              headers: {
-                authorization: `Bearer ${token}`,
-                accept: 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28'
-              },
-              signal: AbortSignal.timeout(15000)
-            });
-            if (!response.ok) {
-              const body = await response.text();
-              throw new Error(`GitHub API ${response.status}: ${body.slice(0, 500)}`);
-            }
-            return response.json();
-          }
+          const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\\/assets\\/[^"]+\\.js/) || [])[0];
+          if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
           async function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
           }
 
-          let lastState = 'no matching Preview deployment found';
-          for (let attempt = 1; attempt <= 30; attempt++) {
-            const query = new URLSearchParams({
-              sha: expectedSha,
-              ref: expectedRef,
-              environment: 'Preview',
-              per_page: '100'
-            });
-            const deployments = await github(`/deployments?${query}`);
-            const matching = deployments
-              .filter(item =>
-                item.sha === expectedSha &&
-                item.ref === expectedRef &&
-                String(item.environment).toLowerCase() === 'preview'
-              )
-              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          let lastObservedCommit = 'unavailable';
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            try {
+              const [healthResponse, pageResponse] = await Promise.all([
+                fetch(new URL('/api/health', previewUrl), { signal: AbortSignal.timeout(15000) }),
+                fetch(previewUrl, { signal: AbortSignal.timeout(15000) })
+              ]);
 
-            if (matching.length) {
-              const deployment = matching[0];
-              const statuses = await github(`/deployments/${deployment.id}/statuses?per_page=100`);
-              const latest = statuses[0];
-              lastState = latest?.state || 'deployment has no status';
+              if (healthResponse.ok && pageResponse.ok) {
+                const health = await healthResponse.json();
+                const html = await pageResponse.text();
+                lastObservedCommit = health.commit || 'missing';
 
-              if (latest?.state === 'success' && latest.environment_url) {
-                const previewUrl = new URL(latest.environment_url);
-                if (previewUrl.protocol !== 'https:' || !previewUrl.hostname.endsWith('.vercel.app')) {
-                  throw new Error('GitHub returned a non-Preview or untrusted deployment URL.');
-                }
-
-                const expectedAsset = (readFileSync('dist/index.html', 'utf8').match(/\/assets\/[^"]+\.js/) || [])[0];
-                if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
-
-                let runtimeReady = false;
-                for (let healthAttempt = 1; healthAttempt <= 12; healthAttempt++) {
-                  try {
-                    const [healthResponse, pageResponse] = await Promise.all([
-                      fetch(new URL('/api/health', previewUrl), { signal: AbortSignal.timeout(15000) }),
-                      fetch(previewUrl, { signal: AbortSignal.timeout(15000) })
-                    ]);
-                    if (healthResponse.ok && pageResponse.ok) {
-                      const health = await healthResponse.json();
-                      const html = await pageResponse.text();
-                      if (
-                        health.commit === expectedSha &&
-                        health.database === 'connected' &&
-                        html.includes(expectedAsset)
-                      ) {
-                        runtimeReady = true;
-                        break;
-                      }
-                    }
-                  } catch {
-                    // A successful deployment status can precede runtime readiness briefly.
-                  }
-                  await sleep(5000);
-                }
-
-                if (runtimeReady) {
-                  appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl.origin}\n`);
-                  appendFileSync(process.env.GITHUB_OUTPUT, `deployment_id=${deployment.id}\n`);
-                  appendFileSync(process.env.GITHUB_OUTPUT, `sha=${expectedSha}\n`);
-                  console.log(`Verified Preview deployment ${deployment.id} for exact SHA ${expectedSha}.`);
-                  console.log('Health endpoint, connected database, and frontend asset all match this candidate.');
+                if (
+                  health.status === 'ok' &&
+                  health.commit === expectedSha &&
+                  health.database === 'connected' &&
+                  html.includes(expectedAsset)
+                ) {
+                  appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl.origin}\\n`);
+                  appendFileSync(process.env.GITHUB_OUTPUT, `sha=${expectedSha}\\n`);
+                  console.log(`Verified stable branch Preview alias serves exact SHA ${expectedSha}.`);
+                  console.log('Health, connected database, and built frontend asset match this candidate.');
                   process.exit(0);
                 }
-                lastState = 'deployment succeeded, but runtime SHA/health/frontend asset did not match';
               }
+            } catch {
+              // The alias can briefly serve the previous deployment while Vercel promotes the new Preview.
             }
 
-            console.log(`Preview for ${expectedSha}: attempt ${attempt}/30; latest state: ${lastState}`);
-            await sleep(20000);
+            console.log(`Waiting for Preview SHA ${expectedSha}; attempt ${attempt}/60; observed SHA: ${lastObservedCommit}`);
+            await sleep(10000);
           }
 
-          throw new Error(`No READY Vercel Preview matched branch ${expectedRef} and SHA ${expectedSha}. Last state: ${lastState}`);
+          throw new Error(`Vercel branch alias did not serve exact SHA ${expectedSha}; last observed SHA: ${lastObservedCommit}`);
           NODE
 
       - name: Verify QA credentials are configured
