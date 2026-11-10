@@ -39,6 +39,7 @@ test.describe('Dashboard · estructura responsive', () => {
 
   test('mantiene navegación funcional y jerarquía del shell', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Grupo Comunicarte' }).first()).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Inventario', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Solicitudes Media Kits' })).toBeVisible();
