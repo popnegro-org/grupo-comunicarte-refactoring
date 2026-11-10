@@ -2,6 +2,8 @@ import { ArrowLeft, ArrowRight, MapPin, Monitor, Play } from 'lucide-react';
 import { InventoryItem, getDisponibilidad } from '../../types';
 import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
 import { getCardFacts } from '../../lib/supportCardFacts.ts';
+export { getCardFacts, formatImpacts } from '../../lib/supportCardFacts.ts';
+export type { SupportCardFact } from '../../lib/supportCardFacts.ts';
 
 export function reservationPeriod(item: InventoryItem) {
   const from = item.reservedFrom || item.technical?.metadata?.reserved_from;
