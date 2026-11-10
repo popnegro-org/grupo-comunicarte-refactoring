@@ -93,3 +93,14 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - La bandeja diferencia explícitamente error de carga, ausencia total de solicitudes y ausencia de resultados por filtros. El estado de error ofrece `Reintentar`.
 - No se alteran endpoints, estados comerciales, ownership, reglas de cotización, asociación de Media Kit ni persistencia.
 - QA automatizado añadido en `tests/visual/dashboard-requests-responsive.spec.ts` para desktop/mobile, overflow horizontal, reintento y estado vacío.
+
+## P2 — Constructor de Media Kit: accesibilidad y estados (2026-11-09)
+
+- Etiquetas visibles asociadas a nombre, empresa, email y teléfono; autocomplete y tipos semánticos de email/teléfono.
+- Búsqueda del inventario con nombre accesible y tipo `search`.
+- Selección de soportes con estado `aria-pressed` y nombre dinámico Agregar/Quitar.
+- Carga, notificaciones y búsqueda vacía anunciadas mediante regiones `status`/`aria-live`.
+- Acción de quitar soporte con área interactiva 44×44 px y nombre accesible específico.
+- Sin cambios en endpoints, payloads, reglas comerciales ni persistencia.
+- Validación local sobre el árbol de trabajo: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
+- QA visual autenticado y navegación por teclado en Preview pendientes de ejecución CI/sesión autorizada; no se declaran verificados.
