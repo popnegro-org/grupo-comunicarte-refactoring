@@ -191,3 +191,27 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Dashboard shell responsive validado; la revisión manual autenticada de flujos administrativos continúa pendiente de sesión QA autorizada.
 - No se ejecutó merge a `main`, deploy Production, ni comunicación real.
 - **Estado:** fases estéticas A–F implementadas y QA visual público reproducido. Queda pendiente únicamente la revisión humana final del Preview y la comprobación autenticada del Dashboard/Media Kit antes de solicitar el HUMAN GATE de release.
+
+
+## Ajuste de inventario público y tipologías Neon — 2026-11-10
+
+### Cambios de interfaz
+- Se retiró el bloque de encabezado redundante `Grupo Comunicarte · OOH / Inventario de soportes / Explorá ubicaciones...`; el inventario comienza directamente en la barra de filtros.
+- Se eliminaron los contadores duplicados de resultados en toolbar y panel lateral del mapa. El contador de selección solo aparece cuando existe una selección o se activa “Cerca de mí”.
+- El filtro comercial expone únicamente `Tradicionales`, `Pantallas LED` y `LED móvil`; `Pendiente de mapeo` queda fuera de las opciones públicas.
+- Los enlaces antiguos con `tipo=led` se normalizan a `pantallas_led`.
+
+### Auditoría de Neon
+- Proyecto: `grupocomunicarte-serverless`; branch consultado: `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`). Consultas exclusivamente de lectura; no se modificaron datos.
+- Tabla `supports`: 46 registros, 29 activos y 17 inactivos en la branch consultada.
+- Tipologías activas: 26 `tradicional` / `traditional`, 2 `led` / `led` y 1 `led_movil` / `led_mobile`.
+- Los dos registros `led` activos se llaman “Pantalla LED Acceso Este y Dorrego” y “Pantalla LED Panamericana y Pueyrredón”; ambos tienen media activa. La interfaz ahora los presenta y filtra como `Pantallas LED`, sin alterar los valores persistidos.
+- El registro `led_movil` activo (“Camión LED Móvil”) tiene familia `led_mobile`, media activa, datos técnicos y ruta activa con waypoints. Se presenta como `LED móvil`.
+- Los 26 registros tradicionales activos se presentan como `Tradicionales`.
+- Hallazgos de datos que no se modificaron: las dos pantallas LED no tienen lat/lng en `supports` ni fila de `support_technical`; la ruta móvil sí tiene geometría y waypoints en `support_routes`. En el inventario completo hay registros inactivos históricos con tipo/familia vacíos; no se exponen en el catálogo público.
+
+### QA
+- Se añadió prueba unitaria de mapeo `led` + `family=led` a `Pantallas LED`.
+- Playwright `tests/visual/inventory.spec.ts`: 21 PASS y 3 omitidos por ser específicos de otro viewport (24 casos totales), en desktop/mobile. Se regeneraron snapshots afectados por la eliminación del encabezado y los contadores.
+- `npm run lint`: PASS; `npm run test:unit`: 84/84 PASS; `npm run build`: PASS.
+- La comprobación funcional de filtro verifica que `Pantallas LED` devuelve el registro LED tipificado y que `Pendiente de mapeo` ya no existe como opción pública.
