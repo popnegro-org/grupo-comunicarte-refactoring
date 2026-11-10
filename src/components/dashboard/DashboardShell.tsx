@@ -78,9 +78,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {mobileNavOpen && <button type="button" aria-label="Cerrar menú" onClick={() => setMobileNavOpen(false)} className="fixed inset-0 z-30 bg-slate-900/40 md:hidden" />}
       <div className="min-h-screen md:flex">
         <aside aria-label="Navegación de administración" className={`${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[#E2E8F0] bg-[#F1F5FB] px-3 py-5 transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0`}>
-          <div className="flex items-center gap-2.5 px-1.5 pb-4">
-            <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full bg-[#0F2A5C] text-xs font-bold text-white">GC</span>
-            <span className="text-[15px] font-semibold tracking-tight text-[#1E293B]">Grupo Comunicarte</span>
+          <div className="flex min-h-11 items-center gap-2.5 px-1.5 pb-4">
+            <Link to="/dashboard" aria-label="Grupo Comunicarte, inicio del panel" className="inline-flex min-h-11 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]">
+              <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-7 w-auto max-w-[164px] object-contain" />
+            </Link>
             <button type="button" aria-label="Cerrar menú" onClick={() => setMobileNavOpen(false)} className="ml-auto grid min-h-11 min-w-11 place-items-center rounded-md text-slate-500 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] md:hidden"><X size={18}/></button>
           </div>
           <div className="flex items-center gap-2.5 px-1.5 py-2">
@@ -98,7 +99,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <div className="mt-auto space-y-1 border-t border-[#E2E8F0] pt-4">
             <Link to="/inventario" className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-[#475569] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"><Building2 size={19} strokeWidth={1.7} className="text-[#5B6B86]"/><span className="flex-1">Inventario público</span><ChevronRight size={15} className="text-slate-400"/></Link>
             <button type="button" onClick={handleLogout} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#475569] transition hover:bg-white/70 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"><LogOut size={19} strokeWidth={1.7} className="text-[#5B6B86]"/>Cerrar sesión</button>
-            <div className="mt-3 flex items-center gap-2.5 rounded-lg bg-[#E8EDF5] p-3"><span className="h-[30px] w-[34px] shrink-0 rounded bg-[#CBD5E1]"/><div><p className="text-[11px] font-medium text-[#475569]">Panel de administración</p><p className="mt-0.5 text-[11px] text-[#475569]">Grupo Comunicarte</p></div></div>
+            <div className="mt-3 flex items-center gap-2.5 rounded-lg bg-[#E8EDF5] p-3"><Building2 size={18} className="shrink-0 text-[#475569]" aria-hidden="true" /><div><p className="text-[11px] font-medium text-[#475569]">Panel de administración</p><p className="mt-0.5 text-[11px] text-[#475569]">Grupo Comunicarte</p></div></div>
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
