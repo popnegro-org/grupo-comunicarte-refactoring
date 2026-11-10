@@ -5,6 +5,7 @@ import { inArray } from 'drizzle-orm';
 import { InventoryItem } from '../types.ts';
 import { sanitizePublicSupport } from './publicSupportDto.ts';
 import { getStorageAdapter, isSafeSupportMediaKey } from './r2StorageAdapter.ts';
+import { isSafePublicImagePath } from './publicMediaPath.ts';
 
 const R2_URI_PREFIX = 'r2://';
 
@@ -13,6 +14,8 @@ function resolvePublicMediaUrl(canonicalId: string, media: { url: string; metada
   // Storage-backed media rows use this same-origin route, which checks public-catalog eligibility
   // before redirecting to a short-lived R2 URL.
   if (/^\/api\/media\/[1-9]\d*$/.test(media.url)) return media.url;
+  // Checked-in public images may use same-origin /images paths; reject arbitrary relative URLs.
+  if (isSafePublicImagePath(media.url)) return media.url;
   if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\/\//i.test(media.url) ? media.url : null;
   const metadataKey = typeof media.metadata?.storage_key === 'string' ? media.metadata.storage_key : '';
   const key = metadataKey || media.url.slice(R2_URI_PREFIX.length);
