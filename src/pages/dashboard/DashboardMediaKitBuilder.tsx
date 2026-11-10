@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Check, Download, FileText, Loader2, Search, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardShell } from '../../components/dashboard/DashboardShell';
-import { Input } from '../../components/ui/Input';
+import { Input, Label } from '../../components/ui/Input';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
 import { downloadMediaKitPdf, downloadMediaKitPpt, ExportSupport } from '../../lib/adminMediaKitExport';
 import { apiFetch } from '../../lib/api';
@@ -262,20 +262,20 @@ export default function DashboardMediaKitBuilder() {
           </div>
         </div>
 
-        {toast && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">{toast}</div>}
+        {toast && <div role="status" aria-live="polite" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">{toast}</div>}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
+          <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
         ) : (
           <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="min-w-0 space-y-4">
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cliente</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <Input value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} placeholder="Nombre *" />
-                  <Input value={client.company} onChange={(e) => setClient((c) => ({ ...c, company: e.target.value }))} placeholder="Empresa" />
-                  <Input value={client.email} onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} placeholder="Email" />
-                  <Input value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" />
+                  <div><Label htmlFor="mediakit-client-name">Nombre *</Label><Input id="mediakit-client-name" autoComplete="name" value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} placeholder="Nombre *" /></div>
+                  <div><Label htmlFor="mediakit-client-company">Empresa</Label><Input id="mediakit-client-company" autoComplete="organization" value={client.company} onChange={(e) => setClient((c) => ({ ...c, company: e.target.value }))} placeholder="Empresa" /></div>
+                  <div><Label htmlFor="mediakit-client-email">Email</Label><Input id="mediakit-client-email" type="email" autoComplete="email" value={client.email} onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} placeholder="Email" /></div>
+                  <div><Label htmlFor="mediakit-client-phone">Teléfono</Label><Input id="mediakit-client-phone" type="tel" autoComplete="tel" value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" /></div>
                 </div>
               </div>
 
@@ -327,15 +327,16 @@ export default function DashboardMediaKitBuilder() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inventario</p>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-9 rounded-lg border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-gray-900" />
+                    <input type="search" aria-label="Buscar soportes del inventario" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar soporte" className="h-9 rounded-lg border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-gray-900" />
                   </div>
                 </div>
                 <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+                  {filtered.length === 0 && <p role="status" aria-live="polite" className="rounded-lg bg-gray-50 px-3 py-4 text-center text-xs text-gray-500">{allSupports.length === 0 ? "No hay soportes disponibles en el inventario." : "No encontramos soportes que coincidan con la búsqueda."}</p>}
                   {filtered.map((s) => {
                     const on = selectedIds.includes(s.canonical_id);
                     const available = s.disponibilidad === 'disponible';
                     return (
-                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-gray-200 hover:bg-gray-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
+                      <button key={s.canonical_id} type="button" onClick={() => toggle(s)} disabled={!available && !on} aria-pressed={on} aria-label={`${on ? 'Quitar' : 'Agregar'} ${s.name}${available ? '' : ' (no disponible)'}`} className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs transition ${on ? 'border-emerald-300 bg-emerald-50' : available ? 'border-gray-200 hover:bg-gray-50' : 'border-amber-200 bg-amber-50/60 opacity-70 cursor-not-allowed'}`}>
                         <span className="min-w-0">
                           <span className="block truncate font-semibold text-gray-950">{s.name}</span>
                           <span className="text-gray-500">{s.ciudad} · {s.tipo_soporte}{available ? '' : ` · ${s.disponibilidad === 'reservado' ? 'Reservado' : 'Inactivo'}`}</span>
@@ -360,7 +361,7 @@ export default function DashboardMediaKitBuilder() {
                     <div key={s.canonical_id} className="rounded-lg border border-gray-100 bg-gray-50/60 p-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-semibold text-gray-950">{s.name}</p>
-                        <button type="button" onClick={() => toggle(s)} className="text-gray-400 hover:text-red-600" aria-label="Quitar"><X className="h-3.5 w-3.5" /></button>
+                        <button type="button" onClick={() => toggle(s)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" aria-label={`Quitar ${s.name} del Media Kit`}><X className="h-3.5 w-3.5" /></button>
                       </div>
                       <label htmlFor={`approved-price-${s.canonical_id}`} className="mt-2 block text-[10px] font-medium text-gray-500">Precio aprobado para {s.name}</label>
                       <input
