@@ -111,6 +111,7 @@ export default function DashboardMediaKitWorkflow() {
   const [proposalCurrency, setProposalCurrency] = useState<ProposalCurrency>('ARS');
   const [loading, setLoading] = useState(false);
   const [isFetchingLeads, setIsFetchingLeads] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState(false);
   const [deliveryPrepared, setDeliveryPrepared] = useState<'share_sheet' | 'mailto_draft' | null>(null);
   const [toast, setToast] = useState('');
@@ -156,6 +157,7 @@ export default function DashboardMediaKitWorkflow() {
 
   const load = async () => {
     setIsFetchingLeads(true);
+    setLoadError('');
     try {
       const r = await apiFetch('/api/admin/requests');
       const j = await r.json();
@@ -179,7 +181,9 @@ export default function DashboardMediaKitWorkflow() {
         }))
       );
     } catch (e: any) {
-      notify(e.message || 'Error al cargar solicitudes.');
+      const message = e.message || 'Error al cargar solicitudes.';
+      setLoadError(message);
+      notify(message);
     } finally {
       setIsFetchingLeads(false);
     }
@@ -561,11 +565,40 @@ export default function DashboardMediaKitWorkflow() {
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Tabla de solicitudes de Media Kit">
           {isFetchingLeads && leads.length === 0 ? (
             <div className="flex items-center gap-2 p-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando solicitudes…</div>
+          ) : loadError ? (
+            <div role="alert" className="flex flex-col items-center gap-3 p-10 text-center">
+              <p className="text-sm font-semibold text-slate-800">No pudimos cargar las solicitudes</p>
+              <p className="max-w-md text-xs text-slate-500">{loadError}</p>
+              <button type="button" onClick={() => void load()} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+              </button>
+            </div>
           ) : !visible.length ? (
-            <div className="p-10 text-center text-sm text-slate-500"><Inbox className="mx-auto mb-2 h-8 w-8 text-slate-300" />No hay solicitudes para este filtro.</div>
+            <div className="p-10 text-center text-sm text-slate-500"><Inbox className="mx-auto mb-2 h-8 w-8 text-slate-300" />{leads.length ? 'No hay solicitudes para este filtro.' : 'Todavía no hay solicitudes registradas.'}</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left text-xs">
+            <>
+            <div className="space-y-2 p-3 md:hidden" aria-label="Solicitudes en tarjetas">
+              {visible.map((lead) => (
+                <article key={lead.requestId} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-slate-500">{lead.requestId}</p>
+                      <h3 className="mt-0.5 truncate text-sm font-semibold text-slate-900">{lead.clientName}</h3>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">{lead.company}</p>
+                    </div>
+                    <StatusBadge status={labels[lead.status]} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs">
+                    <div><p className="text-slate-500">Soportes</p><p className="mt-0.5 font-medium text-slate-800">{lead.supportNames.length}</p></div>
+                    <div><p className="text-slate-500">Ingreso</p><p className="mt-0.5 font-medium text-slate-800">{formatRequestDate(lead.createdAt)}</p></div>
+                  </div>
+                  {lead.pendingOwnershipCount ? <p className="mt-2 text-[11px] font-medium text-amber-800">Ownership pendiente</p> : null}
+                  <button type="button" onClick={() => open(lead)} className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-600">Ver solicitud</button>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+              <table aria-label="Tabla de solicitudes de Media Kit" className="w-full min-w-[760px] border-collapse text-left text-xs">
                 <thead className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
                   <tr>
                     <th scope="col" className="px-4 py-3">ID</th>
@@ -592,6 +625,7 @@ export default function DashboardMediaKitWorkflow() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
           <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500"><span>{visible.length} solicitudes visibles</span><span>Grupo Comunicarte · Gestión comercial</span></div>
         </section>
