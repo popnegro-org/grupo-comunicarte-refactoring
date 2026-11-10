@@ -124,9 +124,10 @@ test("precomputes req.query with WHATWG URL before Express accesses Vercel's leg
     return originalParse(...args);
   };
 
-  const request = Object.create({
+  let request: any;
+  request = Object.create({
     get query() {
-      return urlModule.parse(this.url, true).query;
+      return urlModule.parse(request.url, true).query;
     },
   });
   request.url = "/api/media/64?variant=thumbnail&tag=one&tag=two";
