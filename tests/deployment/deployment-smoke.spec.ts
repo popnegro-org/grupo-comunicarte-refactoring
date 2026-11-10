@@ -392,3 +392,46 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     }
   });
 });
+
+
+test('el catálogo mantiene los soportes sin ownership en cuarentena', async ({ request }) => {
+  const listResponse = await request.get('/api/supports');
+  expect(listResponse.status()).toBe(200);
+  const payload = await listResponse.json();
+  expect(payload.data.some((item: any) => item.canonical_id === 'mza-trad-16')).toBe(false);
+
+  const detailResponse = await request.get('/api/supports/mza-trad-16');
+  expect(detailResponse.status()).toBe(404);
+});
+
+test('LED Móvil publica imagen y tres atributos canónicos sin inventar impactos', async ({ page, request }) => {
+  const supportsResponse = await request.get('/api/supports');
+  expect(supportsResponse.status()).toBe(200);
+  const payload = await supportsResponse.json();
+  const mobile = payload.data.find((item: any) => item.canonical_id === 'mza-led-movil-01');
+  expect(mobile).toBeTruthy();
+
+  const imageUrl = mobile.imageUrls?.[0] || mobile.media?.find((item: any) => item.media_type === 'image')?.url;
+  expect(imageUrl).toMatch(/^\\/images\\/[A-Za-z0-9._/-]+\\.(?:avif|gif|jpe?g|png|webp)$/i);
+  const imageResponse = await request.get(imageUrl);
+  expect(imageResponse.status()).toBe(200);
+  expect(imageResponse.headers()['content-type']).toContain('image/');
+
+  await page.goto('/inventario?vista=catalogo');
+  await page.getByPlaceholder('Buscar soporte o ubicación...').fill('Camión LED Móvil');
+  const card = page.getByRole('article').filter({ hasText: 'Camión LED Móvil' }).first();
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toBeVisible();
+  await expect(card.getByText('Duración', { exact: true })).toBeVisible();
+  await expect(card.getByText('Spot', { exact: true })).toBeVisible();
+  await expect(card.getByText('Impactos / mes', { exact: true })).toBeVisible();
+
+  const impacts = mobile.technical?.monthly_impacts;
+  if (impacts === null || impacts === undefined || impacts === '') {
+    await expect(card.getByText('A confirmar', { exact: true })).toBeVisible();
+  }
+
+  const image = card.locator('img').first();
+  await expect(image).toHaveAttribute('src', imageUrl);
+  await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+});

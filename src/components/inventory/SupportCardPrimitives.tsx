@@ -1,48 +1,7 @@
 import { ArrowLeft, ArrowRight, MapPin, Monitor, Play } from 'lucide-react';
-import { InventoryItem, MobileRoute, getDisponibilidad, isMobileRoute } from '../../types';
+import { InventoryItem, getDisponibilidad } from '../../types';
 import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
-
-export function formatImpacts(value?: number | string | null) {
-  if (value === null || value === undefined || value === '') return null;
-  const numeric = Number(String(value).replace(/\./g, '').replace(',', '.'));
-  if (!Number.isFinite(numeric)) return String(value);
-  if (numeric >= 1_000_000) return `+${(numeric / 1_000_000).toFixed(1).replace('.', ',')} M`;
-  if (numeric >= 1_000) return `+${Math.round(numeric / 1_000)} K`;
-  return `+${Math.round(numeric).toLocaleString('es-AR')}`;
-}
-
-export function getCardFacts(item: InventoryItem) {
-  const technical = item.technical;
-  const route = isMobileRoute(item) ? item as MobileRoute : null;
-  const hasMonthlyImpacts = technical?.monthly_impacts !== null && technical?.monthly_impacts !== undefined && technical.monthly_impacts !== '';
-  const impacts = hasMonthlyImpacts ? { label: 'Impactos / mes', value: formatImpacts(technical.monthly_impacts), priority: 4 } : null;
-  const resolutionFact = technical?.resolution
-    ? { label: 'Resolución', value: technical.resolution, priority: 2 }
-    : null;
-  const facesFact = technical?.caras ? { label: 'Caras', value: String(technical.caras), priority: 3 } : null;
-
-  if (item.family === 'led_mobile' || item.tipo_soporte === 'led_movil') {
-    return [
-      route?.duration ? { label: 'Duración', value: route.duration, priority: 1 } : null,
-      technical?.spot_duration_seconds ? { label: 'Spot', value: `${technical.spot_duration_seconds}s`, priority: 3 } : null,
-      impacts,
-    ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
-  }
-
-  if (item.family === 'led' || item.tipo_soporte === 'led' || (item.tipo_soporte as string) === 'pantallas_led') {
-    return [
-      technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-      resolutionFact,
-      impacts,
-    ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
-  }
-
-  return [
-    technical?.measures ? { label: 'Medidas', value: technical.measures, priority: 1 } : null,
-    facesFact,
-    impacts,
-  ].filter(Boolean).filter((fact) => fact?.value).map((fact) => fact!) as { label: string; value: string; priority: number }[];
-}
+import { getCardFacts } from '../../lib/supportCardFacts.ts';
 
 export function reservationPeriod(item: InventoryItem) {
   const from = item.reservedFrom || item.technical?.metadata?.reserved_from;
