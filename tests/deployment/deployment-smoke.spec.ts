@@ -149,6 +149,21 @@ test.describe('Preview deployment · PMV smoke', () => {
       });
       expect(adminStats.status).toBe(200);
       expect(adminStats.body.status).toBe('success');
+
+      await page.getByRole('link', { name: 'Inventario', exact: true }).first().click();
+      await expect(page).toHaveURL(/\\/dashboard\\/soportes$/);
+      await expect(page.getByRole('heading', { name: 'Gestión de Soportes' })).toBeVisible();
+
+      await page.getByRole('link', { name: 'Solicitudes Media Kits', exact: true }).first().click();
+      await expect(page).toHaveURL(/\\/dashboard\\/solicitudes$/);
+      await expect(page.getByRole('heading', { name: 'Solicitudes de Media Kit' })).toBeVisible();
+
+      await page.getByRole('link', { name: 'Crear Media Kit', exact: true }).click();
+      await expect(page).toHaveURL(/\\/dashboard\\/mediakits\\/nuevo$/);
+      await expect(page.getByRole('heading', { name: 'Constructor de Media Kit' })).toBeVisible();
+      const inventoryGroup = page.getByRole('group', { name: 'Soportes del inventario' });
+      await expect(inventoryGroup).toBeVisible();
+      await expect(inventoryGroup.getByRole('button').first()).toBeVisible();
     });
 
     test('ownership, tenant spoofing, quarantine and pricing remain fail-closed', async ({ page }) => {
