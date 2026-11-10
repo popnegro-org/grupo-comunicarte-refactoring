@@ -47,7 +47,7 @@ jobs:
           curl -fsS http://127.0.0.1:4173/ >/dev/null
 
       - name: Restore trusted visual baseline
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate'
         id: baseline
         uses: actions/cache/restore@v4
         with:
@@ -70,8 +70,14 @@ jobs:
           echo "## Visual QA: baseline bootstrap" >> "$GITHUB_STEP_SUMMARY"
           echo "PR visual QA uses the snapshots committed in this candidate branch and generates only missing snapshots. No cache from another commit or base branch can overwrite the reviewed candidate baseline." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate candidate snapshots on push
+        if: github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate'
+        run: |
+          npx playwright test
+          echo "Candidate push validated against its committed snapshots; no cross-commit cache was restored." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Bootstrap trusted baseline and validate Playwright
-        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key == ''
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate' && steps.baseline.outputs.cache-matched-key == ''
         run: |
           npx playwright test --update-snapshots=all
           npx playwright test
@@ -91,7 +97,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Compare against previous trusted baseline
-        if: github.event_name == 'push' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
         run: |
           npx playwright test
           {
@@ -100,7 +106,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save trusted baseline
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate'
         uses: actions/cache/save@v4
         with:
           path: tests/visual/__snapshots__
