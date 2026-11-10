@@ -107,7 +107,7 @@ jobs:
             throw new Error('Missing or invalid candidate SHA/branch.');
           }
 
-          const expectedAsset = readFileSync('dist/index.html', 'utf8').split('\"').find(value => value.startsWith('/assets/') && value.endsWith('.js'));
+          const expectedAsset = readFileSync('dist/index.html', 'utf8').split('"').find(value => value.startsWith('/assets/') && value.endsWith('.js'));
           if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
           async function sleep(ms) {
@@ -133,8 +133,8 @@ jobs:
                   health.database === 'connected' &&
                   html.includes(expectedAsset)
                 ) {
-                  appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + previewUrl.origin + '\\n');
-                  appendFileSync(process.env.GITHUB_OUTPUT, 'sha=' + expectedSha + '\\n');
+                  appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + previewUrl.origin + String.fromCharCode(10));
+                  appendFileSync(process.env.GITHUB_OUTPUT, 'sha=' + expectedSha + String.fromCharCode(10));
                   console.log('Verified stable branch Preview alias serves exact SHA ' + expectedSha + '.');
                   console.log('Health, connected database, and built frontend asset match this candidate.');
                   process.exit(0);
