@@ -412,7 +412,7 @@ test('LED Móvil publica imagen y tres atributos canónicos sin inventar impacto
   expect(mobile).toBeTruthy();
 
   const imageUrl = mobile.imageUrls?.[0] || mobile.media?.find((item: any) => item.media_type === 'image')?.url;
-  expect(imageUrl).toMatch(/^\\/images\\/[A-Za-z0-9._/-]+\\.(?:avif|gif|jpe?g|png|webp)$/i);
+  expect(imageUrl).toMatch(/^\/images\/[A-Za-z0-9._/-]+\.(?:avif|gif|jpe?g|png|webp)$/i);
   const imageResponse = await request.get(imageUrl);
   expect(imageResponse.status()).toBe(200);
   expect(imageResponse.headers()['content-type']).toContain('image/');
