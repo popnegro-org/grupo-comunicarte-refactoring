@@ -22,8 +22,13 @@ test('Inventario adapta la vista inicial y carga Leaflet solo cuando se solicita
         address: 'Av. San Martín 100, Mendoza',
         lat: -32.8895,
         lng: -68.8458,
+        imageUrls: ['/mock-support-image.webp'],
       }] }),
     });
+  });
+
+  await page.route('**/mock-support-image.webp', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', 'base64') });
   });
 
   await page.goto('/inventario');
@@ -33,6 +38,9 @@ test('Inventario adapta la vista inicial y carga Leaflet solo cuando se solicita
   await expect(isMobile ? catalog : map).toHaveAttribute('aria-checked', 'true');
 
   if (isMobile) {
+    const firstCardImage = page.locator('article').first().locator('img').first();
+    await expect(firstCardImage).toHaveAttribute('loading', 'eager');
+    await expect(firstCardImage).toHaveAttribute('fetchpriority', 'high');
     await expect(page.locator('.leaflet-container')).toHaveCount(0);
     expect(mapAssets).toHaveLength(0);
     await map.click();
