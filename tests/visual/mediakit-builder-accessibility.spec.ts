@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 test('Media Kit builder: accessible controls, keyboard flow and mobile touch targets', async ({ page }) => {
   const pageErrors: string[] = [];
@@ -81,6 +82,11 @@ test('Media Kit builder: accessible controls, keyboard flow and mobile touch tar
 
   await remove.click();
   await expect(supportToggle).toHaveAttribute('aria-pressed', 'false');
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(accessibility.violations, JSON.stringify(accessibility.violations, null, 2)).toEqual([]);
+
   await page.waitForTimeout(100);
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
