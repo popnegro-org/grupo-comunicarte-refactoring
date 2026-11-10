@@ -103,7 +103,7 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Acción de quitar soporte con área interactiva 44×44 px y nombre accesible específico.
 - Sin cambios en endpoints, payloads, reglas comerciales ni persistencia.
 - Validación local sobre el árbol de trabajo: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
-- QA visual autenticado y navegación por teclado en Preview pendientes de ejecución CI/sesión autorizada; no se declaran verificados.
+- La comprobación manual autenticada en Preview sigue pendiente de una sesión QA autorizada; navegación por teclado y axe se verificaron localmente en desktop y móvil.
 
 ## P2 — endurecimiento de accesibilidad móvil y carga diferida de exportación (2026-11-09)
 
@@ -113,4 +113,17 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Se añadió `tests/visual/mediakit-builder-accessibility.spec.ts`: labels, tipos semánticos, estado `aria-pressed`, estado de búsqueda vacía, recorrido de foco, áreas táctiles, ausencia de overflow y errores de consola.
 - Build de referencia: constructor 18.48 kB (5.19 kB gzip); módulo de exportación 404.45 kB (134.67 kB gzip), cargado dinámicamente al exportar. No se declara reducción del tamaño total descargable, sino de la carga inicial al entrar al constructor.
 - Validación local: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
-- La ejecución local de Playwright no pudo iniciar Chromium por la dependencia del contenedor `libglib-2.0.so.0`; no se cuenta como prueba aprobada. La validación visual queda delegada al workflow remoto de la rama candidata.
+- Se incorporó `@axe-core/playwright` como dependencia de desarrollo y el constructor pasó axe sin violaciones en reglas WCAG 2.0 A/AA, WCAG 2.1 A/AA y WCAG 2.2 AA en desktop y móvil.
+
+
+### Evidencia P2 — validación funcional y de accesibilidad
+
+- `npm run lint`: PASS.
+- `npm run test:unit`: 81/81 PASS.
+- `npm run build`: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+- Playwright desktop + mobile: 22/22 PASS entre `mediakit-builder-accessibility`, `mediakit-delivery`, `inventory-selection-bar` y `dashboard-requests-responsive`.
+- Axe: 0 violaciones en el constructor para WCAG 2.0 A/AA, 2.1 A/AA y 2.2 AA.
+- La suite verifica recorrido de foco, selección reversible, nombres accesibles basados en texto visible, labels, touch targets ≥44 px, ausencia de overflow, búsqueda vacía y ausencia de errores JavaScript/consola.
+- El chunk del constructor mide 18.46 kB (5.18 kB gzip). `adminMediaKitExport` mide 404.45 kB (134.67 kB gzip) y se descarga únicamente al solicitar PDF/PPT; el test confirma que no se solicita al abrir el constructor. El tamaño total del artefacto no se presenta como reducido.
+- Pendiente únicamente la comprobación autenticada en el Preview Vercel con una sesión QA autorizada; no se usaron ni inventaron credenciales.
