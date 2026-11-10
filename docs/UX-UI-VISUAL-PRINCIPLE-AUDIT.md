@@ -127,3 +127,37 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - La suite verifica recorrido de foco, selección reversible, nombres accesibles basados en texto visible, labels, touch targets ≥44 px, ausencia de overflow, búsqueda vacía y ausencia de errores JavaScript/consola.
 - El chunk del constructor mide 18.46 kB (5.18 kB gzip). `adminMediaKitExport` mide 404.45 kB (134.67 kB gzip) y se descarga únicamente al solicitar PDF/PPT; el test confirma que no se solicita al abrir el constructor. El tamaño total del artefacto no se presenta como reducido.
 - Pendiente únicamente la comprobación autenticada en el Preview Vercel con una sesión QA autorizada; no se usaron ni inventaron credenciales.
+
+
+## Iteración estética PMV — fases A–F (2026-11-10)
+
+### A — navegación y responsive
+- El header público conserva su altura de 80 px, enlaces sin salto de línea y navegación desktop desde 1024 px.
+- El menú móvil se conserva hasta 1023 px, incluido tablet landscape; se retiró el enlace Inicio redundante porque el logotipo ya navega a Home.
+- El acceso de login permanece como icono en escritorio amplio para evitar saturar el header en anchos intermedios.
+
+### B — Home
+- Se conserva la fotografía hero existente, los CTA y el buscador; no se reemplazaron activos sin evidencia.
+- Se prioriza la continuidad visual con las fotografías reales ya presentes en public/images.
+
+### C — Soportes y Soluciones
+- Las tres familias de soporte incorporan fotografía local existente: tradicional, pantallas LED y LED móvil.
+- Soportes conserva especificaciones técnicas y enlaces de inventario por formato; la imagen aporta reconocimiento sin sustituir información.
+- Soluciones adopta una composición editorial con imagen y descripción por objetivo, con acceso contextual al inventario.
+
+### D — Nosotros y Contacto
+- Nosotros incorpora fotografía de inventario existente y sustituye el rótulo ambiguo “Puntos clave” por “OOH + DOOH”, categorías presentes en la oferta descrita.
+- Contacto reduce el espacio del hero y acerca el formulario al inicio de la página; no se modifican campos, validación ni envío.
+
+### E — Inventario
+- En escritorio amplio, el mapa incorpora una lista compacta superpuesta de soportes filtrados. Seleccionar un registro abre el detalle correspondiente y resalta el punto en el mapa.
+- En móvil y tablet, la lista superpuesta se oculta para preservar superficie cartográfica y no duplicar el catálogo; se conserva el selector Mapa/Catálogo existente.
+
+### F — consistencia visual
+- Las tarjetas públicas usan elevación y borde sutiles al interactuar; se preservan estados semánticos y paleta operativa del Dashboard.
+- No se unifican los colores de estado con la marca: los colores funcionales mantienen su significado.
+- No se modifican contratos API, modelo comercial, datos, autenticación ni persistencia.
+
+### QA añadida
+- tests/visual/aesthetic-phases.spec.ts: navbar 1024–1440 px, menú en 900 px, imágenes y overflow en páginas comerciales desktop/mobile, listado sincronizado del mapa en desktop y oculto en móvil.
+- Pendiente de ejecución final en Preview del nuevo SHA y revisión visual final.
