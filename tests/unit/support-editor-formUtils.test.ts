@@ -144,7 +144,7 @@ test('getCardFacts preserves a manually entered zero monthly impact for LED mobi
   assert.equal(facts.find((fact) => fact.label === 'Impactos / mes')?.value, '+0');
 });
 
-test('inventory presentation adapter keeps ambiguous LED type unmapped and excludes internal pricing', async () => {
+test('inventory presentation adapter keeps unknown LED types unmapped and excludes internal pricing', async () => {
   const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
   const item = {
     canonical_id: 'SC-TEST-LED',
@@ -179,6 +179,16 @@ test('inventory presentation adapter keeps ambiguous LED type unmapped and exclu
   assert.equal(result.medidas, '8 x 4 m');
   assert.equal(result.impactoMensual, '420000');
   assert.equal('pricing' in result, false);
+});
+
+test('inventory presentation adapter maps Neon legacy LED family to Pantallas LED', async () => {
+  const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
+  const item = {
+    canonical_id: 'SC-NEON-LED', name: 'Pantalla LED Acceso Este', ciudad: 'mendoza',
+    tipo_soporte: 'led', family: 'led', address: 'Acceso Este', lat: null, lng: null,
+    description: '', characteristics: '', imageUrls: ['https://example.com/led.webp'],
+  } as import('../../src/types').InventoryItem;
+  assert.equal(toInventoryPresentationItem(item).tipo, 'Pantallas LED');
 });
 
 test('inventory presentation adapter classifies known support types conservatively', async () => {
