@@ -119,6 +119,31 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
         <MapUpdater locations={locations} routes={routes} userLocation={userLocation} />
       </MapContainer>
 
+      <aside aria-label="Listado de soportes del mapa" className="absolute left-4 top-4 z-[800] hidden w-[276px] max-h-[min(72vh,620px)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm xl:flex">
+        <div className="border-b border-gray-100 px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">Explorá en el mapa</p>
+          <p className="mt-1 text-sm font-semibold text-gray-950">{locations.length + routes.length} soportes en esta vista</p>
+        </div>
+        <ul className="min-h-0 divide-y divide-gray-100 overflow-y-auto">
+          {[...locations, ...routes].map((item) => {
+            const active = selectedItem?.canonical_id === item.canonical_id;
+            const selected = isSelected(item.canonical_id);
+            return (
+              <li key={item.canonical_id}>
+                <button type="button" onClick={() => handleSelect(item)} aria-pressed={active} className={'flex min-h-[68px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ' + (active ? 'bg-gray-50' : '')}>
+                  <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (selected ? 'bg-emerald-600' : active ? 'bg-gray-950' : 'bg-gray-300')} aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-gray-950">{item.name}</span>
+                    <span className="mt-1 block truncate text-[11px] capitalize text-gray-500">{item.ciudad.replace('-', ' ')}</span>
+                  </span>
+                  <span className="shrink-0 text-[10px] font-semibold text-gray-500">{selected ? 'Elegido' : 'Ver'}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
+
       {selectedItem && (
         <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-4 md:left-auto md:right-4 md:w-[410px] bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:shadow-xl z-[1000] border-t md:border border-gray-200/80 overflow-hidden max-h-[82vh] md:max-h-[88vh]">
           <div className="md:hidden pt-2.5 pb-1 flex justify-center shrink-0 bg-white">
