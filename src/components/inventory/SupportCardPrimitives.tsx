@@ -58,12 +58,17 @@ function formatDate(value: string) {
   return parsed.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 }
 
+function thumbnailUrl(url: string, kind: string) {
+  if (kind === 'video' || !url.startsWith('/api/media/')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}variant=thumbnail`;
+}
+
 export function mediaSlides(item: InventoryItem) {
   const media = (item.media || []).filter((entry) => entry.active !== false && entry.url).slice(0, 3);
-  if (media.length) return media.map((entry) => ({ url: entry.url, kind: entry.media_type }));
+  if (media.length) return media.map((entry) => ({ url: thumbnailUrl(entry.url, entry.media_type), kind: entry.media_type }));
   const coverVideo = item.technical?.metadata?.cover_media_type === 'video';
   return (item.imageUrls || []).filter(Boolean).slice(0, 3).map((url, index) => ({
-    url,
+    url: thumbnailUrl(url, 'image'),
     kind: index === 0 && coverVideo ? 'video' : 'image',
   }));
 }
