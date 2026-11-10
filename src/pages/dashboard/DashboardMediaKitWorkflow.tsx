@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
   FileText,
@@ -115,6 +115,7 @@ export default function DashboardMediaKitWorkflow() {
   const [busy, setBusy] = useState(false);
   const [deliveryPrepared, setDeliveryPrepared] = useState<'share_sheet' | 'mailto_draft' | null>(null);
   const [toast, setToast] = useState('');
+  const initialLoadStarted = useRef(false);
 
   const notify = (m: string) => {
     setToast(m);
@@ -190,7 +191,9 @@ export default function DashboardMediaKitWorkflow() {
   };
 
   useEffect(() => {
-    load();
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    void load();
   }, [navigate]);
 
   useEffect(() => {
