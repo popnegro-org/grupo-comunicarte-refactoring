@@ -149,7 +149,7 @@ export default function Inventario() {
       <div className="relative z-10 flex h-full min-w-0 flex-grow flex-col">
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 md:px-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">Grupo Comunicarte · OOH</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">Grupo Comunicarte · OOH</p>
             <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-950 sm:text-xl">Inventario de soportes</h2>
             <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">Explorá ubicaciones, compará formatos y armá tu selección.</p>
           </div>
