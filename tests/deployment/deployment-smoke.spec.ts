@@ -100,8 +100,8 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
 
     await page.getByRole('button', { name: /Abrir Media Kit/ }).click();
-    await expect(page.getByRole('button', { name: 'Solicitar propuesta' })).toBeVisible();
-    await page.getByRole('button', { name: 'Solicitar propuesta' }).click();
+    await expect(page.getByRole('link', { name: 'Solicitar propuesta' })).toBeVisible();
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('grupocomunicarte:selected-supports') || '[]').length === 1);\n    await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/, { timeout: 45_000 });
     await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 15_000 });
