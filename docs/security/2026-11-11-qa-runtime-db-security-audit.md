@@ -25,18 +25,20 @@ El contrato PMV vigente conserva un único administrador global. No requiere con
 - El bootstrap realiza operaciones DDL y DML; por ello la conexión actual necesita permisos superiores a los de un rol de runtime mínimo.
 - Render confirma ambos servicios vinculados a pmv-validation-candidate; no se leen ni exponen valores de variables de entorno.
 
-### Límite de verificación
+### Evidencia efectiva de Render — verificada en ambos servicios
 
-La API consultada de Render permite verificar servicio, rama, despliegue y logs, pero no devolvió el valor ni el nombre de usuario de DATABASE_URL. La consulta directa por el conector Neon se ejecutó como neondb_owner; **no debe confundirse con la conexión de Render**.
+El diagnóstico se ejecutó tras el despliegue de la candidata y confirmó la identidad real usada por DATABASE_URL:
 
-Se incorporó en src/db/index.ts un diagnóstico de arranque, sin secretos, que registra:
-- current_user y session_user;
-- rolsuper y rolbypassrls;
-- permisos CREATE de base y schema;
-- cantidad de tablas públicas, tablas con RLS y tablas con privilegios SELECT/INSERT/UPDATE/DELETE;
-- si existe un app.tenant_id en la sesión de diagnóstico.
+| Servicio Render | Rama Neon | current_user / session_user | BYPASSRLS | CREATE database/schema | Tablas públicas | RLS activo | DML |
+|---|---|---|---|---:|---:|---:|---:|
+| grupo-comunicarte-refactoring-qa | qa/pr96-ownership-20261105 | neondb_owner | true | true / true | 37 | 0 | SELECT/INSERT/UPDATE/DELETE: 37/37 |
+| grupo-comunicarte-refactoring | preview/pmv-validation-candidate | neondb_owner | true | true / true | 36 | 0 | SELECT/INSERT/UPDATE/DELETE: 36/36 |
 
-El diagnóstico no cambia roles, grants, RLS ni contexto tenant. Su resultado definitivo depende del próximo arranque de Render sobre esta candidata.
+En ambos servicios: superuser=false y app.tenant_id ausente en la sesión de diagnóstico. La identidad de Render está confirmada: **los dos servicios ejecutan la aplicación como neondb_owner, con BYPASSRLS y privilegios DML completos sobre todas las tablas de su rama**. El permiso CREATE de database y schema concuerda con el bootstrap DDL ejecutado por la aplicación.
+
+La consulta directa del conector Neon también se ejecutó como neondb_owner; ahora existe evidencia independiente de Render que confirma la misma identidad.
+
+El diagnóstico agregado en src/db/index.ts no registra URLs, contraseñas, hosts ni valores tenant. No cambia roles, grants, RLS ni contexto tenant.
 
 ## 2. Permisos SQL comprobados en Neon QA
 
@@ -135,4 +137,4 @@ El diagnóstico de conexión necesita el siguiente arranque de Render para produ
 - No aplicar migraciones productivas.
 - La rama candidata puede desplegar el diagnóstico inocuo de arranque a los servicios ya asignados a esa rama; el cambio no altera datos ni permisos.
 
-**Estado:** auditoría de esquema y permisos QA completada; identidad efectiva de Render pendiente de evidencia del log posterior al despliegue; separación de roles y migraciones pendiente de implementación/validación específica.
+**Estado:** identidad efectiva confirmada en los dos servicios Render; auditoría de esquema/permisos y cobertura QA completada; separación de roles y migraciones sigue pendiente de implementación/validación específica.
