@@ -175,3 +175,118 @@ jobs:
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
+
+  qa-deployment-e2e:
+    name: QA Deployment E2E · Neon QA
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [validate]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-qa.onrender.com
+      EXPECTED_QA_BRANCH: br-bold-block-aua43ua0
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build expected frontend artifact
+        run: npm run build
+
+      - name: Wait for Render QA to serve this frontend and the isolated Neon QA branch
+        shell: bash
+        run: |
+          node <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_QA_BRANCH;
+          const expectedAsset = readFileSync('dist/index.html', 'utf8')
+            .split('"')
+            .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
+
+          if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastHealth = null;
+
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            try {
+              const [healthResponse, pageResponse] = await Promise.all([
+                fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(15000) }),
+                fetch(base, { signal: AbortSignal.timeout(15000) }),
+              ]);
+
+              if (healthResponse.ok && pageResponse.ok) {
+                const health = await healthResponse.json();
+                const html = await pageResponse.text();
+                lastHealth = health;
+
+                if (
+                  health.status === 'ok' &&
+                  health.database === 'connected' &&
+                  health.databaseBranch === expectedBranch &&
+                  html.includes(expectedAsset)
+                ) {
+                  console.log('Render QA serves the expected frontend asset and isolated Neon QA branch.');
+                  process.exit(0);
+                }
+              }
+            } catch {
+              // Render may still be deploying the candidate.
+            }
+
+            console.log('Waiting for Render QA candidate; attempt ' + attempt + '/60.');
+            await sleep(10000);
+          }
+
+          throw new Error('Render QA did not serve the expected build and Neon branch. Last health: ' + JSON.stringify(lastHealth));
+          NODE
+
+      - name: Verify QA credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated QA."
+            exit 1
+          fi
+          echo "QA credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Neon QA
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.PLAYWRIGHT_BASE_URL }}
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload QA E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-deployment-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
