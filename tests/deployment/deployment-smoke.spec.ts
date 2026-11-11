@@ -94,6 +94,8 @@ test.describe('Preview deployment · PMV smoke', () => {
 
   test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
     const supportsResponse = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/api/supports' && response.ok(),
       { timeout: 45_000 },
@@ -109,6 +111,15 @@ test.describe('Preview deployment · PMV smoke', () => {
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
+    const contactoDebug = await page.evaluate(() => ({
+      url: window.location.href,
+      title: document.title,
+      headings: Array.from(document.querySelectorAll('h1,h2,h3')).map((element) => element.textContent?.trim() ?? ''),
+      bodyText: document.body.innerText.slice(0, 1800),
+      rootText: document.getElementById('root')?.innerText.slice(0, 1800) ?? null,
+    }));
+    console.log('[CONTACTO-MEDIAKIT-DEBUG]', JSON.stringify({ ...contactoDebug, pageErrors }));
+    await page.screenshot({ path: testInfo.outputPath('mediakit-contact-debug.png'), fullPage: true });
     await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
