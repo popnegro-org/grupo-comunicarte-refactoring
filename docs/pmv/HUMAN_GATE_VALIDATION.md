@@ -130,18 +130,17 @@ Cualquier cherry-pick UX debe ser **selectivo**, con diff revisado y sin traer m
 
 ## 9. Evidencia automatizada consolidada — 2026-11-11
 
-**SHA de código y tests validado:** `1eef8db66944bdfbe9b8ad40244f8e2f7cf5481e`  
-**HEAD documental posterior:** `0af51ebcecf2464b63fed37498074121eaf709b1` (solo documentación; no modifica runtime ni tests).  
+**SHA de código y tests validado:** `69acbcae6bbc396c316bdfb1101c683e70dc0dd7`  
 **Rama:** `pmv-validation-candidate`  
 **PR:** [#90](https://github.com/popnegro-org/grupo-comunicarte-refactoring/pull/90), abierto y sin merge.  
 **Neon QA:** `qa/pr96-ownership-20261105` (`br-bold-block-aua43ua0`).  
-**Render QA:** deploy `dep-dbqc71p0bl5c73dtp7g0`, estado `live`, commit `1eef8db`.
+**Render QA:** deploy `dep-dbqchhivcj2c73enpd70`, estado `live`, commit `69acbca`.
 
 | Validación | Run | Resultado |
 |---|---:|---|
-| CI | [43088688838](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688838) | PASS — lint, typecheck, 107/107 unit tests, build |
-| CI Candidate | [43088688975](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688975) | PASS — validación, QA E2E autenticado 12/12 sin flaky |
-| Visual QA | [43088688883](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688883) | PASS técnico — bootstrap de baseline faltante; sin comparación con baseline previamente aprobado |
+| CI | [43092055556](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055556) | PASS — lint, typecheck, 107/107 unit tests, build |
+| CI Candidate | [43092055405](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055405) | PASS — validación, QA E2E autenticado 12/12 sin flaky; Preview Smoke omitido por commit test-only |
+| Visual QA | [43092055343](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055343) | PASS técnico — bootstrap de baseline faltante; sin comparación con baseline previamente aprobado |
 
 El workflow de Preview Vercel fue omitido en este SHA porque el último commit solo modifica tests. La validación funcional solicitada se ejecutó en Render QA, que confirmó health HTTP 200, base conectada y branch Neon QA esperado. No se afirma un nuevo smoke autenticado Vercel para este SHA.
 
@@ -158,15 +157,15 @@ La matriz completa está cerrada en [docs/pmv/C1-C6-TRANSACTIONAL-QA.md](https:/
 
 C2/C5 se probaron con transacciones controladas en Neon QA sin desactivar constraints. Consulta final: `drift_probe_rows=0`, `orphan_probe_rows=0`. Las FK relevantes están validadas (`convalidated=true`).
 
-C1/C6 usan la solicitud sintética estable `REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996`; terminó `pending` después de la restauración. C3 y C4 terminaron `pending` con sus marcas `updated_at` intactas.
+C1/C6 usan la solicitud sintética estable `REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996`; terminó `pending` después de la restauración (`updated_at=2026-11-11T20:01:07.725Z`). C3 y C4 terminaron `pending` con sus marcas `updated_at` intactas.
 
 ### Navegación Media Kit
 
-Se corrigió el cierre del panel de Media Kit para que ocurra después del cambio de ruta, no dentro del evento del enlace. Las páginas públicas comparten ahora un layout de rutas anidadas en el router principal. El E2E 12/12 verifica que el enlace de propuesta renderiza `/contacto?origen=mediakit`, muestra `Tu selección, lista para avanzar.` y conserva un soporte seleccionado. La captura `mediakit-contact.png` está incluida en el artifact QA.
+Se corrigió el cierre del panel de Media Kit para que ocurra después del cambio de ruta, no dentro del evento del enlace. Las páginas públicas comparten ahora un layout de rutas anidadas en el router principal. El E2E 12/12 verifica que el enlace de propuesta renderiza `/contacto?origen=mediakit`, muestra `Tu selección, lista para avanzar.` y conserva un soporte seleccionado. La captura `mediakit-contact.png` está incluida en el artifact QA; muestra la página de contacto, el soporte seleccionado y el aviso de conservación de selección.
 
 ### Artifact y estado QA
 
-Artifact `qa-deployment-e2e-evidence`, ID `13887877899`, SHA-256 `f2455b5e4785584b95dbc596c90558d867d91f21add92b04235809d40b475399`.
+Artifact `qa-deployment-e2e-evidence`, ID `13889651667`, SHA-256 `4fa66dc47443b2e82638f4c622321dd242b26ebf8486e51ad5b75f7e1f7a169d`.
 
 El Media Kit sintético `KIT-QA-EXPORT-C4A280BC3D34` terminó en `draft` con `metadata.exports={}`; la solicitud asociada terminó `pending`. No se enviaron comunicaciones reales. PDF/PPTX son fixtures sintéticos (81 y 8 bytes): el round-trip de storage pasa, pero esto no valida la composición final de documentos comerciales.
 
