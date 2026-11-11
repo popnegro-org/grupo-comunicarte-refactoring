@@ -1,7 +1,7 @@
 # PMV — validación HUMAN GATE
 
 **Estado release:** NO-GO hasta completar checklist P0.  
-**Fecha de actualización:** 2026-11-05  
+**Fecha de actualización:** 2026-11-11  
 **Línea de integración única:** `pmv-validation-candidate`  
 **Rama de trabajo P0 ownership/cuarentena:** `pmv/p0-ownership-quarantine-gate` (incluye commits de `fix/request-ownership-revalidation` / PR #96)
 
@@ -126,3 +126,55 @@ Cualquier cherry-pick UX debe ser **selectivo**, con diff revisado y sin traer m
 - Ownership fuente: `docs/inventario/processed/TENANT-OWNERSHIP-MAPPING.md`
 - Bloqueante aislamiento: `docs/pmv/tenant-isolation-blocker.md`
 - Plan QA ownership Preview: `docs/pmv/QA-OWNERSHIP-REVALIDATION-PREVIEW.md`
+
+
+## 9. Evidencia automatizada del candidato — 2026-11-11
+
+**SHA de código vigente:** `a97f0f3e054d18857684f12217eb42bf63b2eedc`  
+**HEAD actual de la rama (solo tests/workflows desde el SHA de código):** `6e94fa0bc52ad44bd1f6b4c1896ce49d2717d69f`  
+**Neon QA:** `br-bold-block-aua43ua0` (`qa/pr96-ownership-20261105`).
+
+| Validación | Run | Resultado |
+|---|---:|---|
+| CI | [43077449673](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449673) | PASS — lint/typecheck, 105/105 unit tests, build |
+| CI Candidate | [43077449587](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449587) | PASS — validación + QA E2E |
+| Visual QA | [43077449817](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449817) | PASS — 69 pass, 7 skip, 0 fail |
+| Preview Vercel | `dpl_Fw2p6qSs5oLyJbwH3hch83e4h27j` | READY — SHA de código `a97f0f3`, health 200, DB connected |
+
+La última ejecución de CI Candidate sobre HEAD `6e94fa0` omitió el smoke Vercel porque ese commit solo modificó tests/workflows; el runtime desplegado no cambió. El smoke autenticado había pasado 9/9 en el run [43075492674](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43075492674), verificando el SHA exacto `a97f0f3`, health y conexión Neon.
+
+### Alcance real del QA E2E (11/11 PASS)
+
+- Login con la única cuenta global existente.
+- Rutas y endpoints admin sin sesión: rechazo esperado.
+- Catálogo público: el soporte `mza-trad-16` sin ownership queda excluido; detalle 404.
+- Mutaciones administrativas: rechazo de alta sin tenant, tenant spoofing, reasignación de soporte, Media Kit con soporte pendiente y avance de solicitud pendiente.
+- Media Kit: persistencia, descarga autenticada, SHA-256, estado de entrega y evento de auditoría.
+- PDF/PPTX de esta prueba son fixtures sintéticos (PDF de 81 bytes y cabecera ZIP de 8 bytes); esto acredita el round-trip de storage, no la generación documental final.
+
+La matriz completa C1–C6 de la sección 4.2 **no está cerrada**: siguen pendientes los casos de drift forzado, solicitud sin ítems, soporte huérfano y concurrencia real. El smoke de ownership actual cubre fail-closed y spoofing, no sustituye esa matriz.
+
+### Datos sintéticos de Neon QA
+
+La prueba de exportación deja una solicitud y un Media Kit de QA para conservar trazabilidad; no elimina las filas. Se identificaron dos pares creados por ejecuciones duplicadas anteriores:
+
+- `REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996` / `KIT-QA-EXPORT-C4A280BC3D34`
+- `REQ-2026-5e6253d6-05b1-4d7c-920c-7e2366626ea1` / `KIT-QA-EXPORT-6D86ACD3DF3F`
+
+Ambos usan `qa-export-recovery@example.invalid`; no hubo comunicación real. El test quedó modificado para reutilizar el primer par con idempotency key y kit ID estables, y ejecutarse una sola vez por PR. Conteos después de la última ejecución: 29 requests, 43 request items, 12 Media Kits, 9 Media Kit items, 0 outbox. El kit reutilizado queda en `draft`, la solicitud en `pending`, `metadata.qaTest=true` y `metadata.exports={}`; los objetos PDF/PPTX de la última ejecución fueron eliminados mediante el endpoint de QA. No se borraron filas históricas.
+
+### RLS / PostgreSQL
+
+- 37 tablas públicas QA; RLS habilitado: 0; FORCE RLS: 0.
+- 27 policies siguen staged, no activas.
+- `app_runtime_qa`: NOLOGIN, sin grants ni credencial de conexión.
+- `user_roles`: 0 membresías.
+- El administrador global único es el contrato PMV vigente. No crear usuarios/membresías ni activar RLS con las políticas actuales.
+
+### HUMAN GATE aún requerido
+
+1. Completar matriz transaccional C1–C6, especialmente drift y concurrencia.
+2. Revisar las 6 referencias visuales y decidir los 7 escenarios omitidos.
+3. Confirmar de forma independiente la conexión Neon del servicio Render principal; QA ya verifica `br-bold-block-aua43ua0`.
+4. Resolver/aceptar el límite del plan Neon Free: `main` no puede protegerse con Protected Branches en el plan actual.
+5. No mergear a `main` ni promover Production sin aprobación explícita.
