@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight, Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { InventoryItem, isMobileRoute } from '../../types';
 import { useSelection } from '../../context/SelectionContext';
 
 interface MediakitPanelProps {
   selectedItems: InventoryItem[];
   onClose: () => void;
-  onNavigate: (path: string) => void;
 }
 
-export function MediakitPanel({ selectedItems, onClose, onNavigate }: MediakitPanelProps) {
+export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
   const { removeSelected } = useSelection();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -124,22 +124,22 @@ export function MediakitPanel({ selectedItems, onClose, onNavigate }: MediakitPa
             Podés seguir agregando soportes desde el inventario. La selección se conserva en este navegador.
           </p>
           <div className="mt-6 grid gap-2">
-            <button
-              type="button"
-              onClick={() => onNavigate(selectedItems.length ? '/contacto?origen=mediakit' : '/inventario')}
+            <Link
+              to={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
+              onClick={onClose}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {selectedItems.length ? 'Solicitar propuesta' : 'Explorar inventario'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </button>
+            </Link>
             <div className="grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => onNavigate('/mediakits')}
+              <Link
+                to="/mediakits"
+                onClick={onClose}
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               >
                 Revisar en página
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={onClose}
