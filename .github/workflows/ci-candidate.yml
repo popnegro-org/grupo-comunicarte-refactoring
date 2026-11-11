@@ -46,7 +46,6 @@ jobs:
           retention-days: 1
 
       - name: Install dependencies
-        if: steps.runtime.outputs.required == 'true'
         run: npm ci --no-audit --no-fund
 
       - name: Production dependency audit
@@ -112,6 +111,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        if: steps.runtime.outputs.required == 'true'
         run: npm ci --no-audit --no-fund
 
       - name: Build expected frontend artifact
