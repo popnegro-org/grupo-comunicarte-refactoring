@@ -1,9 +1,9 @@
 # Matriz transaccional C1–C6 — Neon QA
 
 **Rama:** `pmv-validation-candidate`  
-**SHA validado:** `1eef8db66944bdfbe9b8ad40244f8e2f7cf5481e`  
-**Workflow E2E:** [CI Candidate #43088688975](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688975)  
-**Resultado:** 12/12 PASS, 0 fallos, 0 flaky, 1.8 min.  
+**SHA de código/tests validado:** `69acbcae6bbc396c316bdfb1101c683e70dc0dd7`  
+**Workflow E2E:** [CI Candidate #43092055405](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055405)  
+**Resultado:** 12/12 PASS, 0 fallos, 0 flaky, 1.7 min.  
 **Base:** Neon QA `qa/pr96-ownership-20261105` (`br-bold-block-aua43ua0`).  
 **Entorno:** Render QA. No se usó Neon Production ni se promovió Production.
 
@@ -11,7 +11,7 @@
 
 | Caso | Prueba transaccional | Verificación persistida en Neon QA | Resultado |
 |---|---|---|---|
-| C1 — ownership coincidente | PATCH a `quoted` → HTTP 200; restauración a `pending` → HTTP 200 | Solicitud estable terminó `pending`; `updated_at=2026-11-11T19:39:26.510Z` confirma mutación y restauración | PASS |
+| C1 — ownership coincidente | PATCH a `quoted` → HTTP 200; restauración a `pending` → HTTP 200 | Solicitud estable terminó `pending`; `updated_at=2026-11-11T20:01:07.725Z` confirma mutación y restauración | PASS |
 | C2 — ownership drift | Inserción con `support_id=bue-trad-05` (tenant real `tenant-ba`) y `tenant_id=tenant-default` | FK compuesta rechazó la inserción; `drift_probe_rows=0` | PASS |
 | C3 — ownership NULL | PATCH a `enviado` → HTTP 409 | Solicitud `REQ-2026-00000000-0000-4000-8000-000000000003` sigue `pending`; `updated_at=2026-11-11T18:40:18.336Z` sin cambio | PASS |
 | C4 — solicitud sin ítems | PATCH a `closed` → HTTP 409 | Solicitud `REQ-2026-00000000-0000-4000-8000-000000000004` sigue `pending`; `updated_at=2026-11-11T18:37:46.996Z` sin cambio | PASS |
@@ -42,10 +42,11 @@ En `tests/unit/tenant-access.test.ts`:
 ## Corrección de la navegación del Media Kit
 
 La ejecución anterior detectó que el cierre del panel comercial desde el handler del enlace competía con la navegación SPA y dejaba el inventario renderizado bajo la URL de contacto. Se corrigió el ciclo:
-- Los enlaces de propuesta ya no desmontan el panel durante su propio evento de navegación.
-- `Navbar` cierra el panel cuando cambia `location.pathname`.
+- El CTA de propuesta usa navegación nativa (`href`) para evitar la intermitencia del handler SPA dentro del portal.
+- La selección se persiste en `localStorage` antes de navegar; el E2E espera explícitamente el registro de un soporte.
+- `Navbar` cierra el panel cuando cambia `location.pathname` en las rutas SPA.
 - Las páginas públicas comparten un layout de rutas anidadas en el router principal.
-- Se eliminó la espera del test por una respuesta API que podía haber sido consumida por el caché global; ahora espera el inventario renderizado.
+- El test valida la ruta de contacto, el título y la selección conservada tras la navegación completa.
 
 La captura `mediakit-contact.png` del artifact final muestra:
 - Ruta de contacto cargada.
@@ -57,11 +58,11 @@ La captura `mediakit-contact.png` del artifact final muestra:
 
 | Validación | Run | Resultado |
 |---|---:|---|
-| CI | [43088688838](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688838) | PASS — lint, typecheck, 107/107 unit tests, build |
-| CI Candidate | [43088688975](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688975) | PASS — validate, Authenticated Preview Smoke y QA Deployment E2E 12/12 |
-| Visual QA | [43088688883](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688883) | PASS técnico — baseline faltante bootstrap; no hubo comparación contra baseline previamente revisado |
+| CI | [43092055556](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055556) | PASS — lint, typecheck, 107/107 unit tests, build |
+| CI Candidate | [43092055405](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055405) | PASS — validate, QA Deployment E2E 12/12; Authenticated Preview Smoke omitido por commit test-only |
+| Visual QA | [43092055343](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43092055343) | PASS técnico — baseline faltante bootstrap; no hubo comparación contra baseline previamente revisado |
 
-Artifact QA E2E: `qa-deployment-e2e-evidence`, ID `13887877899`, SHA-256 `f2455b5e4785584b95dbc596c90558d867d91f21add92b04235809d40b475399`.
+Artifact QA E2E: `qa-deployment-e2e-evidence`, ID `13889651667`, SHA-256 `4fa66dc47443b2e82638f4c622321dd242b26ebf8486e51ad5b75f7e1f7a169d`.
 
 ## Limpieza y límites
 
