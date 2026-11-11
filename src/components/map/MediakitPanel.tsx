@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight, Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { InventoryItem, isMobileRoute } from '../../types';
 import { useSelection } from '../../context/SelectionContext';
 
@@ -12,6 +12,7 @@ interface MediakitPanelProps {
 
 export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
   const { removeSelected } = useSelection();
+  const navigate = useNavigate();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -126,6 +127,13 @@ export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
           <div className="mt-6 grid gap-2">
             <Link
               to={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
+              onClick={(event) => {
+                if (!selectedItems.length) return;
+                event.preventDefault();
+                void import('../../pages/Contacto').then(() => {
+                  navigate('/contacto?origen=mediakit');
+                });
+              }}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {selectedItems.length ? 'Solicitar propuesta' : 'Explorar inventario'}
