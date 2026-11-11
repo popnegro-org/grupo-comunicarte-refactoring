@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { PageTransition } from './components/layout/PageTransition';
 import { SelectionProvider } from './context/SelectionContext';
@@ -25,7 +25,6 @@ const DashboardMediaKitWorkflow = lazy(() => import('./pages/dashboard/Dashboard
 const DashboardMediaKitBuilder = lazy(() => import('./pages/dashboard/DashboardMediaKitBuilder'));
 
 function PublicRoutes() {
-  const location = useLocation();
   const isProductionDomain = ['grupocomunicarte.com.ar', 'www.grupocomunicarte.com.ar'].includes(window.location.hostname);
 
   // Keep all public routes on canonical production domains behind the standalone
@@ -36,15 +35,7 @@ function PublicRoutes() {
 
   return (
     <Layout>
-      <Routes location={location}>
-          <Route path="/" element={<PageTransition><Home /></PageTransition>} />
-          <Route path="/soportes" element={<PageTransition><Soportes /></PageTransition>} />
-          <Route path="/nosotros" element={<PageTransition><Nosotros /></PageTransition>} />
-          <Route path="/soluciones" element={<PageTransition><Soluciones /></PageTransition>} />
-          <Route path="/inventario" element={<PageTransition><Inventario /></PageTransition>} />
-          <Route path="/mediakits" element={<PageTransition><MediaKits /></PageTransition>} />
-          <Route path="/contacto" element={<PageTransition><Contacto /></PageTransition>} />
-      </Routes>
+      <Outlet />
     </Layout>
   );
 }
@@ -67,7 +58,15 @@ export default function App() {
           <Route path="/dashboard/solicitudes" element={<DashboardMediaKitWorkflow />} />
           <Route path="/dashboard/mediakits/nuevo" element={<DashboardMediaKitBuilder />} />
           <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
-          <Route path="*" element={<PublicRoutes />} />
+          <Route element={<PublicRoutes />}>
+            <Route index element={<PageTransition><Home /></PageTransition>} />
+            <Route path="soportes" element={<PageTransition><Soportes /></PageTransition>} />
+            <Route path="nosotros" element={<PageTransition><Nosotros /></PageTransition>} />
+            <Route path="soluciones" element={<PageTransition><Soluciones /></PageTransition>} />
+            <Route path="inventario" element={<PageTransition><Inventario /></PageTransition>} />
+            <Route path="mediakits" element={<PageTransition><MediaKits /></PageTransition>} />
+            <Route path="contacto" element={<PageTransition><Contacto /></PageTransition>} />
+          </Route>
         </Routes>
         </Suspense>
       </Router>
