@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight, Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { InventoryItem, isMobileRoute } from '../../types';
 import { useSelection } from '../../context/SelectionContext';
 
@@ -124,20 +123,20 @@ export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
             Podés seguir agregando soportes desde el inventario. La selección se conserva en este navegador.
           </p>
           <div className="mt-6 grid gap-2">
-            <Link
-              to={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
+            <a
+              href={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {selectedItems.length ? 'Solicitar propuesta' : 'Explorar inventario'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            </a>
             <div className="grid gap-2 sm:grid-cols-2">
-              <Link
-                to="/mediakits"
+              <a
+                href="/mediakits"
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               >
                 Revisar en página
-              </Link>
+              </a>
               <button
                 type="button"
                 onClick={onClose}
