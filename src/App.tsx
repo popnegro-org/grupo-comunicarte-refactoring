@@ -58,7 +58,7 @@ export default function App() {
           <Route path="/dashboard/solicitudes" element={<DashboardMediaKitWorkflow />} />
           <Route path="/dashboard/mediakits/nuevo" element={<DashboardMediaKitBuilder />} />
           <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
-          <Route element={<PublicRoutes />}>
+          <Route path="/" element={<PublicRoutes />}>
             <Route index element={<PageTransition><Home /></PageTransition>} />
             <Route path="soportes" element={<PageTransition><Soportes /></PageTransition>} />
             <Route path="nosotros" element={<PageTransition><Nosotros /></PageTransition>} />
