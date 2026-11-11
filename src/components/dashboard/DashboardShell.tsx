@@ -22,7 +22,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch('/api/admin/stats').then((response) => { if (!cancelled) setAuthChecked(response.ok); })
+    apiFetch('/api/admin/session').then((response) => { if (!cancelled) setAuthChecked(response.ok); })
       .catch(() => { if (!cancelled) setAuthChecked(false); });
     return () => { cancelled = true; };
   }, []);
