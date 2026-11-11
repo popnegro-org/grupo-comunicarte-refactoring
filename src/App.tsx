@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'motion/react';
 import { Layout } from './components/layout/Layout';
 import { PageTransition } from './components/layout/PageTransition';
 import { SelectionProvider } from './context/SelectionContext';
@@ -37,8 +36,7 @@ function PublicRoutes() {
 
   return (
     <Layout>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+      <Routes location={location}>
           <Route path="/" element={<PageTransition><Home /></PageTransition>} />
           <Route path="/soportes" element={<PageTransition><Soportes /></PageTransition>} />
           <Route path="/nosotros" element={<PageTransition><Nosotros /></PageTransition>} />
@@ -46,8 +44,7 @@ function PublicRoutes() {
           <Route path="/inventario" element={<PageTransition><Inventario /></PageTransition>} />
           <Route path="/mediakits" element={<PageTransition><MediaKits /></PageTransition>} />
           <Route path="/contacto" element={<PageTransition><Contacto /></PageTransition>} />
-        </Routes>
-      </AnimatePresence>
+      </Routes>
     </Layout>
   );
 }
