@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { Layout } from './components/layout/Layout';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PageTransition } from './components/layout/PageTransition';
 import { SelectionProvider } from './context/SelectionContext';
 
@@ -59,16 +60,16 @@ export default function App() {
         <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/soportes" element={<DashboardSupportList />} />
-          <Route path="/dashboard/soportes/new" element={<DashboardSupportProductEditor mode="create" />} />
-          <Route path="/dashboard/soportes/:canonicalId/edit" element={<DashboardSupportProductEditor mode="edit" />} />
-          <Route path="/dashboard/soportes/:canonicalId/preview" element={<DashboardSupportPreview />} />
-          <Route path="/dashboard/soportes/:canonicalId/reservation" element={<DashboardSupportReservation />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/soportes" element={<ProtectedRoute><DashboardSupportList /></ProtectedRoute>} />
+          <Route path="/dashboard/soportes/new" element={<ProtectedRoute><DashboardSupportProductEditor mode="create" /></ProtectedRoute>} />
+          <Route path="/dashboard/soportes/:canonicalId/edit" element={<ProtectedRoute><DashboardSupportProductEditor mode="edit" /></ProtectedRoute>} />
+          <Route path="/dashboard/soportes/:canonicalId/preview" element={<ProtectedRoute><DashboardSupportPreview /></ProtectedRoute>} />
+          <Route path="/dashboard/soportes/:canonicalId/reservation" element={<ProtectedRoute><DashboardSupportReservation /></ProtectedRoute>} />
 
           {/* Single commercial inbox: solicitudes is canonical; mediakits redirects */}
-          <Route path="/dashboard/solicitudes" element={<DashboardMediaKitWorkflow />} />
-          <Route path="/dashboard/mediakits/nuevo" element={<DashboardMediaKitBuilder />} />
+          <Route path="/dashboard/solicitudes" element={<ProtectedRoute><DashboardMediaKitWorkflow /></ProtectedRoute>} />
+          <Route path="/dashboard/mediakits/nuevo" element={<ProtectedRoute><DashboardMediaKitBuilder /></ProtectedRoute>} />
           <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
           <Route path="*" element={<PublicRoutes />} />
         </Routes>
