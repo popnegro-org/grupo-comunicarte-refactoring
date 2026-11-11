@@ -47,7 +47,7 @@ CI requerido:
 
 ## 4. Checklist humano — ownership y cuarentena (P0)
 
-Usar usuario QA y datos aislados en **Neon Preview** (nunca Production).
+Usar usuario QA y datos aislados en **Neon QA** (nunca Production).
 
 ### 4.1 Catálogo y selección
 
@@ -128,53 +128,56 @@ Cualquier cherry-pick UX debe ser **selectivo**, con diff revisado y sin traer m
 - Plan QA ownership Preview: `docs/pmv/QA-OWNERSHIP-REVALIDATION-PREVIEW.md`
 
 
-## 9. Evidencia automatizada del candidato — 2026-11-11
+## 9. Evidencia automatizada consolidada — 2026-11-11
 
-**SHA de código vigente:** `a97f0f3e054d18857684f12217eb42bf63b2eedc`  
-**HEAD actual de la rama (solo tests/workflows desde el SHA de código):** `6e94fa0bc52ad44bd1f6b4c1896ce49d2717d69f`  
-**Neon QA:** `br-bold-block-aua43ua0` (`qa/pr96-ownership-20261105`).
+**HEAD validado:** `1eef8db66944bdfbe9b8ad40244f8e2f7cf5481e`  
+**Rama:** `pmv-validation-candidate`  
+**PR:** [#90](https://github.com/popnegro-org/grupo-comunicarte-refactoring/pull/90), abierto y sin merge.  
+**Neon QA:** `qa/pr96-ownership-20261105` (`br-bold-block-aua43ua0`).  
+**Render QA:** deploy `dep-dbqc71p0bl5c73dtp7g0`, estado `live`, commit `1eef8db`.
 
 | Validación | Run | Resultado |
 |---|---:|---|
-| CI | [43077449673](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449673) | PASS — lint/typecheck, 105/105 unit tests, build |
-| CI Candidate | [43077449587](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449587) | PASS — validación + QA E2E |
-| Visual QA | [43077449817](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43077449817) | PASS — 69 pass, 7 skip, 0 fail |
-| Preview Vercel | `dpl_Fw2p6qSs5oLyJbwH3hch83e4h27j` | READY — SHA de código `a97f0f3`, health 200, DB connected |
+| CI | [43088688838](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688838) | PASS — lint, typecheck, 107/107 unit tests, build |
+| CI Candidate | [43088688975](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688975) | PASS — validación, QA E2E autenticado 12/12 sin flaky |
+| Visual QA | [43088688883](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43088688883) | PASS técnico — bootstrap de baseline faltante; sin comparación con baseline previamente aprobado |
 
-La última ejecución de CI Candidate sobre HEAD `6e94fa0` omitió el smoke Vercel porque ese commit solo modificó tests/workflows; el runtime desplegado no cambió. El smoke autenticado había pasado 9/9 en el run [43075492674](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43075492674), verificando el SHA exacto `a97f0f3`, health y conexión Neon.
+El workflow de Preview Vercel fue omitido en este SHA porque el último commit solo modifica tests. La validación funcional solicitada se ejecutó en Render QA, que confirmó health HTTP 200, base conectada y branch Neon QA esperado. No se afirma un nuevo smoke autenticado Vercel para este SHA.
 
-### Alcance real del QA E2E (11/11 PASS)
+### Matriz transaccional C1–C6
 
-- Login con la única cuenta global existente.
-- Rutas y endpoints admin sin sesión: rechazo esperado.
-- Catálogo público: el soporte `mza-trad-16` sin ownership queda excluido; detalle 404.
-- Mutaciones administrativas: rechazo de alta sin tenant, tenant spoofing, reasignación de soporte, Media Kit con soporte pendiente y avance de solicitud pendiente.
-- Media Kit: persistencia, descarga autenticada, SHA-256, estado de entrega y evento de auditoría.
-- PDF/PPTX de esta prueba son fixtures sintéticos (PDF de 81 bytes y cabecera ZIP de 8 bytes); esto acredita el round-trip de storage, no la generación documental final.
+La matriz completa está cerrada en [docs/pmv/C1-C6-TRANSACTIONAL-QA.md](https://github.com/popnegro-org/grupo-comunicarte-refactoring/blob/pmv-validation-candidate/docs/pmv/C1-C6-TRANSACTIONAL-QA.md).
 
-La matriz completa C1–C6 de la sección 4.2 **no está cerrada**: siguen pendientes los casos de drift forzado, solicitud sin ítems, soporte huérfano y concurrencia real. El smoke de ownership actual cubre fail-closed y spoofing, no sustituye esa matriz.
+- **C1 PASS:** ownership coincidente, PATCH `quoted` HTTP 200 y restauración `pending`.
+- **C2 PASS:** la FK compuesta rechaza el tenant drift; guard de dominio PASS.
+- **C3 PASS:** ownership NULL, PATCH `enviado` HTTP 409; Neon conserva `pending` y el `updated_at` original.
+- **C4 PASS:** solicitud sin ítems, PATCH `closed` HTTP 409; Neon conserva `pending` y el `updated_at` original.
+- **C5 PASS:** FK rechaza soporte inexistente; guard de dominio PASS.
+- **C6 PASS:** PATCH concurrentes; resultados de dominio 200/409, al menos una transición aceptada y estados devueltos `quoted`/`closed`; restauración final `pending`.
 
-### Datos sintéticos de Neon QA
+C2/C5 se probaron con transacciones controladas en Neon QA sin desactivar constraints. Consulta final: `drift_probe_rows=0`, `orphan_probe_rows=0`. Las FK relevantes están validadas (`convalidated=true`).
 
-La prueba de exportación deja una solicitud y un Media Kit de QA para conservar trazabilidad; no elimina las filas. Se identificaron dos pares creados por ejecuciones duplicadas anteriores:
+C1/C6 usan la solicitud sintética estable `REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996`; terminó `pending` después de la restauración. C3 y C4 terminaron `pending` con sus marcas `updated_at` intactas.
 
-- `REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996` / `KIT-QA-EXPORT-C4A280BC3D34`
-- `REQ-2026-5e6253d6-05b1-4d7c-920c-7e2366626ea1` / `KIT-QA-EXPORT-6D86ACD3DF3F`
+### Navegación Media Kit
 
-Ambos usan `qa-export-recovery@example.invalid`; no hubo comunicación real. El test quedó modificado para reutilizar el primer par con idempotency key y kit ID estables, y ejecutarse una sola vez por PR. Conteos después de la última ejecución: 29 requests, 43 request items, 12 Media Kits, 9 Media Kit items, 0 outbox. El kit reutilizado queda en `draft`, la solicitud en `pending`, `metadata.qaTest=true` y `metadata.exports={}`; los objetos PDF/PPTX de la última ejecución fueron eliminados mediante el endpoint de QA. No se borraron filas históricas.
+Se corrigió el cierre del panel de Media Kit para que ocurra después del cambio de ruta, no dentro del evento del enlace. Las páginas públicas comparten ahora un layout de rutas anidadas en el router principal. El E2E 12/12 verifica que el enlace de propuesta renderiza `/contacto?origen=mediakit`, muestra `Tu selección, lista para avanzar.` y conserva un soporte seleccionado. La captura `mediakit-contact.png` está incluida en el artifact QA.
 
-### RLS / PostgreSQL
+### Artifact y estado QA
 
-- 37 tablas públicas QA; RLS habilitado: 0; FORCE RLS: 0.
-- 27 policies siguen staged, no activas.
-- `app_runtime_qa`: NOLOGIN, sin grants ni credencial de conexión.
-- `user_roles`: 0 membresías.
-- El administrador global único es el contrato PMV vigente. No crear usuarios/membresías ni activar RLS con las políticas actuales.
+Artifact `qa-deployment-e2e-evidence`, ID `13887877899`, SHA-256 `f2455b5e4785584b95dbc596c90558d867d91f21add92b04235809d40b475399`.
 
-### HUMAN GATE aún requerido
+El Media Kit sintético `KIT-QA-EXPORT-C4A280BC3D34` terminó en `draft` con `metadata.exports={}`; la solicitud asociada terminó `pending`. No se enviaron comunicaciones reales. PDF/PPTX son fixtures sintéticos (81 y 8 bytes): el round-trip de storage pasa, pero esto no valida la composición final de documentos comerciales.
 
-1. Completar matriz transaccional C1–C6, especialmente drift y concurrencia.
-2. Revisar las 6 referencias visuales y decidir los 7 escenarios omitidos.
-3. Confirmar de forma independiente la conexión Neon del servicio Render principal; QA ya verifica `br-bold-block-aua43ua0`.
-4. Resolver/aceptar el límite del plan Neon Free: `main` no puede protegerse con Protected Branches en el plan actual.
-5. No mergear a `main` ni promover Production sin aprobación explícita.
+### Visual QA — límite explícito
+
+El workflow pasó el bootstrap y validación de baseline faltante. No existía un baseline de referencia previamente aprobado: los pasos de comparación/refresh contra baseline confiable fueron omitidos. Esto no reemplaza la revisión visual humana desktop/mobile ni la aprobación de las seis referencias y siete escenarios indicados en §4.5.
+
+### HUMAN GATE pendiente
+
+1. Revisión visual humana desktop 1440×900 y mobile 390×844; aprobar referencias y escenarios omitidos.
+2. Certificar de forma independiente la conexión Neon del servicio Render principal.
+3. Revisar la evidencia comercial de PDF/PPTX reales; los fixtures QA no son documentos finales.
+4. Aceptar las limitaciones del plan Neon Free y el estado de Cloudflare/WAF.
+
+**C1–C6 quedan cerrados en Neon QA.** Esto no autoriza merge. PR #90 permanece abierto; `main`, Neon Production y Vercel Production no fueron modificados. Merge y promoción Production siguen sujetos a aprobación explícita HUMAN GATE.
