@@ -92,8 +92,13 @@ test.describe('Preview deployment · PMV smoke', () => {
   });
 
   test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
+    const supportsResponse = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/supports' && response.ok(),
+      { timeout: 20_000 },
+    );
     await page.goto('/inventario?vista=catalogo');
-    await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
+    await supportsResponse;
+    await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
 
