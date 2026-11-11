@@ -130,7 +130,8 @@ Cualquier cherry-pick UX debe ser **selectivo**, con diff revisado y sin traer m
 
 ## 9. Evidencia automatizada consolidada — 2026-11-11
 
-**HEAD validado:** `1eef8db66944bdfbe9b8ad40244f8e2f7cf5481e`  
+**SHA de código y tests validado:** `1eef8db66944bdfbe9b8ad40244f8e2f7cf5481e`  
+**HEAD documental posterior:** `74a7785901010124c92cf15ee2c63e8ea9fb15fb` (solo documentación; no modifica runtime ni tests).  
 **Rama:** `pmv-validation-candidate`  
 **PR:** [#90](https://github.com/popnegro-org/grupo-comunicarte-refactoring/pull/90), abierto y sin merge.  
 **Neon QA:** `qa/pr96-ownership-20261105` (`br-bold-block-aua43ua0`).  
