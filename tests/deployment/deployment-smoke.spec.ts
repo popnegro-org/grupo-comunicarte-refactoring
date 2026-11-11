@@ -253,6 +253,84 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.pendingRequestStatus).toBe(409);
       expect(result.assignedTenantAfterAttempt).toBe('tenant-ba');
     });
+
+    test('C1/C3/C4/C6: transición válida, ownership NULL, solicitud vacía y concurrencia', async ({ page }) => {
+      test.setTimeout(60_000);
+      test.skip(
+        !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
+        'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA autenticado.',
+      );
+
+      await page.goto('/login');
+      await page.getByLabel('Usuario / Correo Electrónico').fill(process.env.E2E_ADMIN_USER!);
+      await page.getByRole('textbox', { name: 'Contraseña' }).fill(process.env.E2E_ADMIN_PASSWORD!);
+      await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+      await page.waitForURL(/\\/dashboard$/, { timeout: 20_000 });
+
+      const result = await page.evaluate(async () => {
+        const stableRequestId = 'REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996';
+        const nullOwnershipRequestId = 'REQ-2026-8951-8068';
+        const noItemsRequestId = 'REQ-2026-00000000-0000-4000-8000-000000000004';
+        const patch = async (requestId: string, status: string) => {
+          const response = await fetch(`/api/admin/requests/${requestId}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+          });
+          return { status: response.status, body: await response.json() };
+        };
+        const readStatus = async (requestId: string) => {
+          const response = await fetch('/api/admin/requests', { credentials: 'include' });
+          const payload = await response.json();
+          const row = payload.data?.find((item: any) => item.request_id === requestId);
+          return { status: response.status, currentStatus: row?.status ?? null };
+        };
+
+        const c1 = await patch(stableRequestId, 'quoted');
+        const c1After = await readStatus(stableRequestId);
+        await patch(stableRequestId, 'pending');
+
+        const c3 = await patch(nullOwnershipRequestId, 'quoted');
+        const c3After = await readStatus(nullOwnershipRequestId);
+
+        const c4 = await patch(noItemsRequestId, 'closed');
+        const c4After = await readStatus(noItemsRequestId);
+
+        const [c6a, c6b] = await Promise.all([
+          patch(stableRequestId, 'quoted'),
+          patch(stableRequestId, 'closed'),
+        ]);
+        const c6After = await readStatus(stableRequestId);
+        const restored = await patch(stableRequestId, 'pending');
+        const finalState = await readStatus(stableRequestId);
+
+        return {
+          c1Status: c1.status,
+          c1After: c1After.currentStatus,
+          c3Status: c3.status,
+          c3After: c3After.currentStatus,
+          c4Status: c4.status,
+          c4After: c4After.currentStatus,
+          c6Statuses: [c6a.status, c6b.status],
+          c6After: c6After.currentStatus,
+          restoredStatus: restored.status,
+          finalState: finalState.currentStatus,
+        };
+      });
+
+      expect(result.c1Status).toBe(200);
+      expect(result.c1After).toBe('quoted');
+      expect(result.c3Status).toBe(409);
+      expect(result.c3After).toBe('pending');
+      expect(result.c4Status).toBe(409);
+      expect(result.c4After).toBe('pending');
+      expect(result.c6Statuses.every((status) => [200, 409].includes(status))).toBe(true);
+      expect(result.c6Statuses).toContain(200);
+      expect(['quoted', 'closed']).toContain(result.c6After);
+      expect(result.restoredStatus).toBe(200);
+      expect(result.finalState).toBe('pending');
+    });
   });
 });
 
