@@ -104,7 +104,7 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
 
     await page.getByRole('button', { name: /Abrir Media Kit/ }).click();
-    await expect(page.getByRole('button', { name: 'Solicitar propuesta' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Solicitar propuesta' })).toBeVisible();
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
