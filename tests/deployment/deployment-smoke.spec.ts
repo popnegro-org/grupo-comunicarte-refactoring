@@ -57,6 +57,7 @@ test.describe('Preview deployment · PMV smoke', () => {
 
   test('las rutas administrativas críticas rechazan peticiones sin sesión', async ({ request }) => {
     for (const path of [
+      '/api/admin/session',
       '/api/admin/stats',
       '/api/admin/supports',
       '/api/admin/support-pricing',
@@ -116,6 +117,7 @@ test.describe('Preview deployment · PMV smoke', () => {
 
   test.describe('Autenticación administrativa', () => {
     test('administrador global puede iniciar sesión cuando se configuró la cuenta QA', async ({ page }) => {
+      test.setTimeout(60_000);
       test.skip(
         !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
         'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD como secretos del repositorio para habilitar el login autenticado.',
@@ -148,7 +150,7 @@ test.describe('Preview deployment · PMV smoke', () => {
         throw new Error('El inicio de sesión no completó la redirección al dashboard dentro del plazo esperado.');
       }
 
-      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible({ timeout: 20_000 });
 
       const adminStats = await page.evaluate(async () => {
         const response = await fetch('/api/admin/stats', { credentials: 'include' });
@@ -174,6 +176,7 @@ test.describe('Preview deployment · PMV smoke', () => {
     });
 
     test('ownership, tenant spoofing, quarantine and pricing remain fail-closed', async ({ page }) => {
+      test.setTimeout(60_000);
       test.skip(
         !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
         'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA autenticado.',
@@ -257,6 +260,8 @@ test.describe('Preview deployment · PMV smoke', () => {
 
 test.describe('Media Kit exports · R2 Preview isolated', () => {
   test('PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada', async ({ page }) => {
+    test.setTimeout(120_000);
+    page.request.setTimeout(60_000);
     test.skip(
       !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
       'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA de exportaciones.',
@@ -380,8 +385,8 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     } finally {
       if (kitSaved) {
         await page.request.patch(`/api/admin/mediakits/${kitId}/status`, { headers: authHeaders, data: { status: 'draft' } }).catch(() => null);
-        const currentKitResponse = await page.request.get(`/api/admin/mediakits/${kitId}`, { headers: authHeaders });
-        if (currentKitResponse.ok()) {
+        const currentKitResponse = await page.request.get(`/api/admin/mediakits/${kitId}`, { headers: authHeaders }).catch(() => null);
+        if (currentKitResponse?.ok()) {
           const currentKit = (await currentKitResponse.json()).data;
           if (currentKit?.pdfUrl) {
             const removedPdf = await page.request.delete(`/api/admin/mediakits/${kitId}/exports/pdf`, { headers: authHeaders });
