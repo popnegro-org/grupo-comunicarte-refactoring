@@ -41,8 +41,9 @@ const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60;
 
 export async function createApp() {
   const app = express();
-  // Trust only the single Vercel ingress hop; never trust arbitrary client-supplied X-Forwarded-For values.
-  app.set('trust proxy', process.env.VERCEL ? 1 : false);
+  // Vercel and Render terminate TLS at one trusted ingress proxy. Trust only that hop
+  // so Express derives the public HTTPS origin and client IP without trusting arbitrary hops.
+  app.set('trust proxy', process.env.VERCEL || process.env.RENDER ? 1 : false);
 
   const configuredOrigins = (process.env.CORS_ORIGINS || 'https://grupocomunicarte.vercel.app,http://localhost:5173')
     .split(',')
