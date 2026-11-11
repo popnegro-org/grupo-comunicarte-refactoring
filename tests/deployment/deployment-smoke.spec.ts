@@ -261,7 +261,6 @@ test.describe('Preview deployment · PMV smoke', () => {
 test.describe('Media Kit exports · R2 Preview isolated', () => {
   test('PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada', async ({ page }) => {
     test.setTimeout(120_000);
-    page.request.setTimeout(60_000);
     test.skip(
       !process.env.E2E_ADMIN_USER || !process.env.E2E_ADMIN_PASSWORD,
       'Configurar E2E_ADMIN_USER y E2E_ADMIN_PASSWORD para habilitar QA de exportaciones.',
