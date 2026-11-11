@@ -38,11 +38,71 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Emits a secret-free snapshot of the effective PostgreSQL identity used by
+ * the persistent Render runtime. This is diagnostic only: it does not change
+ * roles, grants, RLS, or tenant context.
+ */
+async function logDatabaseSecurityContext() {
+  try {
+    const result = await pool.query<{
+      current_user: string;
+      session_user: string;
+      current_database: string;
+      bypass_rls: boolean;
+      superuser: boolean;
+      database_create: boolean;
+      public_schema_create: boolean;
+      tenant_context_set: boolean;
+      public_table_count: number;
+      rls_enabled_table_count: number;
+      select_table_count: number;
+      insert_table_count: number;
+      update_table_count: number;
+      delete_table_count: number;
+    }>(`
+      SELECT
+        current_user,
+        session_user,
+        current_database(),
+        role.rolbypassrls AS bypass_rls,
+        role.rolsuper AS superuser,
+        has_database_privilege(current_user, current_database(), 'CREATE') AS database_create,
+        has_schema_privilege(current_user, 'public', 'CREATE') AS public_schema_create,
+        NULLIF(current_setting('app.tenant_id', true), '') IS NOT NULL AS tenant_context_set,
+        counts.public_table_count,
+        counts.rls_enabled_table_count,
+        counts.select_table_count,
+        counts.insert_table_count,
+        counts.update_table_count,
+        counts.delete_table_count
+      FROM pg_roles role
+      CROSS JOIN (
+        SELECT
+          COUNT(*)::int AS public_table_count,
+          COUNT(*) FILTER (WHERE c.relrowsecurity)::int AS rls_enabled_table_count,
+          COUNT(*) FILTER (WHERE has_table_privilege(current_user, c.oid, 'SELECT'))::int AS select_table_count,
+          COUNT(*) FILTER (WHERE has_table_privilege(current_user, c.oid, 'INSERT'))::int AS insert_table_count,
+          COUNT(*) FILTER (WHERE has_table_privilege(current_user, c.oid, 'UPDATE'))::int AS update_table_count,
+          COUNT(*) FILTER (WHERE has_table_privilege(current_user, c.oid, 'DELETE'))::int AS delete_table_count
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind = 'r'
+      ) counts
+      WHERE role.rolname = current_user
+    `);
+    console.info('[db-security] Effective runtime database context (no credentials):', result.rows[0]);
+  } catch (error) {
+    console.warn('[db-security] Runtime identity diagnostic unavailable:', error instanceof Error ? error.message : 'unknown error');
+  }
+}
+
 export async function initDatabase() {
   if (isVercelRuntime) {
     console.info('Database bootstrap skipped in Vercel runtime; schema/seed must be managed outside serverless requests.');
     return;
   }
+  await logDatabaseSecurityContext();
   for (let attempt = 1; attempt <= BOOTSTRAP_RETRIES; attempt += 1) {
     try {
       await initializeDatabaseOnce();
