@@ -93,6 +93,20 @@ export async function createApp() {
     console.warn('Database initialization warning on startup:', err);
   }
 
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        current_setting('neon.branch_id', true) AS branch_id,
+        current_setting('neon.endpoint_id', true) AS endpoint_id
+    `);
+    console.info('Neon runtime identity:', {
+      branchId: rows[0]?.branch_id || null,
+      endpointId: rows[0]?.endpoint_id || null,
+    });
+  } catch (err) {
+    console.warn('Neon runtime identity unavailable:', err);
+  }
+
   // R2 remains private; public catalogue media is delivered through short-lived signed GET URLs.
   app.get('/api/media/:mediaId', async (req, res) => {
     try {
