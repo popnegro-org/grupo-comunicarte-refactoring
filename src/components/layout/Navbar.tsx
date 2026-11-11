@@ -1,5 +1,5 @@
 import { Layers, Menu, Search, User, X } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useSelection } from '../../context/SelectionContext';
 import { cn } from '../../lib/utils';
 import { SearchModal } from './SearchModal';
@@ -17,7 +17,6 @@ const links = [
 
 export function Navbar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { selectedCount, getSelectedItems } = useSelection();
   const { items } = useInventory();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,15 +34,6 @@ export function Navbar() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
-
-  useEffect(() => {
-    setMediakitOpen(false);
-  }, [location.pathname]);
-
-  const navigateFromMediaKit = (path: string) => {
-    navigate(path);
-    setMediakitOpen(false);
-  };
 
   const selectedItems = getSelectedItems(items);
   const isActive = (path: string) => location.pathname === path;
@@ -151,7 +141,7 @@ export function Navbar() {
       />
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-      {mediakitOpen && <MediakitPanel selectedItems={selectedItems} onClose={() => setMediakitOpen(false)} onNavigate={navigateFromMediaKit} />}
+      {mediakitOpen && <MediakitPanel selectedItems={selectedItems} onClose={() => setMediakitOpen(false)} />}
     </>
   );
 }
