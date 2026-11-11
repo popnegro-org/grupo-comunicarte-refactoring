@@ -242,6 +242,12 @@ export async function createApp() {
     next();
   };
 
+  // Lightweight session probe used by the client-side route guard. It validates
+  // the HttpOnly admin cookie without loading dashboard data or exposing claims.
+  app.get('/api/admin/session', requireAdmin, (_req, res) => {
+    res.status(200).json({ status: 'success', data: { authenticated: true } });
+  });
+
   app.post(
     '/api/admin/supports/:id/media/upload',
     requireAdmin,
