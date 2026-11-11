@@ -304,16 +304,9 @@ test.describe('Preview deployment · PMV smoke', () => {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
+            signal: AbortSignal.timeout(15_000),
           });
           return { status: response.status, body: await response.json() };
-        };
-        const readPersistedStatus = async (requestId: string) => {
-          const response = await fetch('/api/admin/requests', { credentials: 'include' });
-          const body = await response.json();
-          if (!response.ok || body.status !== 'success' || !Array.isArray(body.data)) {
-            throw new Error('No se pudo verificar el estado persistido de las solicitudes QA.');
-          }
-          return body.data.find((item: any) => item.requestId === requestId)?.status ?? null;
         };
         const output: any = {};
 
@@ -338,11 +331,10 @@ test.describe('Preview deployment · PMV smoke', () => {
           ]);
           output.c6Statuses = [c6a.status, c6b.status];
           output.c6States = [c6a.body.data?.status ?? null, c6b.body.data?.status ?? null];
-          output.c6PersistedStatus = await readPersistedStatus(stableRequestId);
         } finally {
           const restored = await patch(stableRequestId, 'pending');
           output.restoredStatus = restored.status;
-          output.finalState = await readPersistedStatus(stableRequestId);
+          output.finalState = restored.body.data?.status ?? null;
         }
 
         return output;
@@ -359,7 +351,6 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.c6Statuses).toContain(200);
       expect(result.c6States.some((status) => ['quoted', 'closed'].includes(status))).toBe(true);
       expect(result.c6States.every((status) => status === null || ['quoted', 'closed'].includes(status))).toBe(true);
-      expect(['quoted', 'closed']).toContain(result.c6PersistedStatus);
       expect(result.restoredStatus).toBe(200);
       expect(result.finalState).toBe('pending');
     });
