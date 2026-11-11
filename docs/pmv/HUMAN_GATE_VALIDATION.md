@@ -161,7 +161,7 @@ C1/C6 usan la solicitud sintética estable `REQ-2026-b342e5ef-833d-4c10-97af-faf
 
 ### Navegación Media Kit
 
-Se corrigió el cierre del panel de Media Kit para que ocurra después del cambio de ruta, no dentro del evento del enlace. Las páginas públicas comparten ahora un layout de rutas anidadas en el router principal. El E2E 12/12 verifica que el enlace de propuesta renderiza `/contacto?origen=mediakit`, muestra `Tu selección, lista para avanzar.` y conserva un soporte seleccionado. La captura `mediakit-contact.png` está incluida en el artifact QA; muestra la página de contacto, el soporte seleccionado y el aviso de conservación de selección.
+Se corrigió la navegación de propuesta del Media Kit: el CTA usa un enlace nativo y la selección se persiste en `localStorage` antes de la navegación completa. Las páginas públicas comparten un layout de rutas anidadas y el panel se cierra al cambiar la ruta SPA. El E2E 12/12 verifica que el enlace renderiza `/contacto?origen=mediakit`, muestra `Tu selección, lista para avanzar.` y conserva un soporte seleccionado. La captura `mediakit-contact.png` está incluida en el artifact QA; muestra la página de contacto, el soporte seleccionado y el aviso de conservación de selección.
 
 ### Artifact y estado QA
 
