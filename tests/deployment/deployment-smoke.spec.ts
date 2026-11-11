@@ -94,8 +94,6 @@ test.describe('Preview deployment · PMV smoke', () => {
 
   test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
-    const pageErrors: string[] = [];
-    page.on('pageerror', (error) => pageErrors.push(error.message));
     await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
@@ -106,7 +104,6 @@ test.describe('Preview deployment · PMV smoke', () => {
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
-    await page.screenshot({ path: testInfo.outputPath('mediakit-contact-debug.png'), fullPage: true });
     await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
