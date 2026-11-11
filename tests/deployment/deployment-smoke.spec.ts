@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 
 // Avoid recording browser state, form values or traces in deployment artifacts.
 // The suite keeps its explicit non-sensitive screenshots via page.screenshot().
@@ -277,7 +278,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     );
     expect(support, 'Preview debe exponer al menos un soporte público y disponible').toBeTruthy();
 
-    const kitId = 'KIT-QA-EXPORT-RECOVERY';
+    const kitId = `KIT-QA-EXPORT-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
     let kitSaved = false;
     let requestId: string | null = null;
     const pdfBytes = Buffer.from('%PDF-1.4\\n% Grupo Comunicarte QA export\\n1 0 obj <<>> endobj\\ntrailer <<>>\\n%%EOF', 'ascii');
@@ -297,7 +298,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
             message: 'Solicitud sintética para validar persistencia y recuperación de exportaciones.',
           },
           selectedIds: [support.canonical_id],
-          idempotencyKey: 'a7f18d2c-4e91-4b5f-9a83-2f7c6d5e4b10',
+          idempotencyKey: randomUUID(),
         },
       });
       const requestPayload = await requestResponse.json();
