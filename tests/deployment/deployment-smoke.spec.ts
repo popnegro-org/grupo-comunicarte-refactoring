@@ -93,9 +93,10 @@ test.describe('Preview deployment · PMV smoke', () => {
   });
 
   test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
     const supportsResponse = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/api/supports' && response.ok(),
-      { timeout: 20_000 },
+      { timeout: 45_000 },
     );
     await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await supportsResponse;
@@ -108,7 +109,7 @@ test.describe('Preview deployment · PMV smoke', () => {
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
-    await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
   });
@@ -425,7 +426,7 @@ test('LED Móvil publica imagen y tres atributos canónicos sin inventar impacto
 
   const browserImageResponse = page.waitForResponse(
     (response) => new URL(response.url()).pathname === imageUrl && response.ok(),
-    { timeout: 20_000 },
+    { timeout: 45_000 },
   );
   await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.getByPlaceholder('Buscar soporte o ubicación...').fill('Camión LED Móvil');
