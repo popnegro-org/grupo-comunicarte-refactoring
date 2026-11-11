@@ -141,7 +141,7 @@ test('getCardFacts preserves a manually entered zero monthly impact for LED mobi
   } as import('../../src/types').InventoryItem;
   const facts = getCardFacts(item);
   assert.deepEqual(facts.map((fact) => fact.label), ['Duración', 'Spot', 'Impactos / mes']);
-  assert.equal(facts.find((fact) => fact.label === 'Impactos / mes')?.value, '+0');
+  assert.equal(facts.find((fact) => fact.label === 'Impactos / mes')?.value, '0');
 });
 
 test('inventory presentation adapter keeps unknown LED types unmapped and excludes internal pricing', async () => {
