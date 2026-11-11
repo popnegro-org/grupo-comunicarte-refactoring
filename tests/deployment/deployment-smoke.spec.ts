@@ -417,6 +417,10 @@ test('LED Móvil publica imagen y tres atributos canónicos sin inventar impacto
   expect(imageResponse.status()).toBe(200);
   expect(imageResponse.headers()['content-type']).toContain('image/');
 
+  const browserImageResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === imageUrl && response.ok(),
+    { timeout: 20_000 },
+  );
   await page.goto('/inventario?vista=catalogo');
   await page.getByPlaceholder('Buscar soporte o ubicación...').fill('Camión LED Móvil');
   const card = page.getByRole('article').filter({ hasText: 'Camión LED Móvil' }).first();
@@ -433,5 +437,7 @@ test('LED Móvil publica imagen y tres atributos canónicos sin inventar impacto
 
   const image = card.locator('img').first();
   await expect(image).toHaveAttribute('src', imageUrl);
-  await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await image.scrollIntoViewIfNeeded();
+  await browserImageResponse;
+  await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth), { timeout: 5_000 }).toBeGreaterThan(0);
 });
