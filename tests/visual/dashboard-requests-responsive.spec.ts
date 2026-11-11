@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard · bandeja de solicitudes', () => {
   test.beforeEach(async ({ page }) => {
