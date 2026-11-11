@@ -7,9 +7,10 @@ import { useSelection } from '../../context/SelectionContext';
 interface MediakitPanelProps {
   selectedItems: InventoryItem[];
   onClose: () => void;
+  onNavigate: (path: string) => void;
 }
 
-export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
+export function MediakitPanel({ selectedItems, onClose, onNavigate }: MediakitPanelProps) {
   const { removeSelected } = useSelection();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -123,20 +124,22 @@ export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
             Podés seguir agregando soportes desde el inventario. La selección se conserva en este navegador.
           </p>
           <div className="mt-6 grid gap-2">
-            <a
-              href={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
+            <button
+              type="button"
+              onClick={() => onNavigate(selectedItems.length ? '/contacto?origen=mediakit' : '/inventario')}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {selectedItems.length ? 'Solicitar propuesta' : 'Explorar inventario'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </a>
+            </button>
             <div className="grid gap-2 sm:grid-cols-2">
-              <a
-                href="/mediakits"
+              <button
+                type="button"
+                onClick={() => onNavigate('/mediakits')}
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               >
                 Revisar en página
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={onClose}
