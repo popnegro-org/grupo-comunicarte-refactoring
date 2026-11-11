@@ -35,6 +35,10 @@ export function Navbar() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  useEffect(() => {
+    setMediakitOpen(false);
+  }, [location.pathname]);
+
   const selectedItems = getSelectedItems(items);
   const isActive = (path: string) => location.pathname === path;
 
