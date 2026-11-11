@@ -83,6 +83,19 @@ test('commercial request ownership must match the current support owner', () => 
 });
 
 
+test('C2: rejects transactional ownership drift between request item and current support', () => {
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: 'tenant-ba', supportTenantId: 'tenant-default' },
+  ]), false);
+});
+
+test('C5: rejects an orphan request item whose support row is missing', () => {
+  // The service maps an absent support row to supportTenantId=null before this guard.
+  assert.equal(areRequestItemOwnershipsConsistent([
+    { itemTenantId: 'tenant-ba', supportTenantId: null },
+  ]), false);
+});
+
 test('commercial selection requires assigned ownership, active state and disponibilidad disponible', () => {
   assert.equal(isSupportSelectableForCommercialRequest({
     tenant_id: 'tenant-ba', active: true, disponibilidad: 'disponible',
