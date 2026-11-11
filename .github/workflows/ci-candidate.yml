@@ -62,11 +62,12 @@ jobs:
 
   authenticated-preview-smoke:
     name: Authenticated Preview Smoke
+    # This job creates/updates a synthetic request and Media Kit in Neon QA.
+    # Run once on the PR event, not again on the matching branch push.
     if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate') ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: [validate]
     runs-on: ubuntu-latest
     container:
