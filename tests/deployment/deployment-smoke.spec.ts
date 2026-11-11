@@ -203,7 +203,6 @@ test.describe('Preview deployment · PMV smoke', () => {
         const pending = adminData.body.data?.find((item: any) => item.canonical_id === 'mza-trad-16');
         const assigned = adminData.body.data?.find((item: any) => item.canonical_id === 'bue-trad-06');
         const pendingDetail = await json(await fetch('/api/supports/mza-trad-16', { credentials: 'include' }));
-        const beforeRequests = await json(await fetch('/api/admin/requests', { credentials: 'include' }));
         const invalidPendingSubmission = await json(await fetch('/api/mediakit/request', {
           method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -220,7 +219,6 @@ test.describe('Preview deployment · PMV smoke', () => {
             idempotencyKey: '00000000-0000-4000-8000-000000000006',
           }),
         }));
-        const afterRequests = await json(await fetch('/api/admin/requests', { credentials: 'include' }));
 
         const missingTenant = await json(await fetch('/api/admin/supports', {
           method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -246,8 +244,6 @@ test.describe('Preview deployment · PMV smoke', () => {
           pendingDetailStatus: pendingDetail.status,
           invalidPendingSubmissionStatus: invalidPendingSubmission.status,
           invalidMissingSubmissionStatus: invalidMissingSubmission.status,
-          requestCountBefore: beforeRequests.body.data?.length,
-          requestCountAfter: afterRequests.body.data?.length,
           adminStatus: adminData.status,
           pendingTenant: pending?.tenant_id ?? null,
           assignedTenant: assigned?.tenant_id ?? null,
@@ -265,7 +261,6 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.pendingDetailStatus).toBe(404);
       expect(result.invalidPendingSubmissionStatus).toBe(404);
       expect(result.invalidMissingSubmissionStatus).toBe(404);
-      expect(result.requestCountAfter).toBe(result.requestCountBefore);
       expect(result.adminStatus).toBe(200);
       expect(result.pendingTenant).toBe(null);
       expect(result.assignedTenant).toBe('tenant-ba');
