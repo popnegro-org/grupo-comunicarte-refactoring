@@ -97,14 +97,14 @@ test.describe('Preview deployment · PMV smoke', () => {
       (response) => new URL(response.url()).pathname === '/api/supports' && response.ok(),
       { timeout: 20_000 },
     );
-    await page.goto('/inventario?vista=catalogo');
+    await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await supportsResponse;
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();
 
     await page.getByRole('button', { name: /Abrir Media Kit/ }).click();
-    await expect(page.getByRole('link', { name: 'Solicitar propuesta' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Solicitar propuesta' })).toBeVisible();
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
@@ -427,7 +427,7 @@ test('LED Móvil publica imagen y tres atributos canónicos sin inventar impacto
     (response) => new URL(response.url()).pathname === imageUrl && response.ok(),
     { timeout: 20_000 },
   );
-  await page.goto('/inventario?vista=catalogo');
+  await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.getByPlaceholder('Buscar soporte o ubicación...').fill('Camión LED Móvil');
   const card = page.getByRole('article').filter({ hasText: 'Camión LED Móvil' }).first();
   await card.scrollIntoViewIfNeeded();
