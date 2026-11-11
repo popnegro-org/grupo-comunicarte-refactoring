@@ -126,7 +126,6 @@ export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
           <div className="mt-6 grid gap-2">
             <Link
               to={selectedItems.length ? '/contacto?origen=mediakit' : '/inventario'}
-              onClick={onClose}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {selectedItems.length ? 'Solicitar propuesta' : 'Explorar inventario'}
@@ -135,7 +134,6 @@ export function MediakitPanel({ selectedItems, onClose }: MediakitPanelProps) {
             <div className="grid gap-2 sm:grid-cols-2">
               <Link
                 to="/mediakits"
-                onClick={onClose}
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               >
                 Revisar en página
