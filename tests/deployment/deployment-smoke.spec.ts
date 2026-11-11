@@ -106,14 +106,6 @@ test.describe('Preview deployment · PMV smoke', () => {
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
     await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
-    const contactoDebug = await page.evaluate(() => ({
-      url: window.location.href,
-      title: document.title,
-      headings: Array.from(document.querySelectorAll('h1,h2,h3')).map((element) => element.textContent?.trim() ?? ''),
-      bodyText: document.body.innerText.slice(0, 1800),
-      rootText: document.getElementById('root')?.innerText.slice(0, 1800) ?? null,
-    }));
-    console.log('[CONTACTO-MEDIAKIT-DEBUG]', JSON.stringify({ ...contactoDebug, pageErrors }));
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact-debug.png'), fullPage: true });
     await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
