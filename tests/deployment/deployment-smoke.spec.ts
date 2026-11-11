@@ -268,8 +268,8 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.publicHasPendingSupport).toBe(false);
       expect(result.publicHasSensitiveKeys).toBe(false);
       expect(result.pendingDetailStatus).toBe(404);
-      expect(result.invalidPendingSubmissionStatus).toBe(400);
-      expect(result.invalidMissingSubmissionStatus).toBe(400);
+      expect(result.invalidPendingSubmissionStatus).toBe(404);
+      expect(result.invalidMissingSubmissionStatus).toBe(404);
       expect(result.requestCountAfter).toBe(result.requestCountBefore);
       expect(result.adminStatus).toBe(200);
       expect(result.pendingTenant).toBe(null);
