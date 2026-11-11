@@ -1,5 +1,6 @@
-import { lazy, Suspense, type ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
 import { Layout } from './components/layout/Layout';
 import { PageTransition } from './components/layout/PageTransition';
 import { SelectionProvider } from './context/SelectionContext';
@@ -24,16 +25,31 @@ const DashboardSupportReservation = lazy(() => import('./pages/dashboard/Dashboa
 const DashboardMediaKitWorkflow = lazy(() => import('./pages/dashboard/DashboardMediaKitWorkflow'));
 const DashboardMediaKitBuilder = lazy(() => import('./pages/dashboard/DashboardMediaKitBuilder'));
 
-function PublicPage({ children }: { children: ReactNode }) {
+function PublicRoutes() {
+  const location = useLocation();
   const isProductionDomain = ['grupocomunicarte.com.ar', 'www.grupocomunicarte.com.ar'].includes(window.location.hostname);
 
-  // Keep public pages on canonical production domains behind Coming Soon.
-  // Preview/QA hostnames render the functional PMV.
+  // Keep all public routes on canonical production domains behind the standalone
+  // Coming Soon page. Preview/QA hostnames retain the complete functional PMV.
   if (isProductionDomain) {
     return <ComingSoon />;
   }
 
-  return <Layout>{children}</Layout>;
+  return (
+    <Layout>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+          <Route path="/soportes" element={<PageTransition><Soportes /></PageTransition>} />
+          <Route path="/nosotros" element={<PageTransition><Nosotros /></PageTransition>} />
+          <Route path="/soluciones" element={<PageTransition><Soluciones /></PageTransition>} />
+          <Route path="/inventario" element={<PageTransition><Inventario /></PageTransition>} />
+          <Route path="/mediakits" element={<PageTransition><MediaKits /></PageTransition>} />
+          <Route path="/contacto" element={<PageTransition><Contacto /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
+    </Layout>
+  );
 }
 
 export default function App() {
@@ -54,13 +70,7 @@ export default function App() {
           <Route path="/dashboard/solicitudes" element={<DashboardMediaKitWorkflow />} />
           <Route path="/dashboard/mediakits/nuevo" element={<DashboardMediaKitBuilder />} />
           <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
-          <Route path="/" element={<PublicPage><PageTransition><Home /></PageTransition></PublicPage>} />
-          <Route path="/soportes" element={<PublicPage><PageTransition><Soportes /></PageTransition></PublicPage>} />
-          <Route path="/nosotros" element={<PublicPage><PageTransition><Nosotros /></PageTransition></PublicPage>} />
-          <Route path="/soluciones" element={<PublicPage><PageTransition><Soluciones /></PageTransition></PublicPage>} />
-          <Route path="/inventario" element={<PublicPage><PageTransition><Inventario /></PageTransition></PublicPage>} />
-          <Route path="/mediakits" element={<PublicPage><PageTransition><MediaKits /></PageTransition></PublicPage>} />
-          <Route path="/contacto" element={<PublicPage><PageTransition><Contacto /></PageTransition></PublicPage>} />
+          <Route path="*" element={<PublicRoutes />} />
         </Routes>
         </Suspense>
       </Router>
