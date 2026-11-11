@@ -276,7 +276,6 @@ jobs:
 
       - name: Run full authenticated PMV E2E against Neon QA
         env:
-          PLAYWRIGHT_BASE_URL: ${{ env.PLAYWRIGHT_BASE_URL }}
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts
