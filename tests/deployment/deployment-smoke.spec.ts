@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { randomUUID } from 'node:crypto';
 
 // Avoid recording browser state, form values or traces in deployment artifacts.
 // The suite keeps its explicit non-sensitive screenshots via page.screenshot().
@@ -279,11 +278,13 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
     expect(supportsResponse.status()).toBe(200);
     const supportsPayload = await supportsResponse.json();
     const support = (supportsPayload.data || []).find((item: any) =>
-      item.active !== false && item.disponibilidad === 'disponible'
+      item.canonical_id === 'bue-trad-05' && item.active !== false && item.disponibilidad === 'disponible'
     );
     expect(support, 'Preview debe exponer al menos un soporte público y disponible').toBeTruthy();
 
-    const kitId = `KIT-QA-EXPORT-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
+    // Reuse one synthetic QA request/kit so reruns never accumulate orphan rows.
+    const idempotencyKey = 'b342e5ef-833d-4c10-97af-faff81f9a996';
+    const kitId = 'KIT-QA-EXPORT-C4A280BC3D34';
     let kitSaved = false;
     let requestId: string | null = null;
     const pdfBytes = Buffer.from('%PDF-1.4\\n% Grupo Comunicarte QA export\\n1 0 obj <<>> endobj\\ntrailer <<>>\\n%%EOF', 'ascii');
@@ -303,7 +304,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
             message: 'Solicitud sintética para validar persistencia y recuperación de exportaciones.',
           },
           selectedIds: [support.canonical_id],
-          idempotencyKey: randomUUID(),
+          idempotencyKey,
         },
       });
       const requestPayload = await requestResponse.json();
@@ -326,7 +327,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
           approvedPrices: { [support.canonical_id]: '10000' },
           totalAmount: 10000,
           currency: 'ARS',
-          metadata: { proposalPeriod: { duracionValor: 7, duracionUnidad: 'días' } },
+          metadata: { qaTest: true, testSuite: 'ci-candidate-e2e', proposalPeriod: { duracionValor: 7, duracionUnidad: 'días' } },
         },
       });
       expect(save.status()).toBe(201);
