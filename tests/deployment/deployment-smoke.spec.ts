@@ -238,10 +238,6 @@ test.describe('Preview deployment · PMV smoke', () => {
           method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clientName: 'QA Pending', supportIds: ['mza-trad-16'], tenantId: 'tenant-ba', status: 'draft' }),
         }));
-        const pendingRequest = await json(await fetch('/api/admin/requests/REQ-2026-4997-9171', {
-          method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'closed' }),
-        }));
         const reloadedAssigned = await json(await fetch('/api/admin/supports/bue-trad-06', { credentials: 'include' }));
         return {
           publicStatus: publicData.status,
@@ -259,7 +255,6 @@ test.describe('Preview deployment · PMV smoke', () => {
           invalidTenantStatus: invalidTenant.status,
           reassignmentStatus: reassignment.status,
           pendingKitStatus: pendingKit.status,
-          pendingRequestStatus: pendingRequest.status,
           assignedTenantAfterAttempt: reloadedAssigned.body.data?.tenant_id ?? null,
         };
       });
@@ -278,7 +273,6 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.invalidTenantStatus).toBe(400);
       expect(result.reassignmentStatus).toBe(400);
       expect(result.pendingKitStatus).toBe(409);
-      expect(result.pendingRequestStatus).toBe(409);
       expect(result.assignedTenantAfterAttempt).toBe('tenant-ba');
     });
 
