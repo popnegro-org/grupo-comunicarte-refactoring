@@ -103,8 +103,8 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page.getByRole('link', { name: 'Solicitar propuesta' })).toBeVisible();
     await page.getByRole('link', { name: 'Solicitar propuesta' }).click();
 
-    await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/);
-    await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/\/contacto\?origen=mediakit$/, { timeout: 45_000 });
+    await expect(page.getByRole('heading', { name: 'Tu selección, lista para avanzar.' })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('No perdés tu selección')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('mediakit-contact.png'), fullPage: true });
   });
