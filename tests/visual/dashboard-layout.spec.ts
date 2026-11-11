@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard · estructura responsive', () => {
   test.beforeEach(async ({ page }) => {
