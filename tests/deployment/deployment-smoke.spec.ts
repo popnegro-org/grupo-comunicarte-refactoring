@@ -269,7 +269,7 @@ test.describe('Preview deployment · PMV smoke', () => {
 
       const result = await page.evaluate(async () => {
         const stableRequestId = 'REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996';
-        const nullOwnershipRequestId = 'REQ-2026-8951-8068';
+        const nullOwnershipRequestId = 'REQ-2026-00000000-0000-4000-8000-000000000003';
         const noItemsRequestId = 'REQ-2026-00000000-0000-4000-8000-000000000004';
         const patch = async (requestId: string, status: string) => {
           const response = await fetch(`/api/admin/requests/${requestId}`, {
