@@ -202,6 +202,25 @@ test.describe('Preview deployment · PMV smoke', () => {
         const adminData = await json(adminResponse);
         const pending = adminData.body.data?.find((item: any) => item.canonical_id === 'mza-trad-16');
         const assigned = adminData.body.data?.find((item: any) => item.canonical_id === 'bue-trad-06');
+        const pendingDetail = await json(await fetch('/api/supports/mza-trad-16', { credentials: 'include' }));
+        const beforeRequests = await json(await fetch('/api/admin/requests', { credentials: 'include' }));
+        const invalidPendingSubmission = await json(await fetch('/api/mediakit/request', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead: { name: 'QA invalid pending', email: 'qa-invalid-pending@example.invalid', company: 'QA', message: 'QA synthetic request; no customer contact' },
+            selectedIds: ['mza-trad-16'],
+            idempotencyKey: '00000000-0000-4000-8000-000000000005',
+          }),
+        }));
+        const invalidMissingSubmission = await json(await fetch('/api/mediakit/request', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead: { name: 'QA invalid support', email: 'qa-invalid-support@example.invalid', company: 'QA', message: 'QA synthetic request; no customer contact' },
+            selectedIds: ['qa-support-does-not-exist'],
+            idempotencyKey: '00000000-0000-4000-8000-000000000006',
+          }),
+        }));
+        const afterRequests = await json(await fetch('/api/admin/requests', { credentials: 'include' }));
 
         const missingTenant = await json(await fetch('/api/admin/supports', {
           method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -228,6 +247,11 @@ test.describe('Preview deployment · PMV smoke', () => {
           publicStatus: publicData.status,
           publicHasPendingSupport: publicData.body.data?.some((item: any) => item.canonical_id === 'mza-trad-16'),
           publicHasSensitiveKeys: hasSensitiveKey(publicData.body.data),
+          pendingDetailStatus: pendingDetail.status,
+          invalidPendingSubmissionStatus: invalidPendingSubmission.status,
+          invalidMissingSubmissionStatus: invalidMissingSubmission.status,
+          requestCountBefore: beforeRequests.body.data?.length,
+          requestCountAfter: afterRequests.body.data?.length,
           adminStatus: adminData.status,
           pendingTenant: pending?.tenant_id ?? null,
           assignedTenant: assigned?.tenant_id ?? null,
@@ -243,6 +267,10 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.publicStatus).toBe(200);
       expect(result.publicHasPendingSupport).toBe(false);
       expect(result.publicHasSensitiveKeys).toBe(false);
+      expect(result.pendingDetailStatus).toBe(404);
+      expect(result.invalidPendingSubmissionStatus).toBe(400);
+      expect(result.invalidMissingSubmissionStatus).toBe(400);
+      expect(result.requestCountAfter).toBe(result.requestCountBefore);
       expect(result.adminStatus).toBe(200);
       expect(result.pendingTenant).toBe(null);
       expect(result.assignedTenant).toBe('tenant-ba');
