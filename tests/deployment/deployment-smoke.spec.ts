@@ -307,6 +307,14 @@ test.describe('Preview deployment · PMV smoke', () => {
           });
           return { status: response.status, body: await response.json() };
         };
+        const readPersistedStatus = async (requestId: string) => {
+          const response = await fetch('/api/admin/requests', { credentials: 'include' });
+          const body = await response.json();
+          if (!response.ok || body.status !== 'success' || !Array.isArray(body.data)) {
+            throw new Error('No se pudo verificar el estado persistido de las solicitudes QA.');
+          }
+          return body.data.find((item: any) => item.requestId === requestId)?.status ?? null;
+        };
         const output: any = {};
 
         try {
@@ -316,11 +324,13 @@ test.describe('Preview deployment · PMV smoke', () => {
           const c1Restore = await patch(stableRequestId, 'pending');
           output.c1RestoreStatus = c1Restore.status;
 
-          const c3 = await patch(nullOwnershipRequestId, 'quoted');
+          const c3 = await patch(nullOwnershipRequestId, 'enviado');
           output.c3Status = c3.status;
+          output.c3PersistedStatus = await readPersistedStatus(nullOwnershipRequestId);
 
           const c4 = await patch(noItemsRequestId, 'closed');
           output.c4Status = c4.status;
+          output.c4PersistedStatus = await readPersistedStatus(noItemsRequestId);
 
           const [c6a, c6b] = await Promise.all([
             patch(stableRequestId, 'quoted'),
@@ -328,10 +338,11 @@ test.describe('Preview deployment · PMV smoke', () => {
           ]);
           output.c6Statuses = [c6a.status, c6b.status];
           output.c6States = [c6a.body.data?.status ?? null, c6b.body.data?.status ?? null];
+          output.c6PersistedStatus = await readPersistedStatus(stableRequestId);
         } finally {
           const restored = await patch(stableRequestId, 'pending');
           output.restoredStatus = restored.status;
-          output.finalState = restored.body.data?.status ?? null;
+          output.finalState = await readPersistedStatus(stableRequestId);
         }
 
         return output;
@@ -341,11 +352,14 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.c1After).toBe('quoted');
       expect(result.c1RestoreStatus).toBe(200);
       expect(result.c3Status).toBe(409);
+      expect(result.c3PersistedStatus).toBe('pending');
       expect(result.c4Status).toBe(409);
+      expect(result.c4PersistedStatus).toBe('pending');
       expect(result.c6Statuses.every((status) => [200, 409].includes(status))).toBe(true);
       expect(result.c6Statuses).toContain(200);
       expect(result.c6States.some((status) => ['quoted', 'closed'].includes(status))).toBe(true);
       expect(result.c6States.every((status) => status === null || ['quoted', 'closed'].includes(status))).toBe(true);
+      expect(['quoted', 'closed']).toContain(result.c6PersistedStatus);
       expect(result.restoredStatus).toBe(200);
       expect(result.finalState).toBe('pending');
     });
