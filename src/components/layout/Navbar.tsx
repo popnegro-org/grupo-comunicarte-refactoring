@@ -36,6 +36,11 @@ export function Navbar() {
   }, []);
 
   const selectedItems = getSelectedItems(items);
+  useEffect(() => {
+    setMediakitOpen(false);
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   const isActive = (path: string) => location.pathname === path;
 
   return (
