@@ -3,9 +3,9 @@
 --
 -- Run only after the migration has been applied to an isolated Neon QA branch.
 -- This is one DO statement. Successful execution leaves no row or ownership
--- change behind: temporary request items are deleted and support assignment
--- propagation is tested inside a PL/pgSQL exception subtransaction that rolls
--- back before the outer DO block completes.
+-- change behind: temporary request items are deleted and the historical
+-- pending-item behavior during a simulated support assignment is tested inside
+-- a PL/pgSQL exception subtransaction that rolls back before the DO completes.
 --
 -- Expected: DO completes without exception. Any unexpected acceptance,
 -- rejection, mismatch, or persistent test mutation raises an exception.
