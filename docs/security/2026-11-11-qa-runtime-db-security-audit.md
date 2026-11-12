@@ -175,7 +175,7 @@ Esto coincide con los diagnósticos recientes de ambos servicios Render. No hay 
 
 ### Corrección preparada
 
-Se añadió `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` en la rama candidata. Añade herencia de tenant al insertar/actualizar ítems, preserva NULL para soportes pendientes, propaga la primera asignación documentada y evita reasignar ownership ya establecido. Está versionada, no aplicada ni probada en una base PostgreSQL temporal/persistente.
+Se añadió `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` en la rama candidata. Añade herencia de tenant al insertar/actualizar ítems, preserva NULL para soportes pendientes e históricos, rechaza mismatches y evita reasignar ownership ya establecido. No re-clasifica automáticamente solicitudes históricas al asignar posteriormente un soporte; esos ítems siguen bloqueados hasta reconciliación explícita. Está versionada, no aplicada ni probada en una base PostgreSQL temporal/persistente.
 
 **Estado:** integridad de datos actual PASS; enforcement DB ante nuevos writes incompleto hasta aplicar y probar la migración en QA/Preview. No tocar Production ni habilitar RLS como parte de este cambio.
 
