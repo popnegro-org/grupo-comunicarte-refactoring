@@ -25,9 +25,9 @@ const EXTENSIONS: Record<string, string> = {
 
 export interface StorageUploadInput { key: string; body: Buffer; contentType: string; }
 export interface StorageAdapter {
-  upload(input: StorageUploadInput): Promise<{ key: string; url: string }>;
-  delete(key: string): Promise<void>;
-  getAssetUrl(key: string, expiresInSeconds?: number): string;
+  upload(input: StorageUploadInput): Promise<{ key: string; url: string; bucket?: string }>;
+  delete(key: string, bucketOverride?: string): Promise<void>;
+  getAssetUrl(key: string, expiresInSeconds?: number, bucketOverride?: string): string;
 }
 
 function requiredEnv(name: string): string {
@@ -75,23 +75,25 @@ export function createPresignedGetUrl(input: { endpoint: string; bucket: string;
 class CloudflareR2StorageAdapter implements StorageAdapter {
   private readonly endpoint: string;
   private readonly bucket: string;
+  private readonly uploadBucket: string;
   private readonly accessKey: string;
   private readonly secretKey: string;
 
-  constructor(bucketEnvName = 'R2_BUCKET_NAME') {
+  constructor(bucketEnvName = 'R2_BUCKET_NAME', uploadBucketEnvName = bucketEnvName) {
     const accountId = requiredEnv('R2_ACCOUNT_ID');
     this.endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
     this.bucket = requiredEnv(bucketEnvName);
+    this.uploadBucket = process.env[uploadBucketEnvName]?.trim() || this.bucket;
     this.accessKey = requiredEnv('R2_ACCESS_KEY_ID');
     this.secretKey = requiredEnv('R2_SECRET_ACCESS_KEY');
   }
 
-  getAssetUrl(key: string, expiresInSeconds = 300): string {
-    return createPresignedGetUrl({ endpoint: this.endpoint, bucket: this.bucket, accessKey: this.accessKey, secretKey: this.secretKey, key, expiresInSeconds });
+  getAssetUrl(key: string, expiresInSeconds = 300, bucketOverride = this.bucket): string {
+    return createPresignedGetUrl({ endpoint: this.endpoint, bucket: bucketOverride, accessKey: this.accessKey, secretKey: this.secretKey, key, expiresInSeconds });
   }
 
-  private async request(method: 'PUT' | 'DELETE', key: string, body?: Buffer, contentType?: string) {
-    const url = `${this.endpoint}/${encodePath(this.bucket)}/${encodePath(key)}`;
+  private async request(method: 'PUT' | 'DELETE', key: string, body?: Buffer, contentType?: string, bucket = this.uploadBucket) {
+    const url = `${this.endpoint}/${encodePath(bucket)}/${encodePath(key)}`;
     const parsed = new URL(url);
     const payloadHash = body ? sha256(body) : sha256('');
     const now = new Date();
@@ -121,7 +123,7 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
     }
   }
 
-  async upload(input: StorageUploadInput): Promise<{ key: string; url: string }> {
+  async upload(input: StorageUploadInput): Promise<{ key: string; url: string; bucket: string }> {
     const contentType = input.contentType.toLowerCase();
     const isDocument = ALLOWED_DOCUMENT_MIME_TYPES.has(contentType);
     if (!ALLOWED_MEDIA_MIME_TYPES.has(contentType) && !isDocument) throw new Error(`MIME no permitido: ${contentType}.`);
@@ -129,10 +131,10 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
     const maxBytes = isDocument ? MAX_DOCUMENT_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
     if (input.body.length > maxBytes) throw new Error('El archivo excede el límite máximo permitido.');
     await this.request('PUT', input.key, input.body, contentType);
-    return { key: input.key, url: `r2://${input.key}` };
+    return { key: input.key, url: `r2://${this.uploadBucket}/${input.key}`, bucket: this.uploadBucket };
   }
 
-  async delete(key: string): Promise<void> { await this.request('DELETE', key); }
+  async delete(key: string, bucketOverride = this.uploadBucket): Promise<void> { await this.request('DELETE', key, undefined, undefined, bucketOverride); }
 }
 
 let mediaAdapter: CloudflareR2StorageAdapter | null = null;
@@ -140,7 +142,7 @@ let mediaKitExportAdapter: CloudflareR2StorageAdapter | null = null;
 
 /** Existing catalogue media remains in the shared read/source bucket. */
 export function getStorageAdapter(): StorageAdapter {
-  return mediaAdapter ??= new CloudflareR2StorageAdapter('R2_BUCKET_NAME');
+  return mediaAdapter ??= new CloudflareR2StorageAdapter('R2_BUCKET_NAME', 'R2_UPLOAD_BUCKET_NAME');
 }
 
 /** Media Kit documents are written to an environment-isolated bucket. */
@@ -148,7 +150,7 @@ export function getMediaKitExportStorageAdapter(): StorageAdapter {
   const bucketEnvName = process.env.R2_EXPORTS_BUCKET_NAME?.trim()
     ? 'R2_EXPORTS_BUCKET_NAME'
     : 'R2_BUCKET_NAME';
-  return mediaKitExportAdapter ??= new CloudflareR2StorageAdapter(bucketEnvName);
+  return mediaKitExportAdapter ??= new CloudflareR2StorageAdapter(bucketEnvName, bucketEnvName);
 }
 
 export function createMediaKitAssetKey(kitId: string, format: 'pdf' | 'pptx'): string {

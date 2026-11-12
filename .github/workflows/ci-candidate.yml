@@ -64,8 +64,7 @@ jobs:
         run: npm run check:bundle
 
   authenticated-preview-smoke:
-    name: Authenticated Preview Smoke
-    # Read-only smoke can run for both branch pushes and same-repository PRs.
+    name: Authenticated Preview Smoke · Render Preview
     if: >
       (github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate') ||
       (github.event_name == 'pull_request' &&
@@ -77,181 +76,106 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --user 1001
     timeout-minutes: 25
+    outputs:
+      url: ${{ steps.preview.outputs.url }}
     steps:
       - name: Checkout exact candidate commit
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Detect runtime changes since the deployed Preview SHA
-        id: runtime
-        shell: bash
-        env:
-          PREVIEW_HEALTH_URL: https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app/api/health
-        run: |
-          node <<'NODE'
-          import { appendFileSync } from 'node:fs';
-          import { execFileSync } from 'node:child_process';
-
-          const output = process.env.GITHUB_OUTPUT;
-          const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-          const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT || '1');
-          const runtimePattern = /^(src\/|api\/|server\.ts$|public\/|drizzle\/|scripts\/|package\.json$|package-lock\.json$|vite\.config\.[^/]+$|tsconfig[^/]*\.json$|index\.html$|vercel\.json$|postcss\.config\.[^/]+$|tailwind\.config\.[^/]+$|\.npmrc$)/;
-          let deployedSha = '';
-
-          try {
-            const response = await fetch(process.env.PREVIEW_HEALTH_URL, { signal: AbortSignal.timeout(10000) });
-            if (response.ok) {
-              const health = await response.json();
-              if (health.status === 'ok' && health.database === 'connected' && /^[0-9a-f]{40}$/i.test(health.commit || '')) {
-                deployedSha = health.commit;
-              }
-            }
-          } catch {
-            // An unavailable or unhealthy alias cannot be trusted; require an exact-SHA smoke.
-          }
-
-          let required = true;
-          let expectedSha = headSha;
-          let reason = 'Preview health/commit unavailable; exact candidate smoke is required.';
-
-          if (deployedSha) {
-            try {
-              execFileSync('git', ['cat-file', '-e', deployedSha + '^{commit}'], { stdio: 'ignore' });
-              const changedFiles = execFileSync('git', ['diff', '--name-only', deployedSha + '...HEAD'], { encoding: 'utf8' })
-                .split('\n')
-                .filter(Boolean);
-              const runtimeChanges = changedFiles.filter(file => runtimePattern.test(file));
-
-              if (runtimeChanges.length > 0) {
-                required = true;
-                expectedSha = headSha;
-                reason = 'Runtime changes exist after deployed Preview SHA ' + deployedSha + ': ' + runtimeChanges.join(', ');
-              } else if (runAttempt > 1) {
-                required = true;
-                expectedSha = deployedSha;
-                reason = 'Manual rerun forces authenticated smoke against current deployed Preview SHA ' + deployedSha + '.';
-              } else {
-                required = false;
-                expectedSha = deployedSha;
-                reason = 'No runtime changes since deployed Preview SHA ' + deployedSha + '; reuse that exact runtime.';
-              }
-            } catch {
-              required = true;
-              expectedSha = headSha;
-              reason = 'Deployed Preview SHA is not available in candidate history; exact candidate smoke is required.';
-            }
-          }
-
-          appendFileSync(output, 'required=' + String(required) + '\n');
-          appendFileSync(output, 'expected_sha=' + expectedSha + '\n');
-          console.log(reason);
-          console.log('Candidate HEAD: ' + headSha + '; Preview SHA: ' + (deployedSha || 'unavailable') + '; run attempt: ' + runAttempt);
-          NODE
-
-      - name: Skip Preview deployment smoke for test/documentation-only commits
-        if: steps.runtime.outputs.required != 'true'
-        run: echo "No runtime changes in this commit; no new Vercel deployment is required."
-
       - name: Setup Node
-        if: steps.runtime.outputs.required == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
 
       - name: Install dependencies
-        if: steps.runtime.outputs.required == 'true'
         run: npm ci --no-audit --no-fund
 
       - name: Build expected frontend artifact
-        if: steps.runtime.outputs.required == 'true'
         run: npm run build
 
-      - name: Wait for stable Vercel branch alias to serve the exact candidate SHA
-        if: steps.runtime.outputs.required == 'true'
+      - name: Wait for stable Render Preview and isolated Neon Preview branch
         id: preview
         shell: bash
         env:
-          EXPECTED_SHA: ${{ steps.runtime.outputs.expected_sha }}
-          EXPECTED_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring.onrender.com
+          EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
         run: |
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
 
-          const expectedSha = process.env.EXPECTED_SHA;
-          const expectedRef = process.env.EXPECTED_REF;
-          // Stable branch alias; health.commit is the authoritative deployment identity.
-          const previewUrl = new URL('https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app');
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedAsset = readFileSync('dist/index.html', 'utf8')
+            .split('"')
+            .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
 
-          if (!/^[0-9a-f]{40}$/i.test(expectedSha || '') || expectedRef !== 'pmv-validation-candidate') {
-            throw new Error('Missing or invalid candidate SHA/branch.');
-          }
-
-          const expectedAsset = readFileSync('dist/index.html', 'utf8').split('"').find(value => value.startsWith('/assets/') && value.endsWith('.js'));
           if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
 
-          async function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-          }
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastHealth = null;
+          let consecutiveHealthy = 0;
 
-          let lastObservedCommit = 'unavailable';
           for (let attempt = 1; attempt <= 60; attempt++) {
             try {
               const [healthResponse, pageResponse] = await Promise.all([
-                fetch(new URL('/api/health', previewUrl), { signal: AbortSignal.timeout(15000) }),
-                fetch(previewUrl, { signal: AbortSignal.timeout(15000) })
+                fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(15000) }),
+                fetch(base, { signal: AbortSignal.timeout(15000) }),
               ]);
 
               if (healthResponse.ok && pageResponse.ok) {
                 const health = await healthResponse.json();
                 const html = await pageResponse.text();
-                lastObservedCommit = health.commit || 'missing';
+                lastHealth = health;
 
                 if (
                   health.status === 'ok' &&
-                  health.commit === expectedSha &&
                   health.database === 'connected' &&
+                  health.databaseBranch === expectedBranch &&
                   html.includes(expectedAsset)
                 ) {
-                  appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + previewUrl.origin + String.fromCharCode(10));
-                  appendFileSync(process.env.GITHUB_OUTPUT, 'sha=' + expectedSha + String.fromCharCode(10));
-                  console.log('Verified stable branch Preview alias serves exact SHA ' + expectedSha + '.');
-                  console.log('Health, connected database, and built frontend asset match this candidate.');
-                  process.exit(0);
+                  consecutiveHealthy += 1;
+                  if (consecutiveHealthy >= 3) {
+                    appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + new URL(base).origin + String.fromCharCode(10));
+                    console.log('Render Preview served three consecutive healthy responses with the expected asset and isolated Neon Preview branch.');
+                    process.exit(0);
+                  }
+                } else {
+                  consecutiveHealthy = 0;
                 }
+              } else {
+                consecutiveHealthy = 0;
               }
             } catch {
-              // The alias can briefly serve the previous deployment while Vercel promotes the new Preview.
+              consecutiveHealthy = 0;
             }
 
-            console.log('Waiting for Preview SHA ' + expectedSha + '; attempt ' + attempt + '/60; observed SHA: ' + lastObservedCommit);
-            await sleep(10000);
+            console.log('Waiting for stable Render Preview; attempt ' + attempt + '/60; healthy confirmations: ' + consecutiveHealthy + '/3.');
+            await sleep(3000);
           }
 
-          throw new Error('Vercel branch alias did not serve exact SHA ' + expectedSha + '; last observed SHA: ' + lastObservedCommit);
+          throw new Error('Render Preview did not serve the expected build and Neon branch. Last health: ' + JSON.stringify(lastHealth));
           NODE
 
-      - name: Verify QA credentials are configured
-        if: steps.runtime.outputs.required == 'true'
+      - name: Verify E2E credentials are configured
         shell: bash
         env:
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: |
           if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
-            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to claim authenticated QA."
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Preview."
             exit 1
           fi
-          echo "QA credentials are present; values are intentionally not logged."
+          echo "Preview credentials are present; values are intentionally not logged."
 
-      - name: Verify public smoke, authenticated dashboard and admin API
-        if: steps.runtime.outputs.required == 'true'
+      - name: Verify public smoke, authenticated dashboard and admin API on Render Preview
         env:
           PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
-          EXPECTED_COMMIT_SHA: ${{ steps.runtime.outputs.expected_sha }}
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|C1/C3/C4/C6|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
@@ -272,7 +196,7 @@ jobs:
     timeout-minutes: 25
     env:
       PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-qa.onrender.com
-      EXPECTED_QA_BRANCH: br-bold-block-aua43ua0
+      EXPECTED_DATABASE_BRANCH: br-bold-block-aua43ua0
     steps:
       - name: Checkout exact candidate commit
         uses: actions/checkout@v6
@@ -300,7 +224,7 @@ jobs:
           import { readFileSync } from 'node:fs';
 
           const base = process.env.PLAYWRIGHT_BASE_URL;
-          const expectedBranch = process.env.EXPECTED_QA_BRANCH;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
           const expectedAsset = readFileSync('dist/index.html', 'utf8')
             .split('"')
             .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
@@ -379,3 +303,63 @@ jobs:
             test-results/deployment/
             playwright-report/
           retention-days: 14
+
+  preview-deployment-e2e:
+    name: Preview Deployment E2E · Neon Preview
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [validate, authenticated-preview-smoke]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ needs.authenticated-preview-smoke.outputs.url }}
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Preview credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Preview E2E."
+            exit 1
+          fi
+          echo "Preview credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Neon Preview and isolated R2 bucket
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload Preview E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: preview-deployment-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
+

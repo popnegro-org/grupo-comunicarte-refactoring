@@ -84,14 +84,14 @@ export async function handleMediaUpload(req: Request, res: Response) {
         sort_order: sortOrder,
         title: media.filename.replace(/\.[^.]+$/, ''),
         alt: media.filename.replace(/\.[^.]+$/, ''),
-        metadata: { storage_key: uploaded.key, original_filename: media.filename, role },
+        metadata: { storage_key: uploaded.key, storage_bucket: uploaded.bucket || process.env.R2_UPLOAD_BUCKET_NAME || process.env.R2_BUCKET_NAME, original_filename: media.filename, role },
         active: true,
       });
       createdMediaId = created.id;
       const publicRoute = `/api/media/${created.id}`;
       const persisted = await updateSupportMediaByAdmin(canonicalId, created.id, {
         url: publicRoute,
-        metadata: { storage_key: uploaded.key, original_filename: media.filename, role },
+        metadata: { storage_key: uploaded.key, storage_bucket: uploaded.bucket || process.env.R2_UPLOAD_BUCKET_NAME || process.env.R2_BUCKET_NAME, original_filename: media.filename, role },
       });
       return res.status(201).json({ status: 'success', data: persisted });
     } catch (dbError) {

@@ -239,9 +239,16 @@ export async function getPublicSupportMediaAsset(mediaId: number) {
     .where(and(eq(supportMedia.id, mediaId), eq(supportMedia.active, true), eq(supports.active, true), isNotNull(supports.tenantId)))
     .limit(1);
   if (!result || !isSupportEligibleForPublicCatalog(result.support.tenantId, result.support.active)) return null;
-  const storageKey = (result.media.metadata as Record<string, unknown> | null)?.storage_key;
+  const metadata = result.media.metadata as Record<string, unknown> | null;
+  const storageKey = metadata?.storage_key;
   if (typeof storageKey !== 'string' || !isSafeSupportMediaKey(result.support.canonicalId, storageKey)) return null;
-  return { storageKey, mimeType: result.media.mimeType || undefined };
+  const sourceBucket = process.env.R2_BUCKET_NAME?.trim();
+  const uploadBucket = process.env.R2_UPLOAD_BUCKET_NAME?.trim() || sourceBucket;
+  const metadataBucket = metadata?.storage_bucket;
+  const storageBucket = typeof metadataBucket === 'string' && [sourceBucket, uploadBucket].includes(metadataBucket)
+    ? metadataBucket
+    : sourceBucket;
+  return { storageKey, storageBucket, mimeType: result.media.mimeType || undefined };
 }
 
 export async function getSupportPricingByAdmin(canonicalId: string) {

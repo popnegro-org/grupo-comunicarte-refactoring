@@ -115,8 +115,8 @@ export async function createApp() {
       const mediaId = Number(req.params.mediaId);
       const asset = await getPublicSupportMediaAsset(mediaId);
       if (!asset) return res.status(404).json({ status: 'error', message: 'Recurso multimedia no encontrado.' });
-      const signedUrl = (await import('./src/server/r2StorageAdapter.ts')).getStorageAdapter().getAssetUrl(asset.storageKey, 300);
-      if (req.query.variant === 'thumbnail' && asset.mimeType?.startsWith('image/')) {
+      const signedUrl = (await import('./src/server/r2StorageAdapter.ts')).getStorageAdapter().getAssetUrl(asset.storageKey, 300, asset.storageBucket);
+      if (process.env.R2_THUMBNAILS_ENABLED !== 'false' && req.query.variant === 'thumbnail' && asset.mimeType?.startsWith('image/')) {
         try {
           const original = await fetch(signedUrl, { signal: AbortSignal.timeout(12_000) });
           if (!original.ok) throw new Error(`R2 devolvió HTTP ${original.status} al generar miniatura.`);
