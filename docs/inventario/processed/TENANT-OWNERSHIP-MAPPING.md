@@ -102,3 +102,19 @@ Verificación de solo lectura en Neon:
 - QA conserva 27 políticas staged en 27 tablas, pero 0 tablas tienen RLS habilitado. Preview tiene 0 políticas y 0 tablas con RLS. `app.tenant_id` está sin configurar en ambas ramas.
 
 Las políticas staged de QA no constituyen una frontera de seguridad activa para el PMV de administrador global único. No habilitarlas ni eliminarlas en esta línea de trabajo. La fuente operativa vigente es `docs/pmv/PROJECT-CONTROL.md`.
+
+
+## Actualización de ownership confirmada por el responsable — Production — 2026-11-12
+
+La conciliación documental anterior indicó que `mza-trad-16` no figuraba entre las posiciones 01–17 del PDF de Mendoza y, por eso, lo dejó sin asignación. Esa conclusión sobre el contenido del PDF se mantiene: **el PDF no es la fuente que acredita este soporte**.
+
+El responsable del proyecto confirmó expresamente que `mza-trad-16` (“Las Heras Centro”) pertenece a `tenant-default`. Con autorización HUMAN GATE, esta asignación fue aplicada únicamente en Neon Production el 2026-11-12:
+
+- `supports.tenant_id = tenant-default`
+- Tenant slug: `mendoza-ooh`
+- `active = true`
+- Evidencia persistida en `tenant_ownership_evidence`, `tenant_ownership_assigned_by` y `tenant_ownership_assigned_at`.
+
+La evidencia de ownership es la confirmación explícita del responsable, no una inferencia del PDF. El cambio fue verificado con consulta SQL de solo lectura posterior.
+
+**Alcance por entorno:** esta asignación se ejecutó solo en Production. No se modificaron los datasets aislados de QA ni Preview; sus filas de prueba/cuarentena deben interpretarse según el estado propio de cada branch. Los conteos históricos de este documento no deben reutilizarse como conteos actuales de Production.
