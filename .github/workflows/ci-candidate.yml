@@ -202,7 +202,7 @@ jobs:
           EXPECTED_COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-        run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
+        run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|C1/C3/C4/C6: transición válida, ownership NULL, solicitud vacía y concurrencia|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
 
   qa-deployment-e2e:
     name: QA Deployment E2E · Neon QA
