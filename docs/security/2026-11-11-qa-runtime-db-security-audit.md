@@ -138,3 +138,43 @@ El diagnóstico de conexión necesita el siguiente arranque de Render para produ
 - La rama candidata puede desplegar el diagnóstico inocuo de arranque a los servicios ya asignados a esa rama; el cambio no altera datos ni permisos.
 
 **Estado:** identidad efectiva confirmada en los dos servicios Render; auditoría de esquema/permisos y cobertura QA completada; separación de roles y migraciones sigue pendiente de implementación/validación específica.
+
+
+## Addendum — verificación directa 2026-11-12
+
+Consultas read-only ejecutadas directamente en Neon sobre `br-muddy-cell-au64infb` (Preview) y `br-bold-block-aua43ua0` (QA). No se ejecutó DDL ni DML.
+
+| Control | Preview | QA |
+|---|---:|---:|
+| Supports | 46 | 46 |
+| Supports sin tenant | 18 | 18 |
+| Request items | 34 | 44 |
+| Request items sin tenant | 2 | 3 |
+| Media Kit items | 3 | 9 |
+| Media Kit items sin tenant | 0 | 0 |
+| Requests sin scope | 2 | 2 |
+| Tenants `tenant-ba` / `tenant-default` existentes | 2 | 2 |
+| Request item huérfano / mismatch | 0 / 0 | 0 / 0 |
+| Media Kit item huérfano / mismatch | 0 / 0 | 0 / 0 |
+
+Las FK compuestas y las FK simples a `tenants` existen y están validadas en ambas ramas. No existen triggers de herencia/immutability en ninguna. El postflight del SQL adjunto (34 request items y 2 NULL para ambas ramas; QA con 0 Media Kit items) está desactualizado respecto de QA actual: QA contiene 44 request items, 3 NULL y 9 Media Kit items. La migración de alineación no debe ejecutarse con expectativas numéricas históricas fijas.
+
+### Privilegios efectivos confirmados
+
+Consulta read-only en ambas ramas como `neondb_owner`:
+
+| Atributo | Preview | QA |
+|---|---:|---:|
+| superuser | false | false |
+| BYPASSRLS | true | true |
+| CREATEDB / CREATEROLE | true / true | true / true |
+| CREATE database / schema public | true / true | true / true |
+| SELECT / INSERT / UPDATE / DELETE sobre tablas públicas | 36/36 | 37/37 |
+
+Esto coincide con los diagnósticos recientes de ambos servicios Render. No hay rol runtime de mínimos privilegios instalado en esos servicios. El contrato actual de administrador global no requiere activar RLS, pero el rol privilegiado sigue siendo una deuda de seguridad.
+
+### Corrección preparada
+
+Se añadió `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` en la rama candidata. Añade herencia de tenant al insertar/actualizar ítems, preserva NULL para soportes pendientes, propaga la primera asignación documentada y evita reasignar ownership ya establecido. Está versionada, no aplicada ni probada en una base PostgreSQL temporal/persistente.
+
+**Estado:** integridad de datos actual PASS; enforcement DB ante nuevos writes incompleto hasta aplicar y probar la migración en QA/Preview. No tocar Production ni habilitar RLS como parte de este cambio.
