@@ -47,10 +47,12 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Missing support rejected | PASS | PASS |
 | Assigned support ownership change rejected | PASS | PASS |
 | Assigned support ownership clear rejected | PASS | PASS |
-| Historical pending item remains NULL after support assignment and explicit tenant_id=NULL UPDATE | PASS | PASS |
+| Historical pending item remains NULL after support assignment and explicit tenant_id=NULL UPDATE | PENDING revalidation | PENDING revalidation |
 | Test mutations rolled back / cleaned | PASS | PASS |
 
 The Neon SQL connector returned successful execution for both test statements with no exception.
+
+> **Regression revalidation required:** the original QA/Preview PASS was recorded before the additional explicit-UPDATE assertion was added. The migration and rollback test were hardened in commits `ee0ed89` / `7d1c06d`; they have not yet been reapplied/re-executed on QA and Preview. Do not treat the new historical-item UPDATE case as PASS until both isolated branches confirm it.
 
 ## Postflight — data unchanged and consistent
 
