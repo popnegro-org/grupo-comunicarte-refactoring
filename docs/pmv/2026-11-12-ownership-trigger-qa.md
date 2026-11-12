@@ -9,14 +9,14 @@
 
 ## Scope and safety
 
-The migration was applied transactionally to the two explicitly allowlisted Neon branches only:
+The base migration was applied transactionally to the two explicitly allowlisted Neon branches. The corrective migration was subsequently applied transactionally to those same two branches only:
 
 | Environment | Branch | Branch ID | Result |
 |---|---|---|---|
 | QA | qa/pr96-ownership-20261105 | br-bold-block-aua43ua0 | APPLIED |
 | Preview | preview/pmv-validation-candidate | br-muddy-cell-au64infb | APPLIED |
 
-The migration preflight checked the Neon branch ID, database name, required tables/columns, tenant existence, and orphan/mismatch counts. It was run through a single transaction per branch. The migration adds two triggers and two invoker-security functions; it does not update existing rows, change roles/grants, enable RLS, or alter Production.
+Both migration preflights checked the exact Neon branch ID and database. The corrective migration also verified the existing table, function and enabled trigger. It replaces only the invoker-security trigger function; it does not update existing rows, change roles/grants, enable RLS, or alter Production.
 
 **Neon Production br-wandering-sky-aunq6lad was not targeted or modified.**
 
@@ -26,7 +26,7 @@ A further adversarial review found an UPDATE path not covered by the original ro
 
 This means the original QA/Preview PASS evidence below remains valid only for the scenarios explicitly listed; it did **not** prove rejection of cross-support reassignment into quarantine. The candidate now contains a corrective migration and a regression assertion for this case.
 
-**Current status of correction:** committed to `pmv-validation-candidate`; **NOT APPLIED** to Neon QA or Preview and **NOT EXECUTED**. Do not claim the new scenario passes until the migration is applied to the exact allowlisted branches and the rollback-only test is rerun. No DDL or data mutation was performed as part of this correction.
+**Current status of correction:** applied transactionally to Neon QA (`br-bold-block-aua43ua0`) and Preview (`br-muddy-cell-au64infb`). The expanded rollback-only test was executed successfully on both branches. Production was not targeted.
 
 ## Enforced behavior
 
@@ -52,7 +52,7 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Assigned item tenant cleared → re-inherited | PASS | PASS |
 | Mismatched tenant rejected | PASS | PASS |
 | Missing parent request rejected | PASS | PASS |
-| New request item + pending support + NULL tenant rejected | PASS | PASS |\n| Historical item reassignment to a different quarantined support rejected | NOT RUN — corrective migration pending | NOT RUN — corrective migration pending |
+| New request item + pending support + NULL tenant rejected | PASS | PASS |\n| Historical item reassignment to a different quarantined support rejected | PASS | PASS |
 | Historical pending item UPDATE + NULL preserved after support assignment | PASS | PASS |
 | Pending support + non-NULL tenant rejected | PASS | PASS |
 | Missing support rejected | PASS | PASS |
@@ -62,9 +62,9 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Historical pending item remains NULL after support assignment | PASS | PASS |
 | Test mutations rolled back / cleaned | PASS | PASS |
 
-The Neon SQL connector returned successful execution for the original test statement on both branches with no exception. That result predates the newly added cross-support reassignment assertion and does not validate the corrective migration.
+The Neon SQL connector returned successful execution for the expanded rollback-only test on both branches, including the cross-support reassignment rejection assertion.
 
-The final rollback-only test was re-executed after the explicit historical-item UPDATE assertion was corrected to run before support assignment. Both QA and Preview returned successful execution with no exception. Postflight confirms the original 44/34 request-item counts, 3/2 historical NULL rows, and zero orphan/mismatch rows.
+The expanded rollback-only test completed without exception on both QA and Preview after the corrective migration. Postflight confirms zero request-item orphan/mismatch rows, 46 supports per branch, 18 unassigned supports per branch, and two remaining historical NULL request items per branch. Current request-item counts are 43 in QA and 37 in Preview; Media Kit item counts are 9 and 4 respectively. These are current post-E2E snapshots, not immutable acceptance totals.
 
 ## Postflight — data unchanged and consistent
 
@@ -72,9 +72,9 @@ The final rollback-only test was re-executed after the explicit historical-item 
 |---|---:|---:|
 | Supports | 46 | 46 |
 | Unassigned supports | 18 | 18 |
-| Request items | 44 | 34 |
-| Historical pending request items | 3 | 2 |
-| Media Kit items | 9 | 3 |
+| Request items | 43 | 37 |
+| Historical pending request items | 2 | 2 |
+| Media Kit items | 9 | 4 |
 | Pending Media Kit items | 0 | 0 |
 | Enabled request-item inheritance trigger | 1 | 1 |
 | Enabled support ownership immutability trigger | 1 | 1 |
