@@ -172,3 +172,16 @@ Se inspeccionó el deployment Vercel Production `dpl_E83qTALyMZ9FuFVvVeMc8Aj2Xcp
 - El servicio Render `grupo-comunicarte-refactoring` sigue en `pmv-validation-candidate` y su runtime reportó `app_runtime_preview`; no es el backend Production.
 
 **Bloqueantes de release:** (1) Production aún sirve una API que expone al menos un soporte en cuarentena; (2) falta demostrar que el runtime Vercel usa un rol dedicado de privilegios mínimos; (3) PR #90 sigue sin aprobación humana y conserva seis snapshots sin baseline histórico confiable. No modificar Production, secretos, ramas Neon ni despliegues críticos sin HUMAN GATE.
+
+
+### Addendum — identidad runtime de Vercel Production confirmada por sesión PostgreSQL
+
+La comprobación se repitió inmediatamente después de invocar el endpoint Production `/api/supports`. Neon Production mostró una sesión PostgreSQL con:
+- `usename = neondb_owner`
+- `application_name = pgbouncer`
+- `state = idle`
+- última consulta: `SELECT support_canonical_id, metadata FROM support_technical WHERE ...`, consistente con la consulta de enriquecimiento ejecutada por el handler público de catálogo.
+
+Esto confirma que la API Vercel Production está utilizando `neondb_owner` como identidad efectiva de base de datos (no solo que el usuario de auditoría use ese rol). Los atributos actuales del rol son `rolsuper=false`, pero `rolbypassrls=true`, `rolcreatedb=true`, `rolcreaterole=true`, `rolcanlogin=true`. No es una identidad de aplicación de privilegios mínimos.
+
+**P1 confirmado:** Vercel Production ejecuta consultas de catálogo usando `neondb_owner`, un rol con BYPASSRLS y capacidad de crear bases/roles. No se creó ni rotó ningún rol/credencial y no se cambió el secreto productivo. La remediación requiere aprovisionar y validar un rol runtime dedicado con privilegios mínimos y migrar el secreto de conexión de Vercel Production; por ser un cambio crítico de producción, queda sujeto a HUMAN GATE.
