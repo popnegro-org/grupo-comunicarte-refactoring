@@ -62,6 +62,16 @@ BEGIN
     RAISE EXCEPTION 'Assigned support did not propagate tenant_id to request item';
   END IF;
 
+  -- Clearing a child tenant on an assigned support must also re-inherit it.
+  UPDATE public.mediakit_request_items
+     SET tenant_id=NULL
+   WHERE id=v_inserted_id
+  RETURNING tenant_id INTO v_observed_tenant;
+
+  IF v_observed_tenant IS DISTINCT FROM v_assigned_tenant THEN
+    RAISE EXCEPTION 'Request item update bypassed tenant inheritance';
+  END IF;
+
   DELETE FROM public.mediakit_request_items WHERE id=v_inserted_id;
 
   -- Assigned support: a spoofed/mismatching tenant must be rejected.
@@ -108,6 +118,15 @@ BEGIN
        SET tenant_id=v_other_tenant
      WHERE canonical_id=v_assigned_support;
     RAISE EXCEPTION 'Assigned support ownership was unexpectedly mutable';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE public.supports
+       SET tenant_id=NULL
+     WHERE canonical_id=v_assigned_support;
+    RAISE EXCEPTION 'Assigned support ownership was unexpectedly clearable';
   EXCEPTION WHEN check_violation THEN
     NULL;
   END;
