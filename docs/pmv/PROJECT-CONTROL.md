@@ -114,7 +114,7 @@ CI Candidate confirma typecheck, unit tests, build, bundle budget y dependency a
 
 ## 7. Auditoría DevSecOps y alcance del PR
 
-Diff actual respecto de `main`: **552 commits ahead / 0 behind; 156 archivos, +11.947 / -2.158 líneas**.
+El SHA de código validado (`8270b541ae4ff65c8eecf2b46e50365441d8059c`) tenía 552 commits ahead / 0 behind y 156 archivos (+11.947 / -2.158 líneas). Después se agregaron commits exclusivamente documentales para corregir el registro de auditoría; consultar el compare vivo de PR #90 para el alcance y los contadores actuales.
 
 | Grupo | Archivos |
 |---|---:|
