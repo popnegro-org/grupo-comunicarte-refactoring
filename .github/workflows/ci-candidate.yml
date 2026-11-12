@@ -180,6 +180,124 @@ jobs:
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|C1/C3/C4/C6|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
 
+  vercel-preview-e2e:
+    name: Vercel Preview E2E · Neon Preview
+    # Validate the exact Vercel Preview runtime after Render Preview E2E has completed,
+    # avoiding concurrent writes to the shared Neon Preview branch.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [validate, preview-deployment-e2e]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-ctozn8xxv-popnegros-projects.vercel.app
+      EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
+      EXPECTED_DEPLOYMENT_COMMIT: 8418ffa0835337202d6a3866866d1bfe60ddbbee
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Vercel Preview branch, code revision, quarantine and pricing privacy
+        shell: bash
+        run: |
+          node <<'NODE'
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
+
+          const [healthResponse, supportsResponse, quarantinedResponse, sessionResponse, pricingResponse] = await Promise.all([
+            fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/supports', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/supports/mza-trad-16', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/admin/session', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/admin/support-pricing', base), { signal: AbortSignal.timeout(20000) }),
+          ]);
+
+          if (!healthResponse.ok) throw new Error('Vercel health check returned HTTP ' + healthResponse.status);
+          const health = await healthResponse.json();
+          if (health.status !== 'ok' || health.database !== 'connected') {
+            throw new Error('Vercel Preview database is not connected: ' + JSON.stringify(health));
+          }
+          if (health.databaseBranch !== expectedBranch) {
+            throw new Error('Unexpected Neon branch: ' + health.databaseBranch);
+          }
+          if (health.commit !== expectedCommit) {
+            throw new Error('Vercel deployment is stale or code SHA changed. Expected ' + expectedCommit + ', received ' + health.commit);
+          }
+
+          if (!supportsResponse.ok) throw new Error('Public supports endpoint returned HTTP ' + supportsResponse.status);
+          const catalog = await supportsResponse.json();
+          if (!Array.isArray(catalog.data) || catalog.data.length !== 28) {
+            throw new Error('Expected 28 owned supports, received ' + (catalog.data?.length ?? 'invalid payload'));
+          }
+          if (catalog.data.some((support) => support.canonical_id === 'mza-trad-16')) {
+            throw new Error('Quarantined support mza-trad-16 leaked into the public catalog.');
+          }
+          const containsPricing = (value) => {
+            if (Array.isArray(value)) return value.some(containsPricing);
+            if (!value || typeof value !== 'object') return false;
+            return Object.entries(value).some(([key, child]) =>
+              /(price|precio|cost|costo)/i.test(key) || containsPricing(child)
+            );
+          };
+          if (containsPricing(catalog)) throw new Error('Public catalog exposes pricing fields.');
+
+          if (quarantinedResponse.status !== 404) {
+            throw new Error('Quarantined support detail must return 404, received ' + quarantinedResponse.status);
+          }
+          if (sessionResponse.status !== 401 || pricingResponse.status !== 401) {
+            throw new Error('Admin session and pricing endpoints must reject anonymous access.');
+          }
+
+          console.log('Vercel Preview preflight PASS: same code revision, isolated Neon branch, 28 public supports, quarantine 404, pricing private.');
+          NODE
+
+      - name: Verify Vercel Preview E2E credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Vercel Preview E2E."
+            exit 1
+          fi
+          echo "Vercel Preview credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Vercel Preview
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload Vercel Preview E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: vercel-preview-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
+
   qa-deployment-e2e:
     name: QA Deployment E2E · Neon QA
     # This job creates/updates one deterministic synthetic request and Media Kit in Neon QA.
