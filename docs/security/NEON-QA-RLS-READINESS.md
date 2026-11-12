@@ -1,5 +1,8 @@
 # Neon QA — PostgreSQL roles and RLS readiness
 
+> **Addendum runtime (2026-11-12):** las 27 políticas descritas aquí son staged/inertes: QA tiene 0 tablas con RLS habilitado; Preview tiene 0 políticas y 0 tablas con RLS. El rol `app_runtime_qa` mencionado en el análisis es el rol NOLOGIN de staging; el runtime Render QA usa `app_runtime_qa_login`. Preview usa `app_runtime_preview`. Ambos roles runtime tienen `BYPASSRLS=false`. Mantener las políticas staged sin activar ni eliminar; ver [PROJECT-CONTROL.md](../pmv/PROJECT-CONTROL.md).
+
+
 **Date:** 2026-11-11  
 **Scope:** Neon project `grupocomunicarte-serverless`, QA branch `qa/pr96-ownership-20261105`  
 **Branch ID:** `br-bold-block-aua43ua0`  
