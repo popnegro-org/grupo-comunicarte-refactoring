@@ -47,7 +47,7 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Missing support rejected | PASS | PASS |
 | Assigned support ownership change rejected | PASS | PASS |
 | Assigned support ownership clear rejected | PASS | PASS |
-| Historical pending item remains NULL after support assignment attempt | PASS | PASS |
+| Historical pending item remains NULL after support assignment and explicit tenant_id=NULL UPDATE | PASS | PASS |
 | Test mutations rolled back / cleaned | PASS | PASS |
 
 The Neon SQL connector returned successful execution for both test statements with no exception.
