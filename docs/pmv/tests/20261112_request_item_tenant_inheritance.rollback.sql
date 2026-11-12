@@ -1,7 +1,7 @@
 -- Rollback-only integration test for migration
 -- docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql
 --
--- Run only after the migration has been applied to an isolated Neon QA branch.
+-- Run only after both the base inheritance migration and the corrective quarantine-reassignment migration have been applied to an isolated Neon QA/Preview branch.
 -- This is one DO statement. Successful execution leaves no row or ownership
 -- change behind: temporary request items are deleted and the historical
 -- pending-item behavior during a simulated support assignment is tested inside
@@ -249,6 +249,6 @@ BEGIN
     RAISE EXCEPTION 'Rollback test leaked support or request-item mutations';
   END IF;
 
-  RAISE NOTICE 'PASS: request-item tenant inheritance, quarantine, mismatch rejection, support immutability, and historical pending preservation all passed; no test data persisted.';
+  RAISE NOTICE 'PASS: request-item tenant inheritance, quarantine, cross-support reassignment rejection, mismatch rejection, support immutability, and historical pending preservation all passed; no test data persisted.';
 END
 $test$;
