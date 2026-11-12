@@ -185,3 +185,20 @@ La comprobación se repitió inmediatamente después de invocar el endpoint Prod
 Esto confirma que la API Vercel Production está utilizando `neondb_owner` como identidad efectiva de base de datos (no solo que el usuario de auditoría use ese rol). Los atributos actuales del rol son `rolsuper=false`, pero `rolbypassrls=true`, `rolcreatedb=true`, `rolcreaterole=true`, `rolcanlogin=true`. No es una identidad de aplicación de privilegios mínimos.
 
 **P1 confirmado:** Vercel Production ejecuta consultas de catálogo usando `neondb_owner`, un rol con BYPASSRLS y capacidad de crear bases/roles. No se creó ni rotó ningún rol/credencial y no se cambió el secreto productivo. La remediación requiere aprovisionar y validar un rol runtime dedicado con privilegios mínimos y migrar el secreto de conexión de Vercel Production; por ser un cambio crítico de producción, queda sujeto a HUMAN GATE.
+
+
+## 9. Vercel Preview runtime identity audit — 2026-11-12
+
+A live call to the latest available Vercel Preview deployment on `pmv-validation-candidate` was followed by a read-only query of Neon Preview `pg_stat_activity`. The Vercel API's query against `support_routes` ran as `neondb_owner`. This is separate from Render Preview, whose runtime sessions use `app_runtime_preview`.
+
+Neon Preview role attributes:
+- `neondb_owner`: `rolsuper=false`, `rolbypassrls=true`, `rolcreatedb=true`, `rolcreaterole=true`, `rolreplication=true`, database CREATE and public schema CREATE enabled.
+- `app_runtime_preview`: `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`, database CREATE and public schema CREATE disabled.
+- `app_runtime_preview` nevertheless has SELECT/INSERT/UPDATE/DELETE privileges on all 36 public tables; object-level grant scope still requires reduction after a route dependency audit.
+
+The Vercel Preview deployment's ownership behavior is correct on its deployed SHA:
+- `GET /api/health`: HTTP 200; `databaseBranch=br-muddy-cell-au64infb`.
+- `GET /api/supports`: 28 records; `mza-trad-16` absent.
+- `GET /api/supports/mza-trad-16`: HTTP 404.
+
+This verifies data-branch isolation and quarantine behavior in that Vercel Preview deployment, but it does not clear the elevated runtime identity. Vercel Preview uses `neondb_owner`; Render Preview uses `app_runtime_preview`. The preview role and production role remediation must be tracked separately. No Preview or Production secrets/configuration were changed.
