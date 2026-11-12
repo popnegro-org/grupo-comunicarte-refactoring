@@ -82,25 +82,74 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Detect runtime changes in this commit
+      - name: Detect runtime changes since the deployed Preview SHA
         id: runtime
         shell: bash
+        env:
+          PREVIEW_HEALTH_URL: https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app/api/health
         run: |
-          if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            echo "required=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          changed_files="$(git diff --name-only HEAD^ HEAD)"
-          if printf '%s\n' "$changed_files" | grep -Eq '^(src/|api/|server\.ts$|public/|drizzle/|scripts/|package\.json$|package-lock\.json$|vite\.config\.[^/]+$|tsconfig[^/]*\.json$|index\.html$|vercel\.json$|postcss\.config\.[^/]+$|tailwind\.config\.[^/]+$|\.npmrc$)'; then
-            echo "required=true" >> "$GITHUB_OUTPUT"
-            echo "Runtime files changed; exact-SHA Preview smoke is required."
-          else
-            echo "required=false" >> "$GITHUB_OUTPUT"
-            echo "No runtime files changed; reusing the previously verified Preview deployment."
-          fi
+          node <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+
+          const output = process.env.GITHUB_OUTPUT;
+          const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT || '1');
+          const runtimePattern = /^(src\/|api\/|server\.ts$|public\/|drizzle\/|scripts\/|package\.json$|package-lock\.json$|vite\.config\.[^/]+$|tsconfig[^/]*\.json$|index\.html$|vercel\.json$|postcss\.config\.[^/]+$|tailwind\.config\.[^/]+$|\.npmrc$)/;
+          let deployedSha = '';
+
+          try {
+            const response = await fetch(process.env.PREVIEW_HEALTH_URL, { signal: AbortSignal.timeout(10000) });
+            if (response.ok) {
+              const health = await response.json();
+              if (health.status === 'ok' && health.database === 'connected' && /^[0-9a-f]{40}$/i.test(health.commit || '')) {
+                deployedSha = health.commit;
+              }
+            }
+          } catch {
+            // An unavailable or unhealthy alias cannot be trusted; require an exact-SHA smoke.
+          }
+
+          let required = true;
+          let expectedSha = headSha;
+          let reason = 'Preview health/commit unavailable; exact candidate smoke is required.';
+
+          if (deployedSha) {
+            try {
+              execFileSync('git', ['cat-file', '-e', deployedSha + '^{commit}'], { stdio: 'ignore' });
+              const changedFiles = execFileSync('git', ['diff', '--name-only', deployedSha + '...HEAD'], { encoding: 'utf8' })
+                .split('\n')
+                .filter(Boolean);
+              const runtimeChanges = changedFiles.filter(file => runtimePattern.test(file));
+
+              if (runtimeChanges.length > 0) {
+                required = true;
+                expectedSha = headSha;
+                reason = 'Runtime changes exist after deployed Preview SHA ' + deployedSha + ': ' + runtimeChanges.join(', ');
+              } else if (runAttempt > 1) {
+                required = true;
+                expectedSha = deployedSha;
+                reason = 'Manual rerun forces authenticated smoke against current deployed Preview SHA ' + deployedSha + '.';
+              } else {
+                required = false;
+                expectedSha = deployedSha;
+                reason = 'No runtime changes since deployed Preview SHA ' + deployedSha + '; reuse that exact runtime.';
+              }
+            } catch {
+              required = true;
+              expectedSha = headSha;
+              reason = 'Deployed Preview SHA is not available in candidate history; exact candidate smoke is required.';
+            }
+          }
+
+          appendFileSync(output, 'required=' + String(required) + '\n');
+          appendFileSync(output, 'expected_sha=' + expectedSha + '\n');
+          console.log(reason);
+          console.log('Candidate HEAD: ' + headSha + '; Preview SHA: ' + (deployedSha || 'unavailable') + '; run attempt: ' + runAttempt);
+          NODE
 
       - name: Skip Preview deployment smoke for test/documentation-only commits
         if: steps.runtime.outputs.required != 'true'
@@ -126,7 +175,7 @@ jobs:
         id: preview
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_SHA: ${{ steps.runtime.outputs.expected_sha }}
           EXPECTED_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
         run: |
           node <<'NODE'
@@ -202,7 +251,7 @@ jobs:
         if: steps.runtime.outputs.required == 'true'
         env:
           PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
-          EXPECTED_COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_COMMIT_SHA: ${{ steps.runtime.outputs.expected_sha }}
           E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|C1/C3/C4/C6|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
