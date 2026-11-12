@@ -126,6 +126,8 @@ COMMENT ON FUNCTION public.enforce_mediakit_request_item_tenant() IS
 
 -- Ownership is write-once: a documented assignment may move NULL -> tenant,
 -- but an assigned support cannot be silently reassigned or returned to quarantine.
+-- Historical request items that already have tenant_id NULL remain pending even
+-- if their support is assigned later; no historical request is reclassified.
 CREATE OR REPLACE FUNCTION public.prevent_support_tenant_reassignment()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -152,35 +154,6 @@ FOR EACH ROW
 WHEN (OLD.tenant_id IS DISTINCT FROM NEW.tenant_id)
 EXECUTE FUNCTION public.prevent_support_tenant_reassignment();
 
--- When a pending support receives its first documented tenant, propagate that
--- exact value to historical request items in the same transaction. The child
--- trigger above rechecks each row and rejects any inconsistent state.
-CREATE OR REPLACE FUNCTION public.propagate_support_tenant_to_request_items()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = pg_catalog, public
-AS $function$
-BEGIN
-  IF OLD.tenant_id IS NULL AND NEW.tenant_id IS NOT NULL THEN
-    UPDATE public.mediakit_request_items
-       SET tenant_id = NEW.tenant_id
-     WHERE support_id = NEW.canonical_id
-       AND tenant_id IS NULL;
-  END IF;
-  RETURN NEW;
-END
-$function$;
-
-DROP TRIGGER IF EXISTS supports_tenant_assignment_propagation
-  ON public.supports;
-
-CREATE TRIGGER supports_tenant_assignment_propagation
-AFTER UPDATE OF tenant_id
-ON public.supports
-FOR EACH ROW
-WHEN (OLD.tenant_id IS DISTINCT FROM NEW.tenant_id)
-EXECUTE FUNCTION public.propagate_support_tenant_to_request_items();
 
 COMMIT;
 
@@ -191,8 +164,7 @@ COMMIT;
 -- WHERE NOT tgisinternal AND tgname IN (
 --   'mediakit_request_items_tenant_inheritance',
 --   'supports_tenant_ownership_immutable',
---   'supports_tenant_assignment_propagation'
--- )
+---- )
 -- ORDER BY table_name, tgname;
 -- Expected: one enabled trigger per name; all three trigger functions exist.
 -- Existing rows remain unchanged; verify their NULL/match counts against the
@@ -200,5 +172,5 @@ COMMIT;
 -- docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql:
 -- assigned + omitted/cleared tenant => inherited; assigned + mismatch => rejected;
 -- pending + NULL => accepted; pending + tenant => rejected; missing support => rejected;
--- assigned support ownership change/clear => rejected; first documented assignment
--- of a pending support => existing pending request items inherit atomically.
+-- assigned support ownership change/clear => rejected; assigning a pending support
+-- does not retroactively classify existing request items that remain NULL.
