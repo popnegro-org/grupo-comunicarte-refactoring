@@ -107,6 +107,9 @@ BEGIN
    )
   RETURNING tenant_id INTO v_observed_tenant;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Rollback test could not locate an existing historical pending request item';
+  END IF;
   IF v_observed_tenant IS NOT NULL THEN
     RAISE EXCEPTION 'Historical pending request item unexpectedly acquired tenant ownership';
   END IF;
