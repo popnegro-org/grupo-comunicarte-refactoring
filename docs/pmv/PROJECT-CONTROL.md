@@ -300,3 +300,84 @@ La verificación Vercel Preview same-SHA por endpoints está **PASS**. Continúa
 4. Verificación final de Git Integration / Ignored Build Step con evidencia de configuración.
 
 **NO-GO para merge/release** hasta cerrar las validaciones funcionales restantes y recibir `HUMAN GATE: APRUEBO PR #90`. No se ejecutó merge ni se modificó Production.
+
+
+## Cierre de auditoría integral — 2026-11-12 21:55 UTC
+
+### Resultado de pipelines y QA del commit candidato
+
+Commit actual de rama: `5ad9636f5182abf3449c96524799fe86471c05f9`.
+Comparación contra el commit de código servido por Vercel (`8418ffa0835337202d6a3866866d1bfe60ddbbee`): 3 commits adelante, 0 atrás; los únicos archivos modificados son este documento y `.github/workflows/ci-candidate.yml`. No cambió el código de aplicación que ejecuta el deployment Vercel.
+
+- CI #43313906997 / run 1523: **PASS**.
+- CI Candidate #43313906861 / run 1532: **PASS**.
+- Visual QA #43313906745 / run 1242: **PASS**, 96/96 en bootstrap y 96/96 en validación.
+- Render Preview authenticated smoke: **PASS**, 9/9.
+- Neon QA deployment E2E: **PASS**, 12/12.
+- Neon Preview deployment E2E en Render: **PASS**, 12/12.
+- Vercel Preview deployment E2E: **PASS**, 12/12, después de corregir dos privilegios insuficientes del runtime Preview.
+
+### Vercel Preview E2E — gate agregado
+
+Se agregó el job `Vercel Preview E2E · Neon Preview` a `.github/workflows/ci-candidate.yml`. Se ejecuta después del E2E Render/Neon Preview para evitar escrituras concurrentes sobre la misma rama Neon.
+
+Preflight PASS:
+- Deployment `dpl_Bo3WtZp3zme4PYttjsgs2JdA6M5u`, SHA de aplicación `8418ffa0835337202d6a3866866d1bfe60ddbbee`.
+- `/api/health`: HTTP 200, DB conectada, branch `br-muddy-cell-au64infb`.
+- `/api/supports`: HTTP 200, 28 registros; `mza-trad-16` no se publica.
+- Detalle `mza-trad-16`: HTTP 404 esperado.
+- Catálogo público sin campos de precio/costo.
+- `/api/admin/session` y `/api/admin/support-pricing` rechazan acceso anónimo con HTTP 401.
+
+Primer E2E Vercel: 10/12. Los dos fallos eran permisos PostgreSQL faltantes, no errores de lógica:
+- `clientes`: el flujo de Media Kit usa `SELECT ... FOR UPDATE`.
+- `mediakit_request_items`: el cambio de estado de solicitud usa `SELECT ... FOR UPDATE`.
+
+Corrección aplicada exclusivamente en Neon Preview al rol `app_runtime_vercel_preview_v2`: se revocó UPDATE a nivel de tabla y se concedió únicamente UPDATE de la columna `created_at` en esas dos tablas. La comprobación efectiva confirma UPDATE de tabla = false y UPDATE de columna `created_at` = true. No se concedió DELETE adicional ni acceso a `leads`. Reejecución del job: **12/12 PASS**.
+
+Matriz efectiva del rol Vercel Preview:
+- 14 tablas autorizadas y 6 secuencias con USAGE.
+- `supports` no permite DELETE.
+- `leads` no permite SELECT.
+- `clientes` y `mediakit_request_items` no permiten UPDATE a nivel de tabla; solo columna `created_at`.
+- No se modificó ningún dato de negocio ni Production.
+
+### Production — runtime y datos confirmados
+
+- Deployment Production `dpl_2niRf3aieFh7nVxVfAiQU9myGpbt`, commit `244d2f3d4bc6f3094de56b013c0c33b04f1a6e70`, READY.
+- `/api/health`: HTTP 200, DB conectada.
+- Después de invocar health, `pg_stat_activity` mostró sesión de aplicación `app_runtime_prod`; el usuario `neondb_owner` observado en la misma consulta corresponde a la sesión de auditoría.
+- `app_runtime_prod`: LOGIN true; SUPERUSER, CREATEDB, CREATEROLE, REPLICATION y BYPASSRLS false; DB CONNECT true/CREATE false; schema public USAGE true/CREATE false.
+- Permisos: SELECT en 14 tablas, INSERT en 13, UPDATE en 10 y DELETE en 7. Sin SELECT sobre `leads`, `users` o `google_credentials`; sin UPDATE sobre `roles`; sin DELETE sobre `supports`.
+- `/api/supports`: HTTP 200, 29 registros, incluye `mza-trad-16`, sin campos de precios/costos.
+- `/api/supports/mza-trad-16`: HTTP 200. Su asignación Production a `tenant-default` permanece vigente.
+- La variable Vercel Production `DATABASE_URL` está limitada a Production y su metadata identifica `app_runtime_prod`. La afirmación histórica de que Production usaba `neondb_owner` queda **superada** por esta verificación en vivo.
+
+### Render Preview — identidad y riesgo de privilegios
+
+- Último deployment Render `dep-dbr38e9i3sns73ev6mjg`: **LIVE**, commit `5ad9636f5182abf3449c96524799fe86471c05f9`.
+- Render confirmó tres respuestas consecutivas con health OK, DB conectada, branch esperado `br-muddy-cell-au64infb` y asset del candidato. El smoke autenticado pasó 9/9.
+- La identidad PostgreSQL efectiva está confirmada: `app_runtime_preview`. Se observaron seis sesiones idle de ese rol tras el despliegue; las consultas registradas incluyen tablas de precios, soporte técnico y medios.
+- Riesgo P1: `app_runtime_preview` tiene SELECT, INSERT, UPDATE y DELETE sobre las 36/36 tablas públicas (144 grants), además de 12 secuencias. Incluye tablas sensibles como `users`, `roles`, `permissions`, `google_credentials` y `leads`.
+- El rol no es superuser, no puede crear bases/roles, no tiene replication ni BYPASSRLS y no posee membresías de otros roles. Sin embargo, ninguna de las 36 tablas tiene RLS habilitado.
+- No se cambiaron los grants de Render ni su `DATABASE_URL`. La autorización disponible para el workspace Render fue de solo lectura. La matriz de 14 tablas de `app_runtime_vercel_preview_v2` sirve como base validada para una reducción controlada, pero requiere autorización expresa antes de modificar permisos del runtime Render.
+
+### Datos de inventario y aislamiento
+
+- Production: 29 soportes publicados; `mza-trad-16` asignado a `tenant-default`.
+- Preview: 46 soportes, 28 con tenant asignado y 18 con `tenant_id=NULL`. Los 18 permanecen en cuarentena; no se publican. `mza-trad-16` sigue sin tenant en Preview y devuelve 404.
+- No se reasignaron soportes ni se modificaron datos durante esta auditoría.
+
+### Integración Vercel / Git
+
+- Los deployments Vercel consultados identifican `githubOrg=popnegro-org`; `get_git_deployment_context` devuelve un vínculo con `org=popnegro`. Esta discrepancia sigue sin explicación concluyente.
+- No apareció un nuevo deployment Vercel para los commits documentales/CI; el deployment validado sigue sirviendo el SHA de aplicación `8418ffa...`, cuyo código no difiere del candidato actual.
+- El conector disponible no expone la configuración efectiva de Git Integration ni `Ignored Build Step`. Por lo tanto, ambos controles siguen **pendientes de evidencia directa**; no se modificó esa configuración.
+
+### Estado de PR y decisión
+
+- PR #90 permanece abierto, sin reviews ni comentarios inline registrados en la consulta final.
+- No se hizo merge, no se modificó `main` ni se alteró Production durante esta continuación.
+- La validación funcional automatizada de Render, Neon QA, Neon Preview, Vercel Preview y Visual QA queda **PASS**.
+- El PMV sigue **NO-GO para merge** hasta resolver: (1) reducción de privilegios de `app_runtime_preview` en Neon Preview, (2) evidencia concluyente de Git Integration / Ignored Build Step, y (3) conciliación documental de los 18 soportes Preview en cuarentena.
+- La reducción de grants Render no se ejecutó. Requiere autorización específica antes de revocar los privilegios actuales. El merge de PR #90 sigue sujeto a `HUMAN GATE: APRUEBO PR #90`.
