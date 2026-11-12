@@ -40,6 +40,7 @@ test.describe('Inventario · regresión visual', () => {
       await expect(page.getByRole('article').nth(1).getByText('Pantallas LED')).toBeVisible();
     }
     if (testInfo.project.name === 'chromium-desktop') {
+      await expect(page.getByTestId('page-transition')).toHaveCSS('opacity', '1');
       await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-desktop.png') });
       await expect(page).toHaveScreenshot('inventory-catalog-desktop.png', { stylePath: 'tests/visual/screenshot.css' });
     }
@@ -54,6 +55,7 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Consultar disponibilidad' })).toBeVisible();
     if (testInfo.project.name === 'chromium-mobile') {
+      await expect(page.getByTestId('page-transition')).toHaveCSS('opacity', '1');
       await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-mobile.png') });
       await expect(page).toHaveScreenshot('inventory-catalog-mobile.png', { stylePath: 'tests/visual/screenshot.css' });
     }
@@ -78,7 +80,8 @@ test.describe('Inventario · regresión visual', () => {
       // Recalculate Leaflet's viewport after normalizing the map container height.
       await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     }
-    await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
+    await expect(page.getByTestId('page-transition')).toHaveCSS('opacity', '1');
+      await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
     await expect(map).toHaveScreenshot('inventory-map-responsive.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
@@ -135,7 +138,8 @@ test.describe('Inventario · regresión visual', () => {
       await page.setViewportSize({ width: 390, height: 1000 });
     }
     await page.locator('article').first().evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
-    await page.locator('article').first().screenshot({ path: testInfo.outputPath('candidate-inventory-card-selected.png') });
+    await expect(page.getByTestId('page-transition')).toHaveCSS('opacity', '1');
+      await page.locator('article').first().screenshot({ path: testInfo.outputPath('candidate-inventory-card-selected.png') });
     await expect(page.locator('article').first()).toHaveScreenshot('inventory-card-selected.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
