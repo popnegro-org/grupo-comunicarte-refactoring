@@ -96,25 +96,25 @@ Los siete skips se identificaron y eliminaron sin desactivar tests:
 - 3 guardas de viewport/snapshot en `tests/visual/inventory.spec.ts`.
 Las pruebas ahora adaptan el viewport al objetivo desde ambos proyectos; los snapshots solo se comparan en el proyecto correspondiente.
 
-**Visual QA CI:** run [43157492346](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43157492346) — **96/96 PASS, 0 FAIL, 0 SKIPPED**. El log confirma dos ejecuciones completas de 96 tests. Se generaron únicamente snapshots faltantes; `git diff --exit-code -- tests/visual/__snapshots__` confirmó que no se sobrescribieron snapshots comprometidos.
+**Visual QA CI:** run [43258518178](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43258518178) — **96/96 PASS, 0 FAIL, 0 SKIPPED**. El log confirma dos ejecuciones completas de 96 tests. Se generaron únicamente snapshots faltantes; `git diff --exit-code -- tests/visual/__snapshots__` confirmó que no se sobrescribieron snapshots comprometidos.
 
 **Límite de baseline:** los seis snapshots nuevos fueron generados en la rama candidata por el bootstrap; no constituyen comparación contra un baseline histórico confiable. Mantener revisión visual humana de esos artefactos antes del release.
 
 ## 6. CI y E2E del SHA de código validado
 
-SHA de código: `8270b541ae4ff65c8eecf2b46e50365441d8059c`.
+SHA de código: `02301ceefdedfad9b1ed43c2854dbb18d8370dab`.
 
 | Workflow | Run | Resultado |
 |---|---:|---|
-| CI | [43157492264](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43157492264) | PASS |
-| CI Candidate | [43157492285](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43157492285) | PASS |
-| Visual QA | [43157492346](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43157492346) | PASS — 96/96 |
+| CI | [43258518137](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43258518137) | PASS |
+| CI Candidate | [43258518051](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43258518051) | PASS |
+| Visual QA | [43258518178](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43258518178) | PASS — 96/96 |
 
-CI Candidate confirma typecheck, unit tests, build, bundle budget y dependency audit. E2E autenticado: QA **12/12 PASS**, Preview **12/12 PASS** (incluye bucket R2 aislado); Preview authenticated smoke **9/9 PASS**. C1–C6 constan como PASS en `docs/pmv/C1-C6-TRANSACTIONAL-QA.md`.
+CI Candidate confirma typecheck, unit tests, build, bundle budget y dependency audit. E2E autenticado: QA **12/12 PASS** (35,1 s), Preview **12/12 PASS** (38,3 s, bucket R2 aislado, 0 flaky); Preview authenticated smoke **9/9 PASS** (17 s). C1–C6 constan como PASS en `docs/pmv/C1-C6-TRANSACTIONAL-QA.md`. El run anterior tuvo un timeout de 120 s en `GET /api/admin/requests`; se eliminó el N+1 de `getAllMediakitRequestsFromDB` mediante carga por lotes. La repetición actual pasó sin flakiness.
 
 ## 7. Auditoría DevSecOps y alcance del PR
 
-El SHA de código validado (`8270b541ae4ff65c8eecf2b46e50365441d8059c`) tenía 552 commits ahead / 0 behind y 156 archivos (+11.947 / -2.158 líneas). Después se agregaron commits exclusivamente documentales para corregir el registro de auditoría; consultar el compare vivo de PR #90 para el alcance y los contadores actuales.
+El SHA de código validado (`02301ceefdedfad9b1ed43c2854dbb18d8370dab`) tenía 560 commits ahead / 0 behind y 156 archivos (+12.061 / -2.184 líneas). El último cambio de código elimina consultas N+1 del historial administrativo de solicitudes; los commits posteriores de control son documentales. Consultar el compare vivo de PR #90 para los contadores actuales.
 
 | Grupo | Archivos |
 |---|---:|
@@ -129,19 +129,19 @@ El SHA de código validado (`8270b541ae4ff65c8eecf2b46e50365441d8059c`) tenía 5
 - No se encontraron URLs de conexión Neon ni credenciales hardcodeadas.
 - Catálogo y detalle públicos usan los filtros por ownership; medios públicos también exigen tenant asignado.
 - La solicitud pública valida los IDs seleccionados y vuelve a comprobar cantidad, ownership, estado y disponibilidad bajo lock transaccional.
-- Media Kit vuelve a comprobar ownership al guardar y al avanzar a ready/sent.
+- Media Kit vuelve a comprobar ownership al guardar y al avanzar a ready/sent. El historial administrativo carga solicitudes, ítems y catálogo en lote; no expone cuarentena a rutas públicas.
 - Las consultas que incluyen registros sin asignar se usan en estadísticas, conciliación y vistas administrativas protegidas por `requireAdmin`.
 - No se encontró `DELETE`/ `TRUNCATE` sobre `supports` en las migraciones revisadas; la baja de soporte en backend es soft-delete mediante `active=false`.
 - No se creó `integration_outbox` en Preview, ni se crearon usuarios tenant-scoped, membresías o políticas RLS durante esta continuación.
 
-**Alcance:** 552 commits y 156 archivos representan un diff amplio, no atómico. Requiere revisión humana de alcance antes de merge; no habilitar automerge.
+**Alcance:** 560 commits y 156 archivos representan un diff amplio, no atómico. Requiere revisión humana de alcance antes de merge; no habilitar automerge.
 
 ## 8. Próximas condiciones para HUMAN GATE
 
-1. Repetir/verificar los workflows en el HEAD final del PR después de las correcciones documentales.
-2. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
-3. Revisar el diff completo de 156 archivos y el registro histórico de la migración Production; no replay.
-4. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
+1. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
+2. Revisar el diff completo de 156 archivos y el registro histórico de la migración Production; no replay.
+3. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
+4. Mantener PR #90 abierto y sin merge hasta aprobación explícita.
 5. Mantener PR #90 abierto y sin merge hasta aprobación explícita: `HUMAN GATE: APRUEBO PR #90`.
 
 **Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no DDL, no modificaciones de datos QA/Preview/Production ni cambios productivos sin autorización humana explícita.
