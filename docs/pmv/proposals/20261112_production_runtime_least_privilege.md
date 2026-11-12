@@ -83,3 +83,21 @@ No Production role, grant, secret, deployment, data, or Vercel setting was chang
 - All supported API workflows pass against isolated Neon with the candidate role.
 - Production API never returns an unassigned support in public catalog or detail endpoints.
 - Production health, functional E2E, and session identity evidence are recorded after approved cutover.
+
+
+## Additional confirmed finding — Vercel Preview also uses the owner role
+
+A live request to the Vercel Preview deployment `grupo-comunicarte-refactoring-hokhl77mh-popnegros-projects.vercel.app` was followed by a read-only session inspection on Neon Preview branch `br-muddy-cell-au64infb`. The application query against `support_routes` ran as `neondb_owner`. This is distinct from the Render Preview service, whose sessions use `app_runtime_preview`.
+
+Neon Preview role audit:
+- `neondb_owner`: `rolsuper=false`, `rolbypassrls=true`, `rolcreatedb=true`, `rolcreaterole=true`, `rolreplication=true`, database CREATE=true, public schema CREATE=true.
+- `app_runtime_preview`: `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`, database CREATE=false, public schema CREATE=false.
+- `app_runtime_preview` currently has SELECT/INSERT/UPDATE/DELETE on all 36 public tables. This is safer in role attributes than owner, but still broader than an object-level least-privilege allowlist.
+- No privileged role membership was returned for `app_runtime_preview`; the membership row observed is the reverse administrative grant: `neondb_owner` is member of `app_runtime_preview` with admin option.
+
+Therefore the remediation scope is not Production-only:
+1. Provision and validate a narrow Vercel Preview runtime credential (prefer a separate `app_runtime_preview_vercel` identity or an independently scoped equivalent) and update only the Vercel Preview `DATABASE_URL` after staged testing.
+2. Keep Render Preview's existing `app_runtime_preview` identity while auditing its 36-table DML scope; reduce grants only after the full route dependency inventory is proven.
+3. Provision a distinct `app_runtime_prod` identity for Vercel Production and migrate Production `DATABASE_URL` only after HUMAN GATE.
+
+The Vercel Preview endpoint itself is connected to Neon Preview and correctly excludes `mza-trad-16` from `GET /api/supports` (28 rows) and returns HTTP 404 for `GET /api/supports/mza-trad-16`. This proves ownership filtering in that deployed SHA, but does not clear the runtime-role finding.
