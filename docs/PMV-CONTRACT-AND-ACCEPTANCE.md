@@ -133,11 +133,11 @@ Una variable de entorno, botón o URL externa no acredita una integración.
 - [x] Solicitudes públicas idempotentes: clave estable por payload, conflicto concurrente resuelto por `UNIQUE(request_id)` y prueba Preview concurrente 201/200 sin duplicados.
 
 ### P2 — calidad y release
-- [x] Typecheck, unit tests, build y Playwright en el HEAD candidato `593e5d1`; el smoke autenticado corresponde al SHA runtime `231d87d`, sin cambios de código runtime posteriores.
-- [ ] QA visual/funcional real desktop y móvil, no solo mocks.
+- [x] Typecheck, unit tests, build y CI Candidate validate en `23e8da1`; QA Deployment E2E contra Render QA/Neon QA 12/12 PASS y Visual QA push/PR PASS. Authenticated Preview Smoke se omitió en el último commit por ser documentación/tests-only; el runtime `c996cfe` está desplegado en Render QA/Preview y Vercel Preview `bcab94e` está READY.
+- [x] QA visual/funcional automatizada desktop y móvil: snapshots Chromium desktop/mobile validados en Preview y flujo real autenticado en Render QA/Neon QA 12/12 PASS. La revisión visual humana final sigue siendo un gate de release.
 - [ ] Accesibilidad: teclado, foco, labels, contraste y estados.
 - [ ] Rendimiento, bundle y consola revisados.
-- [ ] Documentos históricos marcados como obsoletos o enlazados aquí.
+- [x] Documentos históricos indexados y marcados como snapshots anteriores en `docs/pmv/README.md`; el contrato PMV es la fuente vigente.
 - [x] Evidencias adjuntas al PR.
 
 ## 9. Estado verificado tras conciliación (2026-11-01)
