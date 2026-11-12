@@ -116,6 +116,16 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  -- Keep historical NULL ownership pending when its same support was
+  -- assigned later. Reconciliation must be explicit; a routine UPDATE that
+  -- leaves tenant_id NULL must not silently classify the historical request.
+  IF TG_OP = 'UPDATE'
+     AND OLD.support_id = NEW.support_id
+     AND OLD.tenant_id IS NULL
+     AND NEW.tenant_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.tenant_id IS NULL THEN
     NEW.tenant_id := v_support_tenant_id;
   ELSIF NEW.tenant_id IS DISTINCT FROM v_support_tenant_id THEN
