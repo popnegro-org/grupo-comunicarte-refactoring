@@ -173,11 +173,13 @@ Consulta read-only en ambas ramas como `neondb_owner`:
 
 Esto coincide con los diagnósticos recientes de ambos servicios Render. No hay rol runtime de mínimos privilegios instalado en esos servicios. El contrato actual de administrador global no requiere activar RLS, pero el rol privilegiado sigue siendo una deuda de seguridad.
 
-### Corrección preparada
+### Corrección aplicada y probada — 2026-11-12
 
-Se añadió `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` en la rama candidata. Añade herencia de tenant al insertar/actualizar ítems, preserva NULL para soportes pendientes e históricos, rechaza mismatches y evita reasignar ownership ya establecido. No re-clasifica automáticamente solicitudes históricas al asignar posteriormente un soporte; esos ítems siguen bloqueados hasta reconciliación explícita. Está versionada, no aplicada ni probada en una base PostgreSQL temporal/persistente.
+Se versionó y aplicó `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` transaccionalmente en Neon QA (`br-bold-block-aua43ua0`) y Preview (`br-muddy-cell-au64infb`). La migración añade herencia de tenant para INSERT/UPDATE de request items, preserva NULL para soportes pendientes e históricos, rechaza mismatches y evita reasignar ownership ya establecido. No re-clasifica automáticamente solicitudes históricas al asignar posteriormente un soporte; esos ítems siguen bloqueados hasta reconciliación explícita.
 
-**Estado:** integridad de datos actual PASS; enforcement DB ante nuevos writes incompleto hasta aplicar y probar la migración en QA/Preview. No tocar Production ni habilitar RLS como parte de este cambio.
+El test rollback-only `docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql` pasó en ambas ramas. El postflight confirmó un trigger habilitado por tabla, ambas funciones presentes, sin fixtures persistentes, sin huérfanos ni mismatches y con los conteos originales intactos. Evidencia detallada: `docs/pmv/2026-11-12-ownership-trigger-qa.md`.
+
+**Estado:** enforcement DB de nuevos/actualizados request items PASS en QA y Preview. Las líneas históricas NULL (3 QA, 2 Preview) continúan en cuarentena, sin atribución retroactiva. No se modificó Production ni se habilitó RLS.
 
 
 ### Protección de ramas — comprobación 2026-11-12
