@@ -17,7 +17,9 @@ DECLARE
   v_assigned_tenant TEXT;
   v_other_tenant TEXT;
   v_pending_support TEXT;
+  v_other_pending_support TEXT;
   v_pending_request TEXT;
+  v_historical_item_id INTEGER;
   v_inserted_id INTEGER;
   v_observed_tenant TEXT;
   v_remaining INTEGER;
@@ -44,7 +46,16 @@ BEGIN
   ORDER BY item.id
   LIMIT 1;
 
-  IF v_request_id IS NULL OR v_assigned_support IS NULL OR v_pending_support IS NULL THEN
+  SELECT canonical_id
+    INTO v_other_pending_support
+  FROM public.supports
+  WHERE tenant_id IS NULL
+    AND canonical_id <> v_pending_support
+  ORDER BY canonical_id
+  LIMIT 1;
+
+  IF v_request_id IS NULL OR v_assigned_support IS NULL OR v_pending_support IS NULL
+     OR v_other_pending_support IS NULL THEN
     RAISE EXCEPTION 'Rollback test requires one request, one assigned support, and one pending support with a pending request item';
   END IF;
 
@@ -112,6 +123,36 @@ BEGIN
   END IF;
   IF v_observed_tenant IS NOT NULL THEN
     RAISE EXCEPTION 'Historical pending request item unexpectedly acquired tenant ownership';
+  END IF;
+
+  SELECT id INTO v_historical_item_id
+  FROM public.mediakit_request_items
+  WHERE request_id=v_pending_request
+    AND support_id=v_pending_support
+    AND tenant_id IS NULL
+  ORDER BY id
+  LIMIT 1;
+
+  -- Critical regression: an UPDATE must not move a historical NULL item from
+  -- its original quarantined support to a different quarantined support.
+  BEGIN
+    UPDATE public.mediakit_request_items
+       SET support_id=v_other_pending_support,
+           tenant_id=NULL
+     WHERE id=v_historical_item_id;
+    RAISE EXCEPTION 'Historical pending item was unexpectedly reassigned to another quarantined support';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.mediakit_request_items
+    WHERE id=v_historical_item_id
+      AND support_id=v_pending_support
+      AND tenant_id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Rejected quarantined-support reassignment changed the historical item';
   END IF;
 
   -- A caller cannot attach a tenant before the support is assigned.
