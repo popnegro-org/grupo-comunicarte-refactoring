@@ -202,3 +202,10 @@ The Vercel Preview deployment's ownership behavior is correct on its deployed SH
 - `GET /api/supports/mza-trad-16`: HTTP 404.
 
 This verifies data-branch isolation and quarantine behavior in that Vercel Preview deployment, but it does not clear the elevated runtime identity. Vercel Preview uses `neondb_owner`; Render Preview uses `app_runtime_preview`. The preview role and production role remediation must be tracked separately. No Preview or Production secrets/configuration were changed.
+
+
+### Vercel Preview SHA freshness check — 2026-11-12
+
+The newest Vercel Preview deployment returned by the project for branch `pmv-validation-candidate` is `dpl_4Paj8F2nW9aB6fZ8F28MbNnUM7CD`, commit `40431d1a61bf59da47beeb216bf2365d12077d86`. The current candidate HEAD at the time of audit was `8b2954fe73ba72a5724a0729213280b6a62b30b7`, 33 commits ahead. No Vercel Preview deployment exists for that HEAD. The older deployment's public support model/service and API handler source files match current HEAD, but `server.ts`, `src/db/index.ts`, `src/server/tenantAccess.ts`, and `src/server/mediakitService.ts` differ. Thus its health/quarantine results are useful but are not a substitute for a same-SHA Vercel Preview validation.
+
+Render Preview/QA E2E are executed against the current candidate SHA by CI Candidate. Vercel Preview must also produce a READY deployment for the exact releasable SHA and repeat health, branch identity, public list/detail quarantine, admin 401, and pricing privacy checks before release. No manual Vercel deployment was created because the project has not produced a deployment for the current candidate HEAD; avoid consuming deployment quota until the reason for the stale integration/deploy history is understood.
