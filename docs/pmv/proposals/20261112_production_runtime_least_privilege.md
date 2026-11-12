@@ -1,5 +1,7 @@
 # Production runtime role remediation plan
 
+> **Execution status update — 2026-11-12:** This proposal has been executed for Vercel Production after the explicit HUMAN GATE. The active runtime identity is now `app_runtime_prod`; the production deployment and effective permissions were verified. See [the cutover audit](../2026-11-12-production-runtime-cutover.md) for exact role flags, grants, Vercel environment split, deployment ID and postflight results. The original “proposal only / not executed” statements below describe the state before authorization and are superseded by that execution record. Preview runtime remediation and the independent public ownership exposure remain open.
+
 Date: 2026-11-12  
 Repository: `popnegro-org/grupo-comunicarte-refactoring`  
 Candidate: `pmv-validation-candidate`  
