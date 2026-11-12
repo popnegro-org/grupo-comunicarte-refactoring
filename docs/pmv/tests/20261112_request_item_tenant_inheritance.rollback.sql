@@ -83,18 +83,35 @@ BEGIN
     NULL;
   END;
 
-  -- Pending support: NULL remains allowed and quarantined.
-  INSERT INTO public.mediakit_request_items (request_id, support_id, tenant_id)
-  VALUES (v_pending_request, v_pending_support, NULL)
-  RETURNING id, tenant_id INTO v_inserted_id, v_observed_tenant;
+  -- A new request item cannot reference a pending support, even with NULL tenant.
+  BEGIN
+    INSERT INTO public.mediakit_request_items (request_id, support_id, tenant_id)
+    VALUES (v_pending_request, v_pending_support, NULL);
+    RAISE EXCEPTION 'A quarantined support was unexpectedly accepted in a new request';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  -- A historical pending item may remain NULL when explicitly updated; it is
+  -- not auto-classified while its source support remains quarantined.
+  UPDATE public.mediakit_request_items
+     SET tenant_id=NULL
+   WHERE id=(
+     SELECT item.id
+     FROM public.mediakit_request_items item
+     WHERE item.request_id=v_pending_request
+       AND item.support_id=v_pending_support
+       AND item.tenant_id IS NULL
+     ORDER BY item.id
+     LIMIT 1
+   )
+  RETURNING tenant_id INTO v_observed_tenant;
 
   IF v_observed_tenant IS NOT NULL THEN
-    RAISE EXCEPTION 'Pending support unexpectedly acquired tenant ownership';
+    RAISE EXCEPTION 'Historical pending request item unexpectedly acquired tenant ownership';
   END IF;
 
-  DELETE FROM public.mediakit_request_items WHERE id=v_inserted_id;
-
-  -- Pending support: a caller cannot attach a tenant before the support is assigned.
+  -- A caller cannot attach a tenant before the support is assigned.
   BEGIN
     INSERT INTO public.mediakit_request_items (request_id, support_id, tenant_id)
     VALUES (v_pending_request, v_pending_support, v_assigned_tenant);
