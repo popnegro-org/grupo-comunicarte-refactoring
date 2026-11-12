@@ -62,13 +62,17 @@ El desglose por tenant/tipología coincide en las tres ramas: Buenos Aires 10 tr
 - RLS está deshabilitado en ambas ramas. QA conserva 27 políticas staged/inertes en 27 tablas; ninguna tabla tiene RLS habilitado. Preview tiene 0 políticas. No activar ni eliminar esas políticas como parte de este PMV.
 - QA tiene `integration_outbox`; Preview y Production no. No se encontraron referencias runtime. No crearla en Preview.
 
-### Triggers de ownership ya presentes
+### Triggers de ownership — corrección P1 pendiente
 
-La migración de herencia de ownership fue aplicada previamente en QA y Preview. En ambas ramas están habilitados:
+La migración base de herencia fue aplicada previamente en QA y Preview. En ambas ramas están habilitados:
 - `mediakit_request_items_tenant_inheritance` → `enforce_mediakit_request_item_tenant`.
 - `supports_tenant_ownership_immutable` → `prevent_support_tenant_reassignment`.
 
-Las líneas históricas sin tenant permanecen pendientes; no inferir ni asignar ownership automáticamente. **En esta continuación no se ejecutó DDL ni se modificaron datos.**
+Las líneas históricas sin tenant permanecen pendientes; no inferir ni asignar ownership automáticamente.
+
+**Hallazgo P1 adicional:** el trigger base permitía que un UPDATE mantuviera `tenant_id=NULL` mientras cambiaba `support_id` hacia otro soporte en cuarentena. Se agregó al candidato la migración [20261112_reject_quarantine_support_reassignment.sql](./migrations/20261112_reject_quarantine_support_reassignment.sql) y una aserción de regresión en [rollback test](./tests/20261112_request_item_tenant_inheritance.rollback.sql). La corrección está comprometida, pero todavía NO aplicada ni ejecutada en QA/Preview. El escenario permanece bloqueante hasta validar ambas ramas.
+
+**En esta continuación no se ejecutó DDL ni se modificaron datos.**
 
 ## 4. Antecedente importante: Neon Production
 
@@ -138,10 +142,10 @@ El SHA de código validado (`02301ceefdedfad9b1ed43c2854dbb18d8370dab`) tenía 5
 
 ## 8. Próximas condiciones para HUMAN GATE
 
-1. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
-2. Revisar el diff completo de 156 archivos y el registro histórico de la migración Production; no replay.
-3. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
-4. Mantener PR #90 abierto y sin merge hasta aprobación explícita.
+1. Aplicar la migración correctiva únicamente en QA y Preview, ejecutar el rollback test ampliado y confirmar que no cambian los conteos; Production excluida.\n2. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
+3. Revisar el diff completo de 156 archivos y el registro histórico de la migración Production; no replay.
+4. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
+6. Mantener PR #90 abierto y sin merge hasta aprobación explícita.
 5. Mantener PR #90 abierto y sin merge hasta aprobación explícita: `HUMAN GATE: APRUEBO PR #90`.
 
 **Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no DDL, no modificaciones de datos QA/Preview/Production ni cambios productivos sin autorización humana explícita.
