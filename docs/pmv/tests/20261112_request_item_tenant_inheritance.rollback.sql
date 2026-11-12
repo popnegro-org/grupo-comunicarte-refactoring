@@ -161,16 +161,21 @@ BEGIN
            tenant_ownership_assigned_at=clock_timestamp()
      WHERE canonical_id=v_pending_support;
 
-    SELECT tenant_id
-      INTO v_observed_tenant
-    FROM public.mediakit_request_items
-    WHERE support_id=v_pending_support
-      AND request_id=v_pending_request
-    ORDER BY id
-    LIMIT 1;
+    UPDATE public.mediakit_request_items
+       SET tenant_id=NULL
+     WHERE id=(
+       SELECT item.id
+       FROM public.mediakit_request_items item
+       WHERE item.support_id=v_pending_support
+         AND item.request_id=v_pending_request
+         AND item.tenant_id IS NULL
+       ORDER BY item.id
+       LIMIT 1
+     )
+    RETURNING tenant_id INTO v_observed_tenant;
 
-    IF v_observed_tenant IS NOT NULL THEN
-      RAISE EXCEPTION 'Historical pending request item was unexpectedly reclassified';
+    IF NOT FOUND OR v_observed_tenant IS NOT NULL THEN
+      RAISE EXCEPTION 'Historical pending request item UPDATE was unexpectedly reclassified after support assignment';
     END IF;
 
     RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='__ROLLBACK_EXPECTED__';
