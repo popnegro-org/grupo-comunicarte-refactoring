@@ -142,10 +142,10 @@ El SHA de código validado (`02301ceefdedfad9b1ed43c2854dbb18d8370dab`) tenía 5
 
 ## 8. Próximas condiciones para HUMAN GATE
 
-1. Aplicar la migración correctiva únicamente en QA y Preview, ejecutar el rollback test ampliado y confirmar que no cambian los conteos; Production excluida.\n2. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
-3. Revisar el diff completo de 156 archivos y el registro histórico de la migración Production; no replay.
+1. Aplicar la migración correctiva únicamente en QA y Preview, ejecutar el rollback test ampliado y confirmar que no cambian los conteos; Production excluida.
+2. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
+3. Revisar el diff completo y el registro histórico de la migración Production; no replay.
 4. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
-6. Mantener PR #90 abierto y sin merge hasta aprobación explícita.
 5. Mantener PR #90 abierto y sin merge hasta aprobación explícita: `HUMAN GATE: APRUEBO PR #90`.
 
 **Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no DDL, no modificaciones de datos QA/Preview/Production ni cambios productivos sin autorización humana explícita.
