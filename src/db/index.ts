@@ -97,12 +97,53 @@ async function logDatabaseSecurityContext() {
   }
 }
 
+const REQUIRED_RUNTIME_TABLES = [
+  'supports',
+  'support_locations',
+  'support_faces',
+  'support_technical',
+  'support_pricing',
+  'support_media',
+  'support_routes',
+  'mediakit_requests',
+  'mediakit_request_items',
+  'mediakits',
+  'mediakit_items',
+  'admin_login_attempts',
+] as const;
+
+/**
+ * Runtime startup must never perform schema mutations. Bootstrap remains an
+ * explicit migration-only escape hatch for isolated database provisioning.
+ */
+async function verifyRuntimeSchema() {
+  const result = await pool.query<{ table_name: string }>(
+    `SELECT required.table_name
+       FROM unnest($1::text[]) AS required(table_name)
+       LEFT JOIN information_schema.tables actual
+         ON actual.table_schema = 'public'
+        AND actual.table_name = required.table_name
+      WHERE actual.table_name IS NULL
+      ORDER BY required.table_name`,
+    [REQUIRED_RUNTIME_TABLES],
+  );
+  if (result.rows.length > 0) {
+    throw new Error(`Database schema incomplete; apply reviewed migrations before starting runtime: ${result.rows.map((row) => row.table_name).join(', ')}`);
+  }
+}
+
 export async function initDatabase() {
   if (isVercelRuntime) {
     console.info('Database bootstrap skipped in Vercel runtime; schema/seed must be managed outside serverless requests.');
     return;
   }
   await logDatabaseSecurityContext();
+  if (process.env.DB_BOOTSTRAP_ENABLED !== 'true') {
+    await verifyRuntimeSchema();
+    console.info('Database bootstrap disabled; required runtime schema verified.');
+    return;
+  }
+  console.warn('DB_BOOTSTRAP_ENABLED=true: running privileged legacy bootstrap. Use only with a migration credential.');
   for (let attempt = 1; attempt <= BOOTSTRAP_RETRIES; attempt += 1) {
     try {
       await initializeDatabaseOnce();
