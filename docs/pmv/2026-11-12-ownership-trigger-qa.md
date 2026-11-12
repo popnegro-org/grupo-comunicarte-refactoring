@@ -23,11 +23,12 @@ The migration preflight checked the Neon branch ID, database name, required tabl
 
 1. New or updated request items referencing an assigned support inherit that support's exact tenant when omitted.
 2. A mismatching tenant is rejected.
-3. A request item cannot assign a tenant to a quarantined support.
-4. A missing support is rejected.
-5. Clearing an item's tenant on an assigned support re-inherits the tenant.
-6. An already assigned support cannot be reassigned to another tenant or cleared.
-7. Historical request items whose tenant is already NULL remain pending, even if their support is assigned later. They are not silently reclassified; the existing application gate must continue to block commercial advancement until explicit reconciliation.
+3. A new request item cannot reference a quarantined support, even when tenant_id is NULL.
+4. A historical pending item may remain NULL on an explicit update while its support is still quarantined; it is not converted into a new request item.
+5. A missing support is rejected.
+6. Clearing an item's tenant on an assigned support re-inherits the tenant.
+7. An already assigned support cannot be reassigned to another tenant or cleared.
+8. Historical request items whose tenant is already NULL remain pending, even if their support is assigned later. They are not silently reclassified; the existing application gate must continue to block commercial advancement until explicit reconciliation.
 
 This preserves the business rule that historical/pending request lines are not retroactively attributed.
 
@@ -40,7 +41,8 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Assigned support + omitted tenant inherits | PASS | PASS |
 | Assigned item tenant cleared → re-inherited | PASS | PASS |
 | Mismatched tenant rejected | PASS | PASS |
-| Pending support + NULL remains pending | PASS | PASS |
+| New request item + pending support + NULL tenant rejected | PASS | PASS |
+| Historical pending item UPDATE + NULL preserved | PASS | PASS |
 | Pending support + non-NULL tenant rejected | PASS | PASS |
 | Missing support rejected | PASS | PASS |
 | Assigned support ownership change rejected | PASS | PASS |
