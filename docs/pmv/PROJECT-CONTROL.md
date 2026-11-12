@@ -70,7 +70,7 @@ La migración base de herencia fue aplicada previamente en QA y Preview. En amba
 
 Las líneas históricas sin tenant permanecen pendientes; no inferir ni asignar ownership automáticamente.
 
-**Hallazgo P1 adicional:** el trigger base permitía que un UPDATE mantuviera `tenant_id=NULL` mientras cambiaba `support_id` hacia otro soporte en cuarentena. Se agregó al candidato la migración [20261112_reject_quarantine_support_reassignment.sql](./migrations/20261112_reject_quarantine_support_reassignment.sql) y una aserción de regresión en [rollback test](./tests/20261112_request_item_tenant_inheritance.rollback.sql). La corrección está comprometida, pero todavía NO aplicada ni ejecutada en QA/Preview. El escenario permanece bloqueante hasta validar ambas ramas.
+**Hallazgo P1 adicional:** el trigger base permitía que un UPDATE mantuviera `tenant_id=NULL` mientras cambiaba `support_id` hacia otro soporte en cuarentena. Se agregó al candidato la migración [20261112_reject_quarantine_support_reassignment.sql](./migrations/20261112_reject_quarantine_support_reassignment.sql) y una aserción de regresión en [rollback test](./tests/20261112_request_item_tenant_inheritance.rollback.sql). La corrección se aplicó transaccionalmente en QA y Preview; el rollback test ampliado pasó en ambas ramas. Postflight confirma 46 soportes, 18 sin ownership y cero request-item huérfanos/mismatch por rama. Production no fue modificada.
 
 **En esta continuación no se ejecutó DDL ni se modificaron datos.**
 
@@ -142,10 +142,10 @@ El SHA de código validado (`02301ceefdedfad9b1ed43c2854dbb18d8370dab`) tenía 5
 
 ## 8. Próximas condiciones para HUMAN GATE
 
-1. Aplicar la migración correctiva únicamente en QA y Preview, ejecutar el rollback test ampliado y confirmar que no cambian los conteos; Production excluida.
+1. Confirmar que el workflow actualizado sigue PASS después de la migración correctiva; la migración y rollback test ya pasaron en QA y Preview.
 2. Revisar visualmente los seis snapshots nuevos en desktop/mobile; la suite automatizada pasa, pero no tiene baseline histórico independiente para esos artefactos.
 3. Revisar el diff completo y el registro histórico de la migración Production; no replay.
 4. Verificar por separado la identidad runtime y la política de acceso de Neon Production.
 5. Mantener PR #90 abierto y sin merge hasta aprobación explícita: `HUMAN GATE: APRUEBO PR #90`.
 
-**Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no DDL, no modificaciones de datos QA/Preview/Production ni cambios productivos sin autorización humana explícita.
+**Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no más DDL ni modificaciones de datos; Production sin cambios. Cualquier cambio productivo requiere autorización humana explícita.
