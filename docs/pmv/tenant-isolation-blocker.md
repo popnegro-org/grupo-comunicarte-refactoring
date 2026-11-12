@@ -1,5 +1,8 @@
 # Estado del bloqueante P0 — aislamiento multi-tenant
 
+> **Estado histórico/supersedido (2026-11-12):** usar [PROJECT-CONTROL.md](./PROJECT-CONTROL.md) para el estado operativo actual. La referencia de este documento a `neondb_owner` como runtime Preview es histórica: el runtime actual usa `app_runtime_preview` con `BYPASSRLS=false`. El administrador del PMV sigue siendo global y RLS permanece deshabilitado.
+
+
 > Contrato normativo: [PMV-CONTRACT-AND-ACCEPTANCE.md](../PMV-CONTRACT-AND-ACCEPTANCE.md). Conciliación documental y de datos: [TENANT-OWNERSHIP-MAPPING.md](../inventario/processed/TENANT-OWNERSHIP-MAPPING.md).
 
 **Estado: ownership de inventario conciliado; cuarentena pública en código; revalidación de ownership al avanzar solicitudes implementada (PR #96 / `pmv/p0-ownership-quarantine-gate`). Falta QA transaccional Neon Preview de la matriz ownership, QA autenticado Media Kit y pruebas negativas de seguridad en el SHA liberable.**
