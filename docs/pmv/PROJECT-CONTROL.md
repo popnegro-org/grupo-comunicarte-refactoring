@@ -370,7 +370,7 @@ Matriz efectiva del rol Vercel Preview:
 
 ### Integración Vercel / Git
 
-- Los deployments Vercel consultados identifican `githubOrg=popnegro-org`; `get_git_deployment_context` devuelve un vínculo con `org=popnegro`. Esta discrepancia sigue sin explicación concluyente.
+- Los deployments Vercel consultados identifican `githubOrg=popnegro-org`; `get_git_deployment_context` devuelve un vínculo con `org=popnegro`. La evidencia confirma un vínculo obsoleto: el proyecto apunta al namespace anterior `popnegro`, mientras el repositorio activo es `popnegro-org`. El conector no ofrece operación para reconectar el proyecto.
 - No apareció un nuevo deployment Vercel para los commits documentales/CI; el deployment validado sigue sirviendo el SHA de aplicación `8418ffa...`, cuyo código no difiere del candidato actual.
 - El conector disponible no expone la configuración efectiva de Git Integration ni `Ignored Build Step`. Por lo tanto, ambos controles siguen **pendientes de evidencia directa**; no se modificó esa configuración.
 
@@ -379,14 +379,16 @@ Matriz efectiva del rol Vercel Preview:
 - PR #90 permanece abierto, sin reviews ni comentarios inline registrados en la consulta final.
 - No se hizo merge, no se modificó `main` ni se alteró Production durante esta continuación.
 - La validación funcional automatizada de Render, Neon QA, Neon Preview, Vercel Preview y Visual QA queda **PASS**.
-- El PMV sigue **NO-GO para merge** hasta resolver: (1) reducción de privilegios de `app_runtime_preview` en Neon Preview, (2) evidencia concluyente de Git Integration / Ignored Build Step, y (3) conciliación documental de los 18 soportes Preview en cuarentena.
+- El PMV sigue **NO-GO para merge** hasta resolver: (1) reducción de privilegios de `app_runtime_preview` en Neon Preview, (2) reconexión verificable de Git Integration y revisión de `Ignored Build Step`, y (3) revisión humana del alcance de 586 commits y Human Gate de PR #90.
+
+Los 18 soportes Preview sin tenant **no son un bloqueo de PMV mientras permanezcan en cuarentena**: 17 están inactivos y 1 activo (`mza-trad-16`). Los 28 soportes con ownership documentado forman el catálogo publicable. Production incluye `mza-trad-16` en `tenant-default` por autorización explícita; Preview conserva esa fila en cuarentena. No alterar Preview para forzar paridad sin autorización independiente.
 - La reducción de grants Render no se ejecutó. Requiere autorización específica antes de revocar los privilegios actuales. El merge de PR #90 sigue sujeto a `HUMAN GATE: APRUEBO PR #90`.
 
 
 ## Auditoría de alcance del PR #90 — 2026-11-12 22:02 UTC
 
 - Base `main`: `244d2f3d4bc6f3094de56b013c0c33b04f1a6e70` (coincide con el commit Production verificado).
-- HEAD `pmv-validation-candidate`: `0e83fab7f816d9330a10129ba276bc3c9c99b6ea`.
+- HEAD `pmv-validation-candidate`: `73dc65e1ead6e4c36ffca7ab122dec642bef7467`.
 - Comparación GitHub: **586 commits adelante, 0 atrás**.
 - Reviews: ninguna. Review threads: ninguno.
 - El PR contiene cambios extensos de backend, frontend, base de datos, contratos, tests, workflows y documentación. No es un cambio pequeño de mantenimiento.
