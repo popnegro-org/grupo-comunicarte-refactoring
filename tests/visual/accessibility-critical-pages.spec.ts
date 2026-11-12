@@ -60,7 +60,10 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     { path: '/dashboard/solicitudes', heading: 'Solicitudes de Media Kit' },
     { path: '/dashboard/mediakits/nuevo', heading: 'Constructor de Media Kit' },
   ]) {
-    test(route.path + ' cumple WCAG 2.1 AA y 2.2 AA', async ({ page }) => {
+    test(route.path + ' cumple WCAG 2.1 AA y 2.2 AA sin errores JS', async ({ page }) => {
+      const pageErrors: string[] = [];
+      page.on('pageerror', (error) => pageErrors.push(error.message));
+
       await page.goto(route.path);
       await expect(page.locator('main').first()).toBeVisible();
       if (route.heading) {
@@ -77,6 +80,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
         accessibility.violations,
         route.path + ': ' + JSON.stringify(accessibility.violations, null, 2),
       ).toEqual([]);
+      expect(pageErrors, route.path + ' uncaught browser exceptions').toEqual([]);
     });
   }
 });
