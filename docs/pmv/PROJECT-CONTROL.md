@@ -62,7 +62,7 @@ Los dos servicios Render comparten Environment ID, pero tienen IDs de servicio d
 
 - Una sola rama activa: pmv-validation-candidate.
 - Un único PR abierto: #90 hacia main.
-- 548 commits ahead, 0 behind; 152 archivos, 11.815 adiciones, 1.837 eliminaciones.
+- más de 500 commits ahead, 0 behind; 152 archivos, 11.815 adiciones, 1.837 eliminaciones.
 - No integrar ramas históricas completas, no crear otra rama de integración, no reescribir la historia candidata.
 - PR #90 permanece como gate de release; el diff requiere auditoría de alcance antes de merge.
 - main, Neon Production, Vercel Production, DNS/WAF y secretos productivos no se modifican.

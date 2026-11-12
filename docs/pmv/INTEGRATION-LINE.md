@@ -30,7 +30,7 @@
 
 ## Estado al 2026-11-12
 
-- Candidata: 548 commits ahead, 0 behind; PR #90: 152 archivos, 11.815 adiciones y 1.837 eliminaciones.
+- Candidata: más de 500 commits ahead, 0 behind; PR #90: 152 archivos, 11.815 adiciones y 1.837 eliminaciones.
 - Un único PR abierto (#90), sin merge.
 - CI Candidate: QA E2E 12/12 PASS en QA y Preview, sin flaky.
 - Visual QA: 75 PASS, 14 FAIL de contraste en siete rutas desktop/mobile, 7 SKIPPED.
