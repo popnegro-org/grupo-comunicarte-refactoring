@@ -88,7 +88,23 @@ AS $function$
 DECLARE
   v_support_tenant_id TEXT;
 BEGIN
-  -- SHARE lock prevents a concurrent ownership update while this line is checked.
+  -- Match status-transition lock order on INSERT: request header first, then
+  -- support. UPDATE already holds the request-item row lock, so it must not
+  -- acquire the request header here (that would invert the lock order).
+  IF TG_OP = 'INSERT' THEN
+    PERFORM 1
+    FROM public.mediakit_requests AS request
+    WHERE request.request_id = NEW.request_id
+    FOR KEY SHARE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Request item references an unknown request: %', NEW.request_id
+        USING ERRCODE = '23503',
+              CONSTRAINT = 'fk_mediakit_request_items_request';
+    END IF;
+  END IF;
+
+  -- SHARE prevents a concurrent ownership update while this line is checked.
   SELECT support.tenant_id
     INTO v_support_tenant_id
   FROM public.supports AS support
@@ -116,9 +132,9 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Keep historical NULL ownership pending when its same support was
-  -- assigned later. Reconciliation must be explicit; a routine UPDATE that
-  -- leaves tenant_id NULL must not silently classify the historical request.
+  -- Keep historical NULL ownership pending when its same support was assigned
+  -- later. Explicit reconciliation may set the exact tenant; routine updates
+  -- that leave tenant_id NULL must not silently classify the historical item.
   IF TG_OP = 'UPDATE'
      AND OLD.support_id = NEW.support_id
      AND OLD.tenant_id IS NULL
@@ -148,7 +164,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.enforce_mediakit_request_item_tenant();
 
 COMMENT ON FUNCTION public.enforce_mediakit_request_item_tenant() IS
-  'Inherits tenant_id from the exact support for new/updated items; preserves historical NULL items and rejects mismatches.';
+  'Locks request header before support on INSERT; inherits exact support tenant, rejects quarantined new items and spoofing, and preserves historical NULL items until explicit reconciliation.';
 
 
 -- Ownership is write-once: a documented assignment may move NULL -> tenant,
