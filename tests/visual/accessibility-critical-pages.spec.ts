@@ -50,8 +50,8 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
 
   for (const route of [
     { path: '/', heading: 'Tu marca, en los lugares que todos ven.' },
-    { path: '/inventario', heading: 'Inventario de soportes' },
-    { path: '/contacto', heading: 'Contacto' },
+    { path: '/inventario', heading: 'Inventario de soportes publicitarios' },
+    { path: '/contacto', heading: 'Hablemos de tu próxima campaña.' },
     { path: '/dashboard', heading: 'Dashboard' },
     { path: '/dashboard/solicitudes', heading: 'Solicitudes de Media Kit' },
     { path: '/dashboard/mediakits/nuevo', heading: 'Constructor de Media Kit' },
