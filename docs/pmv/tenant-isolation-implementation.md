@@ -1,5 +1,8 @@
 # Aislamiento multi-tenant — decisión e implementación incremental
 
+> **Aclaración operativa (2026-11-12):** este documento conserva decisiones y estados históricos. La fuente vigente es [PROJECT-CONTROL.md](./PROJECT-CONTROL.md). En Render QA/Preview, los roles runtime actuales son `app_runtime_qa_login` y `app_runtime_preview` (ambos `BYPASSRLS=false`); `neondb_owner` es una identidad privilegiada administrativa/migración, no el runtime QA/Preview. El PMV conserva un único administrador global y RLS deshabilitado.
+
+
 ## Decisiones confirmadas
 
 1. **Usuario actual:** conservar exclusivamente el único usuario/credencial ya creado (ADMIN_USER/ADMIN_PASSWORD). No crear usuarios, invitaciones ni exigir nuevas membresías para iniciar sesión.
