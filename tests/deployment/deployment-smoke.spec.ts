@@ -1,8 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Avoid recording browser state, form values or traces in deployment artifacts.
 // The suite keeps its explicit non-sensitive screenshots via page.screenshot().
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
+async function gotoWithTransientRetry(page: Page, path: string) {
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    if (!response || ![502, 503, 504].includes(response.status())) return response;
+    lastStatus = response.status();
+    if (attempt < 3) await page.waitForTimeout(attempt * 1_500);
+  }
+  throw new Error(`Render returned transient HTTP ${lastStatus} after 3 navigation attempts for ${path}.`);
+}
 
 test.describe('Preview deployment · PMV smoke', () => {
   test('health y catálogo público están disponibles sin exponer datos internos', async ({ request }) => {
@@ -70,7 +81,7 @@ test.describe('Preview deployment · PMV smoke', () => {
   });
 
   test('inventario público carga soportes y no desborda en anchos PMV', async ({ page }, testInfo) => {
-    await page.goto('/inventario?vista=catalogo');
+    await gotoWithTransientRetry(page, '/inventario?vista=catalogo');
     await expect(page.getByRole('heading', { name: 'Inventario de soportes publicitarios' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Av. J. B. Justo y Lope de Vega' })).toBeVisible();
@@ -94,7 +105,7 @@ test.describe('Preview deployment · PMV smoke', () => {
 
   test('selección pública llega al cierre de Media Kit sin enviar una solicitud real', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
-    await page.goto('/inventario?vista=catalogo', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await gotoWithTransientRetry(page, '/inventario?vista=catalogo');
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('button', { name: 'Quitar selección' }).first()).toBeVisible();

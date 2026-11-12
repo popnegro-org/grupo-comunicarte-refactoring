@@ -128,7 +128,21 @@ export async function createApp() {
           res.setHeader('X-Content-Type-Options', 'nosniff');
           return res.status(200).send(thumbnail);
         } catch (thumbnailError) {
-          console.warn('Thumbnail generation failed; falling back to original media:', thumbnailError);
+          const cause = (thumbnailError as any)?.cause;
+          const networkErrors = Array.isArray(cause?.errors)
+            ? cause.errors.map((entry: any) => ({
+              code: entry?.code,
+              syscall: entry?.syscall,
+              address: entry?.address,
+              family: entry?.family,
+            }))
+            : [];
+          const target = new URL(signedUrl);
+          console.warn('Thumbnail generation failed; falling back to original media:', thumbnailError, {
+            endpointHost: target.host,
+            bucket: decodeURIComponent(target.pathname.split('/')[1] || ''),
+            networkErrors,
+          });
         }
       }
       res.setHeader('Cache-Control', 'private, max-age=60');

@@ -309,6 +309,7 @@ jobs:
 
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
           let lastHealth = null;
+          let consecutiveHealthy = 0;
 
           for (let attempt = 1; attempt <= 60; attempt++) {
             try {
@@ -328,16 +329,24 @@ jobs:
                   health.databaseBranch === expectedBranch &&
                   html.includes(expectedAsset)
                 ) {
-                  console.log('Render QA serves the expected frontend asset and isolated Neon QA branch.');
-                  process.exit(0);
+                  consecutiveHealthy += 1;
+                  if (consecutiveHealthy >= 3) {
+                    console.log('Render QA served three consecutive healthy responses with the expected asset and isolated Neon QA branch.');
+                    process.exit(0);
+                  }
+                } else {
+                  consecutiveHealthy = 0;
                 }
+              } else {
+                consecutiveHealthy = 0;
               }
             } catch {
-              // Render may still be deploying the candidate.
+              // Render may still be deploying the candidate or restarting an instance.
+              consecutiveHealthy = 0;
             }
 
-            console.log('Waiting for Render QA candidate; attempt ' + attempt + '/60.');
-            await sleep(10000);
+            console.log('Waiting for stable Render QA candidate; attempt ' + attempt + '/60; healthy confirmations: ' + consecutiveHealthy + '/3.');
+            await sleep(3000);
           }
 
           throw new Error('Render QA did not serve the expected build and Neon branch. Last health: ' + JSON.stringify(lastHealth));
