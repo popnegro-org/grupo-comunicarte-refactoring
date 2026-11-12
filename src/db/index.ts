@@ -109,8 +109,8 @@ export async function initDatabase() {
       return;
     } catch (err) {
       if (attempt === BOOTSTRAP_RETRIES || !isTransientBootstrapError(err)) {
-        console.error('Database initialization failed:', err);
-        return;
+        console.error('Database initialization failed; refusing to start without a verified database schema:', err);
+        throw err;
       }
       console.warn(`Transient database bootstrap failure; retrying (${attempt}/${BOOTSTRAP_RETRIES - 1})`);
       await sleep(BOOTSTRAP_RETRY_DELAY_MS * attempt);
