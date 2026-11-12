@@ -149,3 +149,26 @@ El SHA de código validado (`02301ceefdedfad9b1ed43c2854dbb18d8370dab`) tenía 5
 5. Mantener PR #90 abierto y sin merge hasta aprobación explícita: `HUMAN GATE: APRUEBO PR #90`.
 
 **Guardrails:** no merge, no force-push, no rebase, no ramas nuevas, no más DDL ni modificaciones de datos; Production sin cambios. Cualquier cambio productivo requiere autorización humana explícita.
+
+
+## 8. Verificación directa de Production — 2026-11-12 18:19 UTC
+
+Se inspeccionó el deployment Vercel Production `dpl_E83qTALyMZ9FuFVvVeMc8Aj2XcpA` (commit `244d2f3d4bc6f3094de56b013c0c33b04f1a6e70`, rama `main`) sin modificar configuración ni secretos.
+
+### Enrutamiento de API y VITE_API_URL
+
+- El HTML público carga un bundle que realiza llamadas relativas a `/api/*`; no contiene el hostname Render ni una referencia literal a `VITE_API_URL`.
+- `src/lib/api.ts` en `main` y en `pmv-validation-candidate` devuelve rutas relativas cuando `import.meta.env.PROD` es verdadero. En consecuencia, Vercel Preview y Production ignoran `VITE_API_URL` en builds de producción.
+- `vercel.json` reescribe `/api/*` a `api/[...path].ts`; el handler importa `dist/server.cjs` y atiende API en el mismo deployment Vercel.
+- `GET /api/health` en el deployment Production respondió HTTP 200: `{"status":"ok","database":"connected"}`.
+- `GET /api/supports` respondió HTTP 200 con 29 registros. La respuesta incluye `mza-trad-16` con `active=true`, disponibilidad `disponible` y sin ownership visible (`tenant_id` no se devuelve). Esto contradice la regla PMV de no publicar soportes sin ownership y confirma que el backend de Production desplegado desde `main` no aplica el control candidato esperado. No se ejecutaron escrituras.
+
+**Decisión de configuración:** no asignar el endpoint Render a `VITE_API_URL`. Para builds Vercel, la variable es redundante y no enruta las peticiones; la API está en el mismo origen. Mantenerla vacía/no configurada es el estado recomendado, salvo que un flujo explícito de desarrollo local necesite un backend remoto. No se cambió la variable.
+
+### Identidad efectiva de Neon Production
+
+- La consulta de solo lectura a Neon Production confirma que los únicos roles PostgreSQL con LOGIN son `cloud_admin`, `neon_auth`, `neon_service` y `neondb_owner`; no existe `app_runtime_prod`.
+- El endpoint Vercel Production confirmó conectividad a base de datos. Sin embargo, la conexión activa no quedó expuesta en `pg_stat_activity` después de la solicitud de health check y Vercel no permitió leer el valor secreto de `DATABASE_URL` mediante el conector. Por lo tanto, no se declara verificado el usuario exacto de conexión. `neondb_owner` es el rol de auditoría usado por la conexión de lectura, no evidencia suficiente por sí solo de la identidad runtime.
+- El servicio Render `grupo-comunicarte-refactoring` sigue en `pmv-validation-candidate` y su runtime reportó `app_runtime_preview`; no es el backend Production.
+
+**Bloqueantes de release:** (1) Production aún sirve una API que expone al menos un soporte en cuarentena; (2) falta demostrar que el runtime Vercel usa un rol dedicado de privilegios mínimos; (3) PR #90 sigue sin aprobación humana y conserva seis snapshots sin baseline histórico confiable. No modificar Production, secretos, ramas Neon ni despliegues críticos sin HUMAN GATE.
