@@ -37,7 +37,7 @@ export function mediaSlides(item: InventoryItem) {
 export function StatusBadge({ item, dark = false }: { item: InventoryItem; dark?: boolean }) {
   const status = getDisponibilidad(item);
   const label = status === 'reservado' ? 'Reservado' : status === 'inactivo' ? 'Inactivo' : 'Disponible';
-  const tone = status === 'reservado' ? 'bg-amber-50 text-amber-800' : status === 'inactivo' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700';
+  const tone = status === 'reservado' ? 'bg-amber-50 text-amber-800' : status === 'inactivo' ? 'bg-slate-100 text-slate-800' : 'bg-emerald-50 text-emerald-800';
   const dot = status === 'reservado' ? 'bg-amber-400' : status === 'inactivo' ? 'bg-slate-500' : 'bg-emerald-500';
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${dark ? 'bg-slate-700/90 text-white' : tone}`}>
     <span className={`h-1.5 w-1.5 rounded-full ${dark ? 'bg-white' : dot}`} />{label}
@@ -46,7 +46,7 @@ export function StatusBadge({ item, dark = false }: { item: InventoryItem; dark?
 
 export function TypeBadge({ item }: { item: InventoryItem }) {
   const label = toInventoryPresentationItem(item).tipo;
-  return <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600"><Monitor className="h-3.5 w-3.5" />{label}</span>;
+  return <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-800"><Monitor className="h-3.5 w-3.5" />{label}</span>;
 }
 
 export function SupportMedia({ slides, index, onPrevious, onNext, onSelect, alt, priority = false }: {
@@ -74,7 +74,7 @@ export function FactStrip({ item }: { item: InventoryItem }) {
   return <div className={`grid ${fourFacts ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} divide-x divide-slate-200 border-y border-slate-100 py-3`}>
     {facts.map((fact) => <div key={fact.label} className="min-w-0 px-3 first:pl-0 last:pr-0">
       <div className="truncate text-sm font-bold text-slate-900">{fact.value}</div>
-      <div className="truncate text-[10px] font-medium text-slate-500">{fact.label}</div>
+      <div className="truncate text-[10px] font-medium text-slate-700">{fact.label}</div>
     </div>)}
   </div>;
 }
@@ -82,5 +82,5 @@ export function FactStrip({ item }: { item: InventoryItem }) {
 export function LocationLine({ item }: { item: InventoryItem }) {
   const address = 'address' in item ? item.address : undefined;
   const city = item.ciudad === 'mendoza' ? 'Mendoza' : 'Buenos Aires';
-  return <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{address || city}</span></p>;
+  return <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-slate-700"><MapPin className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{address || city}</span></p>;
 }

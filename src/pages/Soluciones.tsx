@@ -60,7 +60,7 @@ export default function Soluciones() {
                   </div>
                   <div>
                     <div className="mb-2 flex items-center gap-3">
-                      <span className="text-eyebrow text-gray-400">{solucion.index}</span>
+                      <span className="text-eyebrow text-gray-700">{solucion.index}</span>
                       <span className="text-eyebrow">{solucion.label}</span>
                     </div>
                     <h3 className="text-card-title">{solucion.title}</h3>

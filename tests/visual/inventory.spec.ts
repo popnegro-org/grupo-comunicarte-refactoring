@@ -26,7 +26,11 @@ test.describe('Inventario · regresión visual', () => {
   });
 
   test('desktop mantiene jerarquía, estados y atributos de las tarjetas', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'chromium-desktop', 'Snapshot desktop solo en proyecto desktop');
+    if (testInfo.project.name !== 'chromium-desktop') {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.reload();
+      await expect(page.getByRole('article')).toHaveCount(3);
+    }
     await expect(page.locator('article').first().getByText('Disponible', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Consultar disponibilidad' })).toBeVisible();
     if (process.env.VISUAL_BASELINE_MODE !== 'true') {
@@ -35,16 +39,24 @@ test.describe('Inventario · regresión visual', () => {
       await expect(page.getByText('8 h')).toBeVisible();
       await expect(page.getByRole('article').nth(1).getByText('Pantallas LED')).toBeVisible();
     }
-    await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-desktop.png') });
-    await expect(page).toHaveScreenshot('inventory-catalog-desktop.png', { stylePath: 'tests/visual/screenshot.css' });
+    if (testInfo.project.name === 'chromium-desktop') {
+      await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-desktop.png') });
+      await expect(page).toHaveScreenshot('inventory-catalog-desktop.png', { stylePath: 'tests/visual/screenshot.css' });
+    }
   });
 
   test('mobile mantiene tarjetas legibles y acciones accesibles', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'chromium-mobile', 'Snapshot mobile solo en proyecto mobile');
+    if (testInfo.project.name !== 'chromium-mobile') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.reload();
+      await expect(page.getByRole('article')).toHaveCount(3);
+    }
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Consultar disponibilidad' })).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-mobile.png') });
-    await expect(page).toHaveScreenshot('inventory-catalog-mobile.png', { stylePath: 'tests/visual/screenshot.css' });
+    if (testInfo.project.name === 'chromium-mobile') {
+      await page.screenshot({ path: testInfo.outputPath('candidate-inventory-catalog-mobile.png') });
+      await expect(page).toHaveScreenshot('inventory-catalog-mobile.png', { stylePath: 'tests/visual/screenshot.css' });
+    }
   });
 
 
@@ -129,7 +141,10 @@ test.describe('Inventario · regresión visual', () => {
 
 
   test('los controles del inventario respetan objetivos táctiles de 44px en móvil', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'chromium-mobile', 'Targets táctiles solo en proyecto mobile');
+    if (testInfo.project.name !== 'chromium-mobile') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.reload();
+    }
     const controls = [
       page.getByRole('textbox', { name: 'Buscar soportes' }),
       page.getByRole('button', { name: 'Buscar soportes cerca de mi ubicación' }),

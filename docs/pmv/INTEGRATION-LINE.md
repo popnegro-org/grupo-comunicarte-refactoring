@@ -3,7 +3,7 @@
 **Repositorio:** popnegro-org/grupo-comunicarte-refactoring
 **Rama de integración:** pmv-validation-candidate
 **PR de release:** #90 → main
-**HEAD auditado:** 0df24b297a9bc18145cae55add63681932e18331
+**HEAD auditado:** consultar el SHA actual del PR #90; evitar hashes estáticos en este documento.
 **Estado:** integración activa; release NO-GO.
 
 ## Reglas
@@ -30,15 +30,16 @@
 
 ## Estado al 2026-11-12
 
-- Candidata: más de 500 commits ahead, 0 behind; PR #90: 152 archivos, 11.815 adiciones y 1.837 eliminaciones.
+- Candidata: más de 500 commits ahead, 0 behind; snapshot en HEAD 5920862: 153 archivos, +11.961 / -1.837 líneas; el contador cambia con cada commit.
 - Un único PR abierto (#90), sin merge.
-- CI Candidate: QA E2E 12/12 PASS en QA y Preview, sin flaky.
-- Visual QA: 75 PASS, 14 FAIL de contraste en siete rutas desktop/mobile, 7 SKIPPED.
+- Visual QA local: 96/96 PASS, 0 FAIL, 0 SKIPPED, 0 flaky.
+- Lint/typecheck, 102 unit tests, build y npm audit --omit=dev --audit-level=high PASS.
+- Los E2E/C1–C6 remotos deben ejecutarse de nuevo sobre el SHA nuevo; los resultados de 5920862 son evidencia histórica.
 - El tamaño del diff requiere revisión integral antes de release; tests verdes no equivalen a autorización de merge.
 
 ## Secuencia
 
-1. Corregir 14 errores WCAG y resolver 7 SKIPPED.
-2. Auditar el diff completo de PR #90 por alcance, secretos, migraciones y regresiones.
-3. Repetir CI, QA, E2E y Visual QA en el SHA final.
+1. Confirmar CI Candidate, QA/Preview E2E y Visual QA en el SHA nuevo.
+2. Adjuntar evidencias del SHA exacto y revisar cualquier hallazgo del workflow.
+3. Mantener PR #90 NO-GO hasta la revisión humana del alcance y de la migración histórica de Production.
 4. Actualizar evidencias y solicitar HUMAN GATE.

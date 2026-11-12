@@ -69,7 +69,7 @@ export default function Soportes() {
                   </div>
                   <div>
                     <div className="mb-2 flex items-center gap-3">
-                      <span className="text-eyebrow text-gray-400">{soporte.index}</span>
+                      <span className="text-eyebrow text-gray-700">{soporte.index}</span>
                       <span className="text-eyebrow">Formato publicitario</span>
                     </div>
                     <h2 className="text-card-title">{soporte.name}</h2>

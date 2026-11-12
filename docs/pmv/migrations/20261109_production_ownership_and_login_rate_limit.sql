@@ -1,3 +1,5 @@
+-- HISTORICAL PRODUCTION MIGRATION RECORD — DO NOT REPLAY in any environment or candidate release workflow.
+-- The original rollout is documented as applied on 2026-11-09; verify the external migration ledger before any re-execution.
 -- Production rollout for the single global administrator PMV.
 -- Applied to Neon project mute-math-07036388, branch main (br-wandering-sky-aunq6lad)
 -- on 2026-11-09 after successful execution and postflight on a prepared Neon branch.

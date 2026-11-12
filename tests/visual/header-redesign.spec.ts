@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.describe('public header redesign', () => {
   test('desktop navigation exposes the commercial action without duplicate Contact link', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1024) < 600, 'Desktop navigation only');
+    if ((page.viewportSize()?.width ?? 1024) < 600) await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     const navigation = page.getByRole('navigation', { name: 'Navegación principal' });
     await expect(navigation.getByRole('link', { name: 'Inventario' })).toBeVisible();
@@ -19,7 +19,6 @@ test.describe('public header redesign', () => {
   });
 
   test('desktop header fits without horizontal overflow from 1024px upward', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1024) < 600, 'Desktop layout only');
     for (const width of [1024, 1100, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
@@ -30,7 +29,7 @@ test.describe('public header redesign', () => {
   });
 
   test('mobile menu removes redundant Inicio, traps focus and closes with Escape', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1024) >= 600, 'Mobile navigation only');
+    if ((page.viewportSize()?.width ?? 1024) >= 600) await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     const trigger = page.getByRole('button', { name: 'Abrir menú' });
     await trigger.click();
@@ -54,7 +53,6 @@ test.describe('public header redesign', () => {
   });
 
   test('public pages do not overflow horizontally at common viewport widths', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1024) >= 600, 'Responsive width sweep is covered by mobile project');
     for (const width of [320, 360, 375, 390, 414]) {
       await page.setViewportSize({ width, height: 844 });
       await page.goto('/');

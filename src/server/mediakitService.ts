@@ -178,6 +178,7 @@ export async function handleMediakitRequest(body: any): Promise<{
   }
 }
 
+/** Admin-only request history; pending ownership lines are included for reconciliation, never public catalog/quote flows. */
 export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> {
   const reqRows = await db.select().from(mediakitRequests).orderBy(desc(mediakitRequests.createdAt));
   const results: MediakitRecord[] = [];

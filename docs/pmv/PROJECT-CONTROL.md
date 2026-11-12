@@ -3,7 +3,7 @@
 **Verificado:** 2026-11-12
 **Repo:** popnegro-org/grupo-comunicarte-refactoring
 **Rama única:** pmv-validation-candidate
-**HEAD:** 0df24b297a9bc18145cae55add63681932e18331
+**HEAD:** consultar el SHA actual del PR #90; este documento no fija un hash estático para evitar evidencia obsoleta.
 **PR:** [#90](https://github.com/popnegro-org/grupo-comunicarte-refactoring/pull/90) — abierto, sin merge.
 **Production:** intacta.
 
@@ -62,22 +62,34 @@ Los dos servicios Render comparten Environment ID, pero tienen IDs de servicio d
 
 - Una sola rama activa: pmv-validation-candidate.
 - Un único PR abierto: #90 hacia main.
-- más de 500 commits ahead, 0 behind; 152 archivos, 11.815 adiciones, 1.837 eliminaciones.
+- más de 500 commits ahead, 0 behind. El snapshot del diff en HEAD 5920862: 153 archivos, 11.961 adiciones y 1.837 eliminaciones. El contador cambia con cada commit.
 - No integrar ramas históricas completas, no crear otra rama de integración, no reescribir la historia candidata.
 - PR #90 permanece como gate de release; el diff requiere auditoría de alcance antes de merge.
 - main, Neon Production, Vercel Production, DNS/WAF y secretos productivos no se modifican.
 
 ## 5. Calidad del HEAD
 
-- CI general: PASS.
-- CI Candidate: E2E 12/12 PASS en QA y Preview, sin flaky.
-- C1–C6: PASS.
-- Visual QA: 75 PASS, 14 FAIL y 7 SKIPPED. Los 14 fallos son de contraste en siete rutas desktop/mobile.
-- PMV no está listo para release hasta corregir contraste, resolver skips y auditar el diff.
+- Lint/typecheck local: PASS.
+- Unit tests locales: 102/102 PASS.
+- Build local: PASS.
+- Dependency audit production (npm audit --omit=dev --audit-level=high): 0 vulnerabilidades.
+- Visual QA local: 96/96 PASS, 0 FAIL, 0 SKIPPED, 0 flaky.
+- Las 7 omisiones históricas eran guardas de viewport; ahora cada caso se ejecuta en su viewport objetivo también desde el otro proyecto.
+- Los workflows remotos, E2E autenticado 12/12 y C1–C6 deben repetirse en el SHA generado por el siguiente commit; los PASS previos pertenecen a HEAD 5920862 y no se trasladan automáticamente.
 
-## 6. Próximas acciones
+## 6. Auditoría de alcance y seguridad
 
-1. Corregir 14 errores WCAG y resolver 7 SKIPPED.
-2. Auditar el diff completo de PR #90 por alcance, secretos, migraciones y regresiones.
-3. Repetir CI, QA, E2E, Visual QA y smoke en el SHA final.
-4. Actualizar evidencias y solicitar HUMAN GATE para merge/promoción.
+- Escaneo del diff: no se encontraron tokens, claves privadas ni URLs/credenciales Neon hardcodeadas. .env.example contiene solo nombres de variables vacías.
+- Se retiró código de autorización por memberships no utilizado y la lectura diagnóstica de app.tenant_id; el modelo runtime queda en el administrador global único.
+- Catálogo, cotizador y selección pública excluyen ownership NULL; validaciones transaccionales de solicitud y Media Kit rechazan soportes sin ownership.
+- Las rutas que consultan inventario sin asignación están protegidas por requireAdmin y se usan para conciliación/operación administrativa; no son endpoints públicos.
+- Las 18 filas de cuarentena y mza-trad-16 no se modificaron. No se ejecutó SQL ni DDL en esta iteración.
+- La migración 20261109_production_ownership_and_login_rate_limit.sql es un registro histórico que declara aplicación en Production; no debe reproducirse en el release candidate. La afirmación debe cotejarse con el ledger antes de cualquier re-ejecución.
+- El PR conserva un diff amplio (>500 commits ahead); no se recomienda merge automático. main y Production siguen fuera del alcance.
+
+## 7. Próximas acciones
+
+1. Confirmar CI Candidate, Visual QA y E2E autenticado en el SHA nuevo.
+2. Verificar Preview/QA del mismo SHA y adjuntar evidencias.
+3. Mantener PR #90 NO-GO hasta revisión humana del alcance y confirmación del estado de la migración histórica.
+4. Solicitar HUMAN GATE explícito; no mergear ni promover automáticamente.

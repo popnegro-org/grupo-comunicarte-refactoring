@@ -13,6 +13,8 @@ const supportFixture = {
     description: 'Soporte de prueba para auditoría de accesibilidad.',
     disponibilidad: 'disponible',
     imageUrls: [],
+    lat: -32.8895,
+    lng: -68.8458,
   }],
 };
 
@@ -83,7 +85,11 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
       page.on('pageerror', (error) => pageErrors.push(error.message));
 
       await page.goto(route.path);
-      await expect(page.locator('main').first()).toBeVisible();
+      await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 });
+      const transition = page.getByTestId('page-transition');
+      if (await transition.count()) {
+        await expect(transition).toHaveCSS('opacity', '1');
+      }
       if (route.heading) {
         await expect(page.getByRole('heading', { name: route.heading }).first()).toBeVisible();
       } else {

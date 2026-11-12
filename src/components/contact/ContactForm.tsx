@@ -94,7 +94,7 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
         <h2 className="mt-4 text-xl font-semibold text-gray-950">Solicitud enviada</h2>
         <p className="mt-2 text-sm text-gray-600">{success}</p>
         {isMediaKit && requestId && <p className="mt-3 text-sm font-semibold text-gray-800">Solicitud {requestId}</p>}
-        {isMediaKit && <p className="mt-1 text-xs text-gray-500">El equipo comercial recibió tu selección y preparará el Media Kit.</p>}
+        {isMediaKit && <p className="mt-1 text-xs text-gray-700">El equipo comercial recibió tu selección y preparará el Media Kit.</p>}
         <Link to="/inventario" className="mt-5 inline-flex items-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Volver al inventario</Link>
       </div>
     );
@@ -103,9 +103,9 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
   return (
     <form onSubmit={submit} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 md:p-8 shadow-sm space-y-4">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">{isMediaKit ? 'Media Kit' : 'Contacto'}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-700">{isMediaKit ? 'Media Kit' : 'Contacto'}</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-950">{isMediaKit ? 'Solicitá tu Media Kit' : 'Contanos qué necesitás'}</h2>
-        {isMediaKit && <p className="mt-2 text-sm text-gray-500">{selectedCount} {selectedCount === 1 ? 'soporte seleccionado' : 'soportes seleccionados'}.</p>}
+        {isMediaKit && <p className="mt-2 text-sm text-gray-700">{selectedCount} {selectedCount === 1 ? 'soporte seleccionado' : 'soportes seleccionados'}.</p>}
       </div>
 
       {error && <p role="alert" className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">{error}</p>}

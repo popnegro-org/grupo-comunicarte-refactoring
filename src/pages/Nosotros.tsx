@@ -61,15 +61,15 @@ export default function Nosotros() {
           <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-gray-200 bg-white md:grid-cols-3">
             <div className="border-b border-gray-200 p-6 md:border-b-0 md:border-r md:p-7">
               <AnimatedCounter prefix="+" end={items.length} className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl" />
-              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Soportes disponibles en las plazas activas</span>
+              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-700">Soportes disponibles en las plazas activas</span>
             </div>
             <div className="border-b border-gray-200 p-6 md:border-b-0 md:border-r md:p-7">
               <span className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl">OOH + DOOH</span>
-              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Formatos tradicionales y digitales</span>
+              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-700">Formatos tradicionales y digitales</span>
             </div>
             <div className="p-6 md:p-7">
               <span className="text-3xl font-semibold tracking-tight text-gray-950 md:text-4xl">{plazaCount}</span>
-              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-500">Plazas estratégicas nacionales</span>
+              <span className="mt-2 block text-xs font-medium leading-relaxed text-gray-700">Plazas estratégicas nacionales</span>
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function Nosotros() {
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-950 text-white">
                       <Icon className="h-4 w-4" aria-hidden="true" />
                     </span>
-                    <span className="text-eyebrow text-gray-400">0{index + 1}</span>
+                    <span className="text-eyebrow text-gray-700">0{index + 1}</span>
                   </div>
                   <h3 className="text-card-title mt-5">{pillar.title}</h3>
                   <p className="text-body mt-2">{pillar.description}</p>

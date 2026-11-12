@@ -65,7 +65,7 @@ export function InventoryToolbar({
       </button>
 
       {nearMeActive && onClearNearMe && (
-        <button type="button" onClick={onClearNearMe} className="flex h-11 shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Quitar búsqueda cerca de mi ubicación">
+        <button type="button" onClick={onClearNearMe} className="flex h-11 shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-950/20" aria-label="Quitar búsqueda cerca de mi ubicación">
           <X className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Quitar</span>
         </button>

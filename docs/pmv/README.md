@@ -27,6 +27,7 @@ No representan el estado actual sin contrastar con PROJECT-CONTROL y los workflo
 - CONTRACT-AUDIT-2026-11-07.md
 - tenant-isolation-blocker.md
 - tenant-isolation-implementation.md
+- HUMAN_GATE_VALIDATION.md
 
 ## Reglas
 

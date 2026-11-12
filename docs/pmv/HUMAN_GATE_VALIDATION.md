@@ -1,5 +1,7 @@
 # PMV — validación HUMAN GATE
 
+> **Snapshot histórico (2026-11-11):** este documento conserva referencias a ramas y PRs anteriores. No usarlo como estado operativo vigente. La fuente de verdad actual es [PROJECT-CONTROL.md](./PROJECT-CONTROL.md) y el HEAD de PR #90.
+
 **Estado release:** NO-GO hasta completar checklist P0.  
 **Fecha de actualización:** 2026-11-11  
 **Línea de integración única:** `pmv-validation-candidate`  

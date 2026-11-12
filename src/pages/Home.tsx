@@ -72,7 +72,7 @@ export default function Home() {
         <div className="border-b border-gray-100 bg-white px-4 py-3 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             {inventoryLoading && !inventoryError && (
-              <p className="text-sm text-gray-500">Cargando inventario…</p>
+              <p className="text-sm text-gray-700">Cargando inventario…</p>
             )}
             {inventoryError && (
               <p role="alert" className="text-sm text-red-700">
@@ -102,20 +102,20 @@ export default function Home() {
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-800">
                     <MapPin className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500">Plazas disponibles</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-700">Plazas disponibles</span>
                 </div>
                 <h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-tight text-gray-950 md:text-4xl">Elegí dónde querés estar</h2>
-                <p className="mt-3 max-w-xl text-base leading-7 text-gray-600 md:text-lg md:leading-7">
+                <p className="mt-3 max-w-xl text-base leading-7 text-gray-700 md:text-lg md:leading-7">
                   Explorá nuestra cobertura y encontrá soportes estratégicos según la ciudad y el alcance de tu campaña.
                 </p>
                 <div className="mt-7 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
                   <button onClick={() => navigate('/inventario?plaza=mendoza')} className="group flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3.5 text-left transition-colors hover:border-gray-900 hover:bg-gray-50">
-                    <span><span className="block text-base font-semibold text-gray-950">Mendoza</span><span className="mt-1 block text-xs leading-5 text-gray-500">{allItems.filter(item => item.ciudad === 'mendoza').length} soportes estratégicos</span></span>
-                    <MoveRight className="h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:translate-x-1 group-hover:text-gray-950" aria-hidden="true" />
+                    <span><span className="block text-base font-semibold text-gray-950">Mendoza</span><span className="mt-1 block text-xs leading-5 text-gray-700">{allItems.filter(item => item.ciudad === 'mendoza').length} soportes estratégicos</span></span>
+                    <MoveRight className="h-4 w-4 shrink-0 text-gray-700 transition-transform group-hover:translate-x-1 group-hover:text-gray-950" aria-hidden="true" />
                   </button>
                   <button onClick={() => navigate('/inventario?plaza=buenos-aires')} className="group flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3.5 text-left transition-colors hover:border-gray-900 hover:bg-gray-50">
-                    <span><span className="block text-base font-semibold text-gray-950">Buenos Aires</span><span className="mt-1 block text-xs leading-5 text-gray-500">{allItems.filter(item => item.ciudad === 'buenos-aires').length} soportes estratégicos</span></span>
-                    <MoveRight className="h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:translate-x-1 group-hover:text-gray-950" aria-hidden="true" />
+                    <span><span className="block text-base font-semibold text-gray-950">Buenos Aires</span><span className="mt-1 block text-xs leading-5 text-gray-700">{allItems.filter(item => item.ciudad === 'buenos-aires').length} soportes estratégicos</span></span>
+                    <MoveRight className="h-4 w-4 shrink-0 text-gray-700 transition-transform group-hover:translate-x-1 group-hover:text-gray-950" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -132,10 +132,10 @@ export default function Home() {
               <div className="max-w-2xl">
                 <div className="mb-3 flex items-center gap-3">
                   <span className="h-px w-8 bg-gray-900" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">Inventario seleccionado</span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-700">Inventario seleccionado</span>
                 </div>
                 <h2 className="text-3xl font-semibold leading-tight tracking-tight text-gray-950 md:text-4xl">Soportes destacados</h2>
-                <p className="mt-2.5 max-w-xl text-base leading-7 text-gray-600 md:text-lg md:leading-7">Una selección de ubicaciones con información real de disponibilidad, formato y características.</p>
+                <p className="mt-2.5 max-w-xl text-base leading-7 text-gray-700 md:text-lg md:leading-7">Una selección de ubicaciones con información real de disponibilidad, formato y características.</p>
               </div>
               <div className="flex items-center justify-between gap-3 md:shrink-0">
                 <Link to="/inventario" className="hidden items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-700 hover:text-gray-950 sm:inline-flex">Ver inventario completo <MoveRight className="h-4 w-4" /></Link>
@@ -156,7 +156,7 @@ export default function Home() {
           </div>
 
           <div className="mx-auto mt-2 flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <p className="text-[11px] font-medium leading-5 text-gray-500">Deslizá horizontalmente para explorar</p>
+            <p className="text-[11px] font-medium leading-5 text-gray-700">Deslizá horizontalmente para explorar</p>
             <Link to="/inventario" className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-700 sm:hidden">Ver todo <MoveRight className="h-4 w-4" /></Link>
           </div>
         </section>
@@ -167,9 +167,9 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
             <div className="lg:sticky lg:top-24 lg:self-start">
-              <div className="mb-3 flex items-center gap-3"><span className="h-px w-8 bg-gray-900" /><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">Nosotros</span></div>
+              <div className="mb-3 flex items-center gap-3"><span className="h-px w-8 bg-gray-900" /><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-700">Nosotros</span></div>
               <h2 className="max-w-lg text-3xl font-semibold leading-[1.08] tracking-tight text-gray-950 md:text-4xl">Una mirada estratégica sobre la vía pública.</h2>
-              <p className="mt-4 max-w-lg text-base leading-7 text-gray-600 md:text-lg md:leading-7">Conectamos marcas con audiencias en movimiento a través de ubicaciones relevantes, tecnología y acompañamiento profesional.</p>
+              <p className="mt-4 max-w-lg text-base leading-7 text-gray-700 md:text-lg md:leading-7">Conectamos marcas con audiencias en movimiento a través de ubicaciones relevantes, tecnología y acompañamiento profesional.</p>
               <Link to="/nosotros" className="mt-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-800 hover:text-gray-950">Conocé más sobre nosotros <MoveRight className="h-4 w-4" /></Link>
             </div>
 
@@ -178,9 +178,9 @@ export default function Home() {
                 <article key={number} className="grid gap-4 py-7 first:pt-7 sm:grid-cols-[56px_1fr] sm:gap-6 md:py-8">
                   <div className="flex items-center gap-3 sm:block">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-950 text-white"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-                    <span className="text-[11px] font-bold tracking-[0.16em] text-gray-600 sm:mt-3 sm:block">{number}</span>
+                    <span className="text-[11px] font-bold tracking-[0.16em] text-gray-700 sm:mt-3 sm:block">{number}</span>
                   </div>
-                  <div><h3 className="text-xl font-semibold tracking-tight text-gray-950 md:text-2xl">{title}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 md:text-base md:leading-7">{description}</p></div>
+                  <div><h3 className="text-xl font-semibold tracking-tight text-gray-950 md:text-2xl">{title}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-gray-700 md:text-base md:leading-7">{description}</p></div>
                 </article>
               ))}
             </div>
@@ -193,9 +193,9 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="rounded-2xl border border-gray-200 bg-gray-50 px-6 py-12 text-center md:px-12 md:py-16">
             <div className="mx-auto max-w-2xl">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">Empezá por una ubicación</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-700">Empezá por una ubicación</p>
               <h2 className="mt-3 text-3xl font-semibold leading-[1.08] tracking-tight text-gray-950 md:text-5xl">Elegí tus soportes y armá tu solicitud</h2>
-              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-gray-600 md:text-lg md:leading-7">La selección queda guardada mientras recorrés el inventario. Cuando estés listo, Solicitar Media Kit te lleva a Contacto para completar y enviar la solicitud.</p>
+              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-gray-700 md:text-lg md:leading-7">La selección queda guardada mientras recorrés el inventario. Cuando estés listo, Solicitar Media Kit te lleva a Contacto para completar y enviar la solicitud.</p>
               <Link to="/inventario" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800">Explorar inventario <ArrowRight className="h-4 w-4" /></Link>
             </div>
           </div>

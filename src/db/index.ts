@@ -53,7 +53,6 @@ async function logDatabaseSecurityContext() {
       superuser: boolean;
       database_create: boolean;
       public_schema_create: boolean;
-      tenant_context_set: boolean;
       public_table_count: number;
       rls_enabled_table_count: number;
       select_table_count: number;
@@ -69,7 +68,6 @@ async function logDatabaseSecurityContext() {
         role.rolsuper AS superuser,
         has_database_privilege(current_user, current_database(), 'CREATE') AS database_create,
         has_schema_privilege(current_user, 'public', 'CREATE') AS public_schema_create,
-        NULLIF(current_setting('app.tenant_id', true), '') IS NOT NULL AS tenant_context_set,
         counts.public_table_count,
         counts.rls_enabled_table_count,
         counts.select_table_count,

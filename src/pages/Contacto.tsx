@@ -24,25 +24,25 @@ export default function Contacto() {
           <aside className="grid gap-3 lg:sticky lg:top-24">
             {isMediaKit && (
               <div className="surface-card p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">Cierre de solicitud</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-700">Cierre de solicitud</p>
                 <h2 className="mt-2 text-base font-semibold text-gray-950">No perdés tu selección</h2>
-                <p className="mt-2 text-sm leading-6 text-gray-500">Los soportes que elegiste se envían junto con tus datos. No necesitás volver al inventario.</p>
+                <p className="mt-2 text-sm leading-6 text-gray-700">Los soportes que elegiste se envían junto con tus datos. No necesitás volver al inventario.</p>
               </div>
             )}
             <a href="mailto:comercial@grupocomunicarte.com.ar" className="surface-card block p-5 transition-colors hover:border-gray-300">
               <Mail className="h-5 w-5 text-gray-700" aria-hidden="true" />
               <h2 className="text-card-title mt-3 text-base">Email comercial</h2>
-              <p className="mt-1 text-sm leading-6 text-gray-500">comercial@grupocomunicarte.com.ar</p>
+              <p className="mt-1 text-sm leading-6 text-gray-700">comercial@grupocomunicarte.com.ar</p>
             </a>
             <a href="https://maps.app.goo.gl/V3uZwDq283b1u6UY8" className="surface-card block p-5 transition-colors hover:border-gray-300">
               <MapPin className="h-5 w-5 text-gray-700" aria-hidden="true" />
               <h2 className="text-card-title mt-3 text-base">Oficina Comercial</h2>
-              <p className="mt-1 text-sm leading-6 text-gray-500">9 de Julio 891, M5501 Godoy Cruz, Mendoza</p>
+              <p className="mt-1 text-sm leading-6 text-gray-700">9 de Julio 891, M5501 Godoy Cruz, Mendoza</p>
             </a>
             <a href="https://wa.me/542615830208" className="surface-card block p-5 transition-colors hover:border-gray-300">
               <PhoneCallIcon className="h-5 w-5 text-gray-700" aria-hidden="true" />
               <h2 className="text-card-title mt-3 text-base">WhatsApp</h2>
-              <p className="mt-1 text-sm leading-6 text-gray-500">+54 261 583 0208</p>
+              <p className="mt-1 text-sm leading-6 text-gray-700">+54 261 583 0208</p>
             </a>
           </aside>
         </div>
