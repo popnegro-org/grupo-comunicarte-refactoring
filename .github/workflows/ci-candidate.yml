@@ -218,7 +218,7 @@ jobs:
       - name: Verify Vercel Preview branch, code revision, quarantine and pricing privacy
         shell: bash
         run: |
-          node <<'NODE'
+          node --input-type=module <<'NODE'
           const base = process.env.PLAYWRIGHT_BASE_URL;
           const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
           const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
