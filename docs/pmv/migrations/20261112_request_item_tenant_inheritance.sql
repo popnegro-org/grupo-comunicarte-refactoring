@@ -10,10 +10,10 @@
 --   * assigned support + omitted tenant_id -> inherit exact support tenant;
 --   * assigned support + matching tenant_id -> accept;
 --   * assigned support + mismatching tenant_id -> reject;
---   * pending support + NULL tenant_id -> preserve quarantine;
+--   * new item + pending support -> reject, even when tenant_id is NULL;
+--   * historical item UPDATE + pending support + NULL tenant_id -> preserve;
 --   * historical request item + NULL tenant_id -> remain pending even if its
 --     support is assigned later; no automatic historical reclassification;
---   * pending support + non-NULL tenant_id -> reject;
 --   * missing support -> reject.
 --
 -- Apply to an isolated Neon QA/Preview branch only after verifying branch ID.
@@ -101,12 +101,17 @@ BEGIN
   END IF;
 
   IF v_support_tenant_id IS NULL THEN
+    IF TG_OP = 'INSERT' THEN
+      RAISE EXCEPTION 'A quarantined support cannot be added to a new request: %', NEW.support_id
+        USING ERRCODE = '23514',
+              CONSTRAINT = 'mediakit_request_items_tenant_inheritance_check';
+    END IF;
     IF NEW.tenant_id IS NOT NULL THEN
       RAISE EXCEPTION 'A quarantined support cannot receive a tenant-scoped request item: %', NEW.support_id
         USING ERRCODE = '23514',
               CONSTRAINT = 'mediakit_request_items_tenant_inheritance_check';
     END IF;
-    -- Preserve NULL while the source support remains unassigned.
+    -- Preserve NULL only for an existing historical item that remains pending.
     RETURN NEW;
   END IF;
 
