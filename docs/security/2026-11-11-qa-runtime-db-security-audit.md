@@ -178,3 +178,11 @@ Esto coincide con los diagnósticos recientes de ambos servicios Render. No hay 
 Se añadió `docs/pmv/migrations/20261112_request_item_tenant_inheritance.sql` en la rama candidata. Añade herencia de tenant al insertar/actualizar ítems, preserva NULL para soportes pendientes, propaga la primera asignación documentada y evita reasignar ownership ya establecido. Está versionada, no aplicada ni probada en una base PostgreSQL temporal/persistente.
 
 **Estado:** integridad de datos actual PASS; enforcement DB ante nuevos writes incompleto hasta aplicar y probar la migración en QA/Preview. No tocar Production ni habilitar RLS como parte de este cambio.
+
+
+### Protección de ramas — comprobación 2026-11-12
+
+- Neon reporta `protected=false` en las tres ramas del proyecto: `main`, Preview y QA.
+- Intenté habilitar protección únicamente en la rama Neon `main` (`br-wandering-sky-aunq6lad`). Neon rechazó el cambio con HTTP 422: límite máximo de ramas protegidas alcanzado para el plan actual. No se modificó ninguna rama ni se inició una actualización de plan.
+- La consulta de protección de ramas GitHub devolvió HTTP 403 `Resource not accessible by integration`. El estado de branch protection de GitHub `main` queda sin verificar; no se afirma que esté protegida.
+- No se aplicó ninguna configuración que altere la conexión o disponibilidad de Production. La protección de GitHub y la capacidad de proteger Neon `main` requieren resolver permisos/límite del plan antes del release.
