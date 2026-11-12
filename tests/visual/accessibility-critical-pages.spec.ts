@@ -29,7 +29,25 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ status: 'success', data: {} }),
+        body: JSON.stringify({
+          status: 'success',
+          data: {
+            total: 7,
+            available: 5,
+            reserved: 2,
+            inactive: 0,
+            mendozaTotal: 7,
+            mendozaAvailable: 5,
+            buenosAiresTotal: 0,
+            buenosAiresAvailable: 0,
+            tradicionalCount: 5,
+            ledCount: 1,
+            movilCount: 1,
+            totalRequests: 3,
+            pendingRequests: 1,
+            plazaCount: 1,
+          },
+        }),
       });
     });
     await page.route('**/api/admin/requests', async (route) => {
