@@ -131,9 +131,8 @@ BEGIN
     NULL;
   END;
 
-  -- First assignment of a pending support must propagate to its existing
-  -- request items. Force a deliberate exception after the assertion so the
-  -- nested block rolls back both the support assignment and child propagation.
+  -- Assigning a pending support must not retroactively classify historical
+  -- request items. They remain NULL/quarantined until explicitly reconciled.
   BEGIN
     UPDATE public.supports
        SET tenant_id=v_assigned_tenant,
@@ -150,8 +149,8 @@ BEGIN
     ORDER BY id
     LIMIT 1;
 
-    IF v_observed_tenant IS DISTINCT FROM v_assigned_tenant THEN
-      RAISE EXCEPTION 'First support assignment did not propagate to pending request items';
+    IF v_observed_tenant IS NOT NULL THEN
+      RAISE EXCEPTION 'Historical pending request item was unexpectedly reclassified';
     END IF;
 
     RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='__ROLLBACK_EXPECTED__';
@@ -175,6 +174,6 @@ BEGIN
     RAISE EXCEPTION 'Rollback test leaked support or request-item mutations';
   END IF;
 
-  RAISE NOTICE 'PASS: request-item tenant inheritance, quarantine, mismatch rejection, support immutability, and assignment propagation all passed; no test data persisted.';
+  RAISE NOTICE 'PASS: request-item tenant inheritance, quarantine, mismatch rejection, support immutability, and historical pending preservation all passed; no test data persisted.';
 END
 $test$;
