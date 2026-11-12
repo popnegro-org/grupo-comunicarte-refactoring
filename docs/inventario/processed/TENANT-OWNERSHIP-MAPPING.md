@@ -89,3 +89,16 @@ En Neon Preview, los 28 soportes asignados ahora tienen:
 - tenant_ownership_assigned_at: 2026-11-01, fecha de la conciliación documental registrada en este documento.
 
 El CRUD no permite cambiar una asignación existente ni editar su evidencia. Las nuevas asignaciones requieren tenant válido y referencia PDF/posición; el actor y la fecha se registran en backend. Las 18 filas sin fuente continúan sin tenant y sin habilitación comercial.
+
+
+## 8. Addendum de roles runtime y políticas staged — 2026-11-12
+
+La nota de §7 sobre `neondb_owner` con `BYPASSRLS=true` describe una conexión privilegiada/histórica y **no** la identidad runtime actual de Render QA/Preview.
+
+Verificación de solo lectura en Neon:
+- QA runtime `app_runtime_qa_login`: `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`.
+- Preview runtime `app_runtime_preview`: mismos cuatro flags en `false`.
+- `neondb_owner` conserva `BYPASSRLS=true` y privilegios administrativos; no usarlo como identidad de aplicación.
+- QA conserva 27 políticas staged en 27 tablas, pero 0 tablas tienen RLS habilitado. Preview tiene 0 políticas y 0 tablas con RLS. `app.tenant_id` está sin configurar en ambas ramas.
+
+Las políticas staged de QA no constituyen una frontera de seguridad activa para el PMV de administrador global único. No habilitarlas ni eliminarlas en esta línea de trabajo. La fuente operativa vigente es `docs/pmv/PROJECT-CONTROL.md`.
