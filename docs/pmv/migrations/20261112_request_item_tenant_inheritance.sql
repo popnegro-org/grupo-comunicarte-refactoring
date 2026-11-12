@@ -186,12 +186,19 @@ COMMIT;
 
 -- POSTFLIGHT — execute separately on the same branch:
 -- SELECT to_regprocedure('public.enforce_mediakit_request_item_tenant()');
--- SELECT tgname, tgenabled FROM pg_trigger
---  WHERE tgrelid='public.mediakit_request_items'::regclass
---    AND tgname='mediakit_request_items_tenant_inheritance'
---    AND NOT tgisinternal;
--- Expected: function exists, exactly one enabled trigger.
+-- SELECT tgrelid::regclass AS table_name, tgname, tgenabled
+-- FROM pg_trigger
+-- WHERE NOT tgisinternal AND tgname IN (
+--   'mediakit_request_items_tenant_inheritance',
+--   'supports_tenant_ownership_immutable',
+--   'supports_tenant_assignment_propagation'
+-- )
+-- ORDER BY table_name, tgname;
+-- Expected: one enabled trigger per name; all three trigger functions exist.
 -- Existing rows remain unchanged; verify their NULL/match counts against the
--- branch-specific preflight snapshot. Then test insert cases inside ROLLBACK:
--- assigned + omitted tenant => inherited; assigned + mismatch => rejected;
--- pending + NULL => accepted; pending + tenant => rejected; missing support => rejected.
+-- branch-specific preflight snapshot. Then run
+-- docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql:
+-- assigned + omitted/cleared tenant => inherited; assigned + mismatch => rejected;
+-- pending + NULL => accepted; pending + tenant => rejected; missing support => rejected;
+-- assigned support ownership change/clear => rejected; first documented assignment
+-- of a pending support => existing pending request items inherit atomically.
