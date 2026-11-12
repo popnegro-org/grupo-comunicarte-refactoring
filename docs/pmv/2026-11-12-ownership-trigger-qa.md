@@ -77,6 +77,6 @@ Postflight also confirmed the exact branch ID in each database, both trigger fun
 ## Remaining scope
 
 - The nullable historical request items (3 QA, 2 Preview) remain intentionally pending. Do not infer tenant ownership or auto-classify them.
-- The privileged runtime identity (neondb_owner, BYPASSRLS=true) remains a separate security debt; this migration does not attempt role or grant changes.
+- The privileged `neondb_owner` role retains `BYPASSRLS=true` and administrative privileges; it is not the Render QA/Preview runtime identity. Current runtime roles are `app_runtime_qa_login` and `app_runtime_preview`, both with `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, and `rolcreaterole=false`. QA has 27 staged policies but no RLS-enabled tables; Preview has no policies and no RLS-enabled tables. Keep all staged policies inert; do not enable or delete them in this PMV.
 - GitHub/Neon main branch protection remains unresolved due integration permissions and Neon plan limits.
 - No Production migration, merge, or promotion was performed.
