@@ -381,3 +381,20 @@ Matriz efectiva del rol Vercel Preview:
 - La validación funcional automatizada de Render, Neon QA, Neon Preview, Vercel Preview y Visual QA queda **PASS**.
 - El PMV sigue **NO-GO para merge** hasta resolver: (1) reducción de privilegios de `app_runtime_preview` en Neon Preview, (2) evidencia concluyente de Git Integration / Ignored Build Step, y (3) conciliación documental de los 18 soportes Preview en cuarentena.
 - La reducción de grants Render no se ejecutó. Requiere autorización específica antes de revocar los privilegios actuales. El merge de PR #90 sigue sujeto a `HUMAN GATE: APRUEBO PR #90`.
+
+
+## Auditoría de alcance del PR #90 — 2026-11-12 22:02 UTC
+
+- Base `main`: `244d2f3d4bc6f3094de56b013c0c33b04f1a6e70` (coincide con el commit Production verificado).
+- HEAD `pmv-validation-candidate`: `0e83fab7f816d9330a10129ba276bc3c9c99b6ea`.
+- Comparación GitHub: **586 commits adelante, 0 atrás**.
+- Reviews: ninguna. Review threads: ninguno.
+- El PR contiene cambios extensos de backend, frontend, base de datos, contratos, tests, workflows y documentación. No es un cambio pequeño de mantenimiento.
+- El HEAD candidato pasó CI, CI Candidate y Visual QA; eso valida el estado técnico de los jobs, pero no sustituye la revisión humana del alcance de 586 commits.
+- **NO-GO para merge**: no compactar, rebasear, cambiar base ni dividir el PR sin decisión expresa. Mantener `main` intacta y exigir revisión del diff completo antes del Human Gate de merge.
+
+### Reconciliación final de Git Integration Vercel
+
+La lectura de `get_git_deployment_context` identifica el vínculo del proyecto Vercel `prj_LocmTWT0E6LyQ2p0dtGRsUmDj54m` como `popnegro/grupo-comunicarte-refactoring`, mientras que el repositorio candidato y los metadatos de deployments son `popnegro-org/grupo-comunicarte-refactoring`. El namespace `popnegro-org` sí aparece accesible en la instalación GitHub de Vercel con rol admin; no existe una acción de reconexión de repositorio en los conectores disponibles.
+
+Acción manual pendiente en Vercel: Settings → Git → reconectar el proyecto existente a `popnegro-org/grupo-comunicarte-refactoring`, preservando el proyecto, dominios y variables actuales. Después verificar Production Branch `main`, Preview deployments y `Ignored Build Step`. No crear un segundo proyecto ni mover dominios como workaround.
