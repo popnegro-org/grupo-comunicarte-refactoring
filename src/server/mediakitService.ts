@@ -1,7 +1,8 @@
 import { db, pool } from '../db/index.ts';
 import { mediakitRequests, mediakitRequestItems } from '../db/schema.ts';
-import { validateSupportsForRequest, getSupportByIdFromDB } from './supportsService.ts';
-import { eq, desc } from 'drizzle-orm';
+import { validateSupportsForRequest } from './supportsService.ts';
+import { getSupportCatalog } from './supportModel.ts';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { areLockedSupportsCommerciallyEligible, deriveRequestScope } from './tenantAccess.ts';
 import { normalizeIdempotencyKey, requestIdFromIdempotencyKey } from './requestIdempotency.ts';
 
@@ -181,26 +182,41 @@ export async function handleMediakitRequest(body: any): Promise<{
 /** Admin-only request history; pending ownership lines are included for reconciliation, never public catalog/quote flows. */
 export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> {
   const reqRows = await db.select().from(mediakitRequests).orderBy(desc(mediakitRequests.createdAt));
-  const results: MediakitRecord[] = [];
+  if (reqRows.length === 0) return [];
 
-  for (const req of reqRows) {
-    const itemRows = await db
-      .select()
-      .from(mediakitRequestItems)
-      .where(eq(mediakitRequestItems.requestId, req.requestId));
+  const requestIds = reqRows.map((request) => request.requestId);
+  const itemRows = await db
+    .select()
+    .from(mediakitRequestItems)
+    .where(inArray(mediakitRequestItems.requestId, requestIds));
 
-    const selectedIds = itemRows.map((i) => i.supportId);
-    const selectedSupports = [];
+  const itemsByRequestId = new Map<string, typeof itemRows>();
+  for (const item of itemRows) {
+    const items = itemsByRequestId.get(item.requestId) ?? [];
+    items.push(item);
+    itemsByRequestId.set(item.requestId, items);
+  }
 
-    for (const sId of selectedIds) {
-      const sup = await getSupportByIdFromDB(sId, { includeInactive: true, includeUnassigned: true });
-      if (sup) selectedSupports.push({
-        canonical_id: sup.canonical_id,
-        name: sup.name,
-        ciudad: sup.ciudad,
-        tipo_soporte: sup.tipo_soporte,
-      });
-    }
+  // Admin history includes quarantined/inactive supports for reconciliation.
+  // Load the catalog once instead of issuing a support + related-record query
+  // for every request item (the previous N+1 path could exceed the E2E timeout).
+  const supportCatalog = itemRows.length > 0
+    ? await getSupportCatalog({ includeInactive: true, includeUnassigned: true })
+    : [];
+  const supportsById = new Map(supportCatalog.map((support) => [support.canonical_id, support]));
+
+  return reqRows.map((req) => {
+    const requestItems = itemsByRequestId.get(req.requestId) ?? [];
+    const selectedIds = requestItems.map((item) => item.supportId);
+    const selectedSupports = selectedIds.flatMap((supportId) => {
+      const support = supportsById.get(supportId);
+      return support ? [{
+        canonical_id: support.canonical_id,
+        name: support.name,
+        ciudad: support.ciudad,
+        tipo_soporte: support.tipo_soporte,
+      }] : [];
+    });
 
     const requesterCompany = req.requesterCompany || '';
     const requesterPhone = req.requesterPhone || '';
@@ -209,7 +225,7 @@ export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> 
     const supportNames = selectedSupports.map((support) => support.name);
     const createdAt = req.createdAt ? new Date(req.createdAt).toISOString() : new Date().toISOString();
 
-    results.push({
+    return {
       id: req.requestId,
       requestId: req.requestId,
       requesterName: req.requesterName,
@@ -219,16 +235,14 @@ export async function getAllMediakitRequestsFromDB(): Promise<MediakitRecord[]> 
       message,
       status,
       requestScope: req.requestScope ?? null,
-      pendingOwnershipCount: itemRows.filter((item) => !item.tenantId).length,
-      tenantIds: [...new Set(itemRows.map((item) => item.tenantId).filter((tenantId): tenantId is string => Boolean(tenantId)))],
+      pendingOwnershipCount: requestItems.filter((item) => !item.tenantId).length,
+      tenantIds: [...new Set(requestItems.map((item) => item.tenantId).filter((tenantId): tenantId is string => Boolean(tenantId)))],
       supportIds: selectedIds,
       supportNames,
       lead: { name: req.requesterName, email: req.requesterEmail, company: requesterCompany, phone: requesterPhone, message },
       selectedIds,
       selectedSupports,
       createdAt,
-    });
-  }
-
-  return results;
+    };
+  });
 }
