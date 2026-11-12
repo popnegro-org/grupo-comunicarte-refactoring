@@ -60,6 +60,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check JavaScript bundle budget
+        run: npm run check:bundle
+
   authenticated-preview-smoke:
     name: Authenticated Preview Smoke
     # Read-only smoke can run for both branch pushes and same-repository PRs.
