@@ -163,10 +163,10 @@ COMMIT;
 -- FROM pg_trigger
 -- WHERE NOT tgisinternal AND tgname IN (
 --   'mediakit_request_items_tenant_inheritance',
---   'supports_tenant_ownership_immutable',
----- )
+--   'supports_tenant_ownership_immutable'
+-- )
 -- ORDER BY table_name, tgname;
--- Expected: one enabled trigger per name; all three trigger functions exist.
+-- Expected: one enabled trigger per name; both trigger functions exist.
 -- Existing rows remain unchanged; verify their NULL/match counts against the
 -- branch-specific preflight snapshot. Then run
 -- docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql:
