@@ -123,6 +123,65 @@ EXECUTE FUNCTION public.enforce_mediakit_request_item_tenant();
 COMMENT ON FUNCTION public.enforce_mediakit_request_item_tenant() IS
   'Inherits tenant_id from the exact support; preserves NULL only for quarantined supports and rejects mismatches.';
 
+
+-- Ownership is write-once: a documented assignment may move NULL -> tenant,
+-- but an assigned support cannot be silently reassigned or returned to quarantine.
+CREATE OR REPLACE FUNCTION public.prevent_support_tenant_reassignment()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF OLD.tenant_id IS NOT NULL AND NEW.tenant_id IS DISTINCT FROM OLD.tenant_id THEN
+    RAISE EXCEPTION 'Support tenant ownership is immutable once assigned: %', OLD.canonical_id
+      USING ERRCODE = '23514',
+            CONSTRAINT = 'supports_tenant_ownership_immutable';
+  END IF;
+  RETURN NEW;
+END
+$function$;
+
+DROP TRIGGER IF EXISTS supports_tenant_ownership_immutable
+  ON public.supports;
+
+CREATE TRIGGER supports_tenant_ownership_immutable
+BEFORE UPDATE OF tenant_id
+ON public.supports
+FOR EACH ROW
+WHEN (OLD.tenant_id IS DISTINCT FROM NEW.tenant_id)
+EXECUTE FUNCTION public.prevent_support_tenant_reassignment();
+
+-- When a pending support receives its first documented tenant, propagate that
+-- exact value to historical request items in the same transaction. The child
+-- trigger above rechecks each row and rejects any inconsistent state.
+CREATE OR REPLACE FUNCTION public.propagate_support_tenant_to_request_items()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF OLD.tenant_id IS NULL AND NEW.tenant_id IS NOT NULL THEN
+    UPDATE public.mediakit_request_items
+       SET tenant_id = NEW.tenant_id
+     WHERE support_id = NEW.canonical_id
+       AND tenant_id IS NULL;
+  END IF;
+  RETURN NEW;
+END
+$function$;
+
+DROP TRIGGER IF EXISTS supports_tenant_assignment_propagation
+  ON public.supports;
+
+CREATE TRIGGER supports_tenant_assignment_propagation
+AFTER UPDATE OF tenant_id
+ON public.supports
+FOR EACH ROW
+WHEN (OLD.tenant_id IS DISTINCT FROM NEW.tenant_id)
+EXECUTE FUNCTION public.propagate_support_tenant_to_request_items();
+
 COMMIT;
 
 -- POSTFLIGHT — execute separately on the same branch:
