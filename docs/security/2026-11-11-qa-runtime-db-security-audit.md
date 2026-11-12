@@ -188,3 +188,29 @@ El test rollback-only `docs/pmv/tests/20261112_request_item_tenant_inheritance.r
 - Intenté habilitar protección únicamente en la rama Neon `main` (`br-wandering-sky-aunq6lad`). Neon rechazó el cambio con HTTP 422: límite máximo de ramas protegidas alcanzado para el plan actual. No se modificó ninguna rama ni se inició una actualización de plan.
 - La consulta de protección de ramas GitHub devolvió HTTP 403 `Resource not accessible by integration`. El estado de branch protection de GitHub `main` queda sin verificar; no se afirma que esté protegida.
 - No se aplicó ninguna configuración que altere la conexión o disponibilidad de Production. La protección de GitHub y la capacidad de proteger Neon `main` requieren resolver permisos/límite del plan antes del release.
+
+## Addendum — runtime efectivo verificado 2026-11-12
+
+Este addendum supersede las afirmaciones anteriores de que Render usaba neondb_owner, BYPASSRLS=true y bootstrap activo. Esas afirmaciones quedan como evidencia histórica.
+
+| Control | Render QA | Render Preview |
+|---|---|---|
+| Rol runtime | app_runtime_qa_login | app_runtime_preview |
+| Neon branch | br-bold-block-aua43ua0 | br-muddy-cell-au64infb |
+| BYPASSRLS | false | false |
+| Superuser | false | false |
+| CREATE database/schema | false / false | false / false |
+| Bootstrap de aplicación | deshabilitado | deshabilitado |
+| Tablas RLS activas | 0 | 0 |
+| DML grants | 37/37 | 36/36 |
+| app.tenant_id | no configurado | no configurado |
+
+Los logs corresponden al arranque de Render del commit 0df24b297a9bc18145cae55add63681932e18331. Los dos servicios comparten Environment ID de Render, pero son servicios distintos y conectan a ramas Neon diferentes. No se declara verificado el aislamiento de variables a nivel Environment.
+
+QA tiene 37 tablas y Preview 36. La única diferencia de tablas es integration_outbox, presente solo en QA. No se encontraron referencias runtime en el repositorio y no se ejecutó DDL para igualar las ramas.
+
+QA y Preview tienen 46 filas supports: 28 con ownership y 18 sin tenant en cuarentena. Una fila pendiente (mza-trad-16) figura active=true, pero está excluida por el backend. No borrar ni reasignar filas sin evidencia y autorización.
+
+El modelo aprobado es un administrador global único. RLS permanece deshabilitado por alcance; tenant_id conserva ownership comercial/operativo. Los roles runtime no tienen BYPASSRLS ni CREATE, pero conservan DML sobre las tablas de sus respectivas ramas.
+
+No se modificaron roles, grants, RLS, datos de Production ni ramas Neon durante esta verificación.

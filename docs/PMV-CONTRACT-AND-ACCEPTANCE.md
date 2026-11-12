@@ -52,6 +52,18 @@ El PMV permite al equipo interno administrar inventario OOH de dos tenants, prep
 - No prometer exclusividad ni conflictos temporales si el backend no los valida.
 - Mapa y dashboard deben representar datos reales; no completar ubicación ni usar mocks como inventario.
 
+### Inventario comercial oficial — 2026-11-12
+
+Los PDFs en docs/inventario/source/ y el mapping TENANT-OWNERSHIP-MAPPING.md fijan 28 soportes comerciales:
+
+| Plaza | Tradicionales | Pantallas LED | LED móvil | Total |
+|---|---:|---:|---:|---:|
+| Buenos Aires | 10 | 0 | 0 | 10 |
+| Mendoza | 15 | 2 | 1 | 18 |
+| **Total** | **25** | **2** | **1** | **28** |
+
+Las caras de una posición física no cuentan como soportes adicionales. Neon tiene 46 filas en supports: 28 conciliadas y 18 históricas/QA/legacy sin tenant en cuarentena. Las 18 filas no forman parte del inventario comercial y no deben borrarse para forzar el conteo. La fila mza-trad-16 sigue activa pero sin ownership; el backend la excluye del catálogo y del flujo comercial.
+
 ## 5. Contrato comercial y Media Kit
 
 ### Duraciones
@@ -258,3 +270,16 @@ El trabajo autónomo seguro continúa en filtros, cuarentena, asignación audita
 - Neon: health check conectado y consultas/operaciones autenticadas verificadas por el smoke Preview; ownership y cuarentena se mantienen conforme a las secciones 9 y 13.
 - Integraciones no contratadas (HubSpot, Resend/email transaccional, WhatsApp API y Drive/Slides) permanecen fuera del alcance de aceptación; no se simula su integración.
 - Esta evidencia cierra el criterio P1 de integraciones incluidas. No cierra P2: falta revisión manual de accesibilidad, QA funcional integral del flujo móvil, rendimiento/bundle y revisión de consola en todas las rutas.
+
+## Addendum operativo — 2026-11-12
+
+- Inventario comercial oficial: 28 soportes; Buenos Aires 10 tradicionales; Mendoza 15 tradicionales, 2 pantallas LED y 1 LED móvil.
+- Neon: un proyecto, tres ramas: main (Production), preview/pmv-validation-candidate y qa/pr96-ownership-20261105. No crear proyectos o ramas permanentes adicionales ni borrar las existentes.
+- QA y Preview contienen 46 filas supports: 28 con ownership documentado y 18 en cuarentena. No eliminar ni reasignar automáticamente las filas pendientes.
+- Render QA usa app_runtime_qa_login; Render Preview usa app_runtime_preview. Los logs del deploy 0df24b2 confirman BYPASSRLS=false, superuser=false, CREATE database/schema=false y bootstrap deshabilitado.
+- El administrador es global y único. tenant_id expresa ownership comercial/operativo, no autorización individual. RLS y app.tenant_id permanecen deshabilitados/no configurados por decisión de alcance.
+- Los roles runtime mantienen DML sobre las tablas de sus ramas (QA 37/37; Preview 36/36); no tienen permisos CREATE. Las migraciones se ejecutan fuera del arranque del servidor.
+- QA contiene integration_outbox y Preview no. La búsqueda del código no encontró referencias runtime; no se debe crear la tabla a ciegas.
+- Las afirmaciones históricas de runtime neondb_owner, BYPASSRLS=true y bootstrap activo quedan supersedidas por los logs efectivos del 2026-11-12.
+
+Este addendum no autoriza cambios en Production, merge, borrado de cuarentena ni activación de RLS.
