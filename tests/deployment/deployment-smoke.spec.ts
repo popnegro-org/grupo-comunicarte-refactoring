@@ -291,9 +291,50 @@ test.describe('Preview deployment · PMV smoke', () => {
       await page.waitForURL(/\/dashboard$/, { timeout: 20_000 });
 
       const result = await page.evaluate(async () => {
-        const stableRequestId = 'REQ-2026-b342e5ef-833d-4c10-97af-faff81f9a996';
-        const nullOwnershipRequestId = 'REQ-2026-00000000-0000-4000-8000-000000000003';
-        const noItemsRequestId = 'REQ-2026-00000000-0000-4000-8000-000000000004';
+        const idempotencyKey = 'b342e5ef-833d-4c10-97af-faff81f9a996';
+        const createStableRequest = await fetch('/api/mediakit/request', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead: {
+              name: 'QA Export Recovery',
+              email: 'qa-export-recovery@example.invalid',
+              company: 'QA',
+              phone: '2615550000',
+              message: 'Synthetic request for the Media Kit export regression.',
+            },
+            selectedIds: ['bue-trad-05'],
+            idempotencyKey,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const stableRequestPayload = await createStableRequest.json();
+        if (![200, 201].includes(createStableRequest.status) || !stableRequestPayload.requestId) {
+          throw new Error('Could not ensure the deterministic C1/C6 request fixture: ' + JSON.stringify(stableRequestPayload));
+        }
+        const stableRequestId = stableRequestPayload.requestId;
+
+        const adminRequestsResponse = await fetch('/api/admin/requests', {
+          credentials: 'include',
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!adminRequestsResponse.ok) throw new Error('Could not read admin request fixtures for C3/C4.');
+        const adminRequestsPayload = await adminRequestsResponse.json();
+        const adminRequests = Array.isArray(adminRequestsPayload.data) ? adminRequestsPayload.data : [];
+        const nullOwnershipRequest = adminRequests.find((request: any) =>
+          request.status === 'pending' && Number(request.pendingOwnershipCount) > 0
+        );
+        const noItemsRequest = adminRequests.find((request: any) =>
+          request.status === 'pending' && Array.isArray(request.selectedIds) && request.selectedIds.length === 0
+        );
+        if (!nullOwnershipRequest?.requestId) throw new Error('No pending request with NULL support ownership is available for C3.');
+        if (!noItemsRequest?.requestId) throw new Error('No pending request without items is available for C4.');
+
+        const nullOwnershipRequestId = nullOwnershipRequest.requestId;
+        const noItemsRequestId = noItemsRequest.requestId;
+        const c3BeforeStatus = nullOwnershipRequest.status;
+        const c4BeforeStatus = noItemsRequest.status;
         const patch = async (requestId: string, status: string) => {
           const response = await fetch(`/api/admin/requests/${requestId}`, {
             method: 'PATCH',
@@ -304,7 +345,21 @@ test.describe('Preview deployment · PMV smoke', () => {
           });
           return { status: response.status, body: await response.json() };
         };
-        const output: any = {};
+        const readAdminRequests = async () => {
+          const response = await fetch('/api/admin/requests', {
+            credentials: 'include',
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (!response.ok) throw new Error('Could not verify request state after fail-closed ownership checks.');
+          const payload = await response.json();
+          return Array.isArray(payload.data) ? payload.data : [];
+        };
+        const output: any = {
+          c3BeforeStatus,
+          c4BeforeStatus,
+          c3RequestId: nullOwnershipRequestId,
+          c4RequestId: noItemsRequestId,
+        };
 
         try {
           const c1 = await patch(stableRequestId, 'quoted');
@@ -315,9 +370,13 @@ test.describe('Preview deployment · PMV smoke', () => {
 
           const c3 = await patch(nullOwnershipRequestId, 'enviado');
           output.c3Status = c3.status;
+          const c3After = (await readAdminRequests()).find((request: any) => request.requestId === nullOwnershipRequestId);
+          output.c3AfterStatus = c3After?.status ?? null;
 
           const c4 = await patch(noItemsRequestId, 'closed');
           output.c4Status = c4.status;
+          const c4After = (await readAdminRequests()).find((request: any) => request.requestId === noItemsRequestId);
+          output.c4AfterStatus = c4After?.status ?? null;
 
           const [c6a, c6b] = await Promise.all([
             patch(stableRequestId, 'quoted'),
@@ -326,6 +385,10 @@ test.describe('Preview deployment · PMV smoke', () => {
           output.c6Statuses = [c6a.status, c6b.status];
           output.c6States = [c6a.body.data?.status ?? null, c6b.body.data?.status ?? null];
         } finally {
+          const c3Current = (await readAdminRequests()).find((request: any) => request.requestId === nullOwnershipRequestId);
+          if (c3Current?.status !== c3BeforeStatus) await patch(nullOwnershipRequestId, c3BeforeStatus);
+          const c4Current = (await readAdminRequests()).find((request: any) => request.requestId === noItemsRequestId);
+          if (c4Current?.status !== c4BeforeStatus) await patch(noItemsRequestId, c4BeforeStatus);
           const restored = await patch(stableRequestId, 'pending');
           output.restoredStatus = restored.status;
           output.finalState = restored.body.data?.status ?? null;
@@ -338,7 +401,9 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.c1After).toBe('quoted');
       expect(result.c1RestoreStatus).toBe(200);
       expect(result.c3Status).toBe(409);
+      expect(result.c3AfterStatus).toBe(result.c3BeforeStatus);
       expect(result.c4Status).toBe(409);
+      expect(result.c4AfterStatus).toBe(result.c4BeforeStatus);
       expect(result.c6Statuses.every((status) => [200, 409].includes(status))).toBe(true);
       expect(result.c6Statuses).toContain(200);
       expect(result.c6States.some((status) => ['quoted', 'closed'].includes(status))).toBe(true);
@@ -403,6 +468,7 @@ test.describe('Media Kit exports · R2 Preview isolated', () => {
       const requestPayload = await requestResponse.json();
       expect([200, 201], JSON.stringify(requestPayload)).toContain(requestResponse.status());
       requestId = requestPayload.requestId;
+      expect(requestPayload.duplicate).toBe(true);
       expect(requestId).toBeTruthy();
       await page.request.patch(`/api/admin/requests/${requestId}`, { headers: authHeaders, data: { status: 'pending' } });
 
