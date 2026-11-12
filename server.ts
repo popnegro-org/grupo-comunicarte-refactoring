@@ -91,7 +91,8 @@ export async function createApp() {
   try {
     await initDatabase();
   } catch (err) {
-    console.warn('Database initialization warning on startup:', err);
+    console.error('Database initialization failed; application startup aborted:', err);
+    throw err;
   }
 
   try {
