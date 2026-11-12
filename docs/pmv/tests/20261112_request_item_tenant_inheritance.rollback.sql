@@ -123,6 +123,15 @@ BEGIN
     NULL;
   END;
 
+  -- Missing request must be rejected before the trigger locks the support row.
+  BEGIN
+    INSERT INTO public.mediakit_request_items (request_id, support_id, tenant_id)
+    VALUES ('__qa_missing_request__', v_assigned_support, NULL);
+    RAISE EXCEPTION 'Unknown request was unexpectedly accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
   -- Missing support must be rejected by the trigger itself, not only by a nullable composite FK.
   BEGIN
     INSERT INTO public.mediakit_request_items (request_id, support_id, tenant_id)
@@ -151,27 +160,8 @@ BEGIN
     NULL;
   END;
 
-  -- Historical pending item UPDATE with NULL is allowed while its support
-  -- remains quarantined; it must not acquire tenant ownership.
-  UPDATE public.mediakit_request_items
-     SET tenant_id=NULL
-   WHERE id=(
-     SELECT item.id
-     FROM public.mediakit_request_items item
-     WHERE item.support_id=v_pending_support
-       AND item.request_id=v_pending_request
-       AND item.tenant_id IS NULL
-     ORDER BY item.id
-     LIMIT 1
-   )
-  RETURNING tenant_id INTO v_observed_tenant;
-
-  IF NOT FOUND OR v_observed_tenant IS NOT NULL THEN
-    RAISE EXCEPTION 'Historical pending request item UPDATE was unexpectedly reclassified while support remained quarantined';
-  END IF;
-
-  -- Assigning a pending support must not retroactively classify historical
-  -- request items. They remain NULL/quarantined until explicitly reconciled.
+  -- Historical pending item UPDATE with NULL remains pending even after
+  -- its support receives a first documented tenant assignment.
   BEGIN
     UPDATE public.supports
        SET tenant_id=v_assigned_tenant,
@@ -180,16 +170,21 @@ BEGIN
            tenant_ownership_assigned_at=clock_timestamp()
      WHERE canonical_id=v_pending_support;
 
-    SELECT tenant_id
-      INTO v_observed_tenant
-    FROM public.mediakit_request_items
-    WHERE support_id=v_pending_support
-      AND request_id=v_pending_request
-    ORDER BY id
-    LIMIT 1;
+    UPDATE public.mediakit_request_items
+       SET tenant_id=NULL
+     WHERE id=(
+       SELECT item.id
+       FROM public.mediakit_request_items item
+       WHERE item.support_id=v_pending_support
+         AND item.request_id=v_pending_request
+         AND item.tenant_id IS NULL
+       ORDER BY item.id
+       LIMIT 1
+     )
+    RETURNING tenant_id INTO v_observed_tenant;
 
-    IF v_observed_tenant IS NOT NULL THEN
-      RAISE EXCEPTION 'Historical pending request item was unexpectedly reclassified after support assignment';
+    IF NOT FOUND OR v_observed_tenant IS NOT NULL THEN
+      RAISE EXCEPTION 'Historical pending request item UPDATE was unexpectedly reclassified after support assignment';
     END IF;
 
     RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='__ROLLBACK_EXPECTED__';
