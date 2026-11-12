@@ -24,7 +24,16 @@ DO $preflight$
 DECLARE
   v_missing_tenants TEXT[];
   v_bad_rows BIGINT;
+  v_branch_id TEXT := current_setting('neon.branch_id', true);
 BEGIN
+  IF v_branch_id NOT IN ('br-muddy-cell-au64infb', 'br-bold-block-aua43ua0') THEN
+    RAISE EXCEPTION 'Ownership trigger migration refused on unexpected Neon branch: %', COALESCE(v_branch_id, 'unknown');
+  END IF;
+
+  IF current_database() <> 'neondb' THEN
+    RAISE EXCEPTION 'Ownership trigger migration refused on unexpected database: %', current_database();
+  END IF;
+
   IF to_regclass('public.supports') IS NULL
      OR to_regclass('public.mediakit_request_items') IS NULL
      OR to_regclass('public.tenants') IS NULL THEN
