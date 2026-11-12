@@ -28,7 +28,8 @@ DECLARE
   v_bad_rows BIGINT;
   v_branch_id TEXT := current_setting('neon.branch_id', true);
 BEGIN
-  IF v_branch_id NOT IN ('br-muddy-cell-au64infb', 'br-bold-block-aua43ua0') THEN
+  IF v_branch_id IS NULL
+     OR v_branch_id NOT IN ('br-muddy-cell-au64infb', 'br-bold-block-aua43ua0') THEN
     RAISE EXCEPTION 'Ownership trigger migration refused on unexpected Neon branch: %', COALESCE(v_branch_id, 'unknown');
   END IF;
 
