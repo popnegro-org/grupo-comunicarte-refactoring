@@ -240,3 +240,22 @@ Este apartado supersede las cifras y conclusiones anteriores sobre Production qu
 **NO-GO para merge/release.** La asignación de ownership de Production queda resuelta; no debe seguir tratándose como P1. Permanecen pendientes la revisión/corrección de las capturas del mapa, una validación Vercel Preview sobre el SHA exacto que se pretenda liberar (o una alternativa equivalente documentada y aceptada), y la aprobación humana requerida del alcance completo del PR.
 
 No se ejecutó merge, despliegue ni otra modificación de Production.
+
+
+## QA visual final del HEAD 0762d378d7ae01b54fe6a4b7fcd1e27b1dc28351 — 2026-11-12
+
+### Checks del SHA exacto
+
+- CI #43286571057: **PASS**.
+- CI Candidate #43286571055: **PASS**; QA Deployment E2E **12/12**, Preview Deployment E2E **12/12**, Authenticated Preview Smoke **9/9**.
+- Visual QA #43286571092: **96/96 PASS en dos ejecuciones**, sin fallos.
+- Artefacto: `visual-qa-report` ID `13976056200`, SHA del workflow `0762d378d7ae01b54fe6a4b7fcd1e27b1dc28351`.
+- Comparación visual manual de los seis screenshots nuevos (catálogo desktop/móvil, tarjeta seleccionada desktop/móvil y mapa desktop/móvil) contra los snapshots comprometidos: **PASS**. La captura actual del mapa ya no presenta el efecto lavado observado en el artefacto anterior; las diferencias residuales corresponden principalmente a contenido dinámico de tiles de OpenStreetMap y no a cambios de layout/opacity.
+- Render Preview desplegó automáticamente el SHA exacto `0762d378d7ae01b54fe6a4b7fcd1e27b1dc28351`; deployment `dep-dbr0ru6iqj8c73dahtag`, estado `live`. CI autenticado validó ese mismo commit.
+- Vercel Preview continúa en un SHA antiguo `40431d1a61bf59da47beeb216bf2365d12077d86`; no se disparó un deployment manual para evitar consumo de cuota.
+
+### Estado de liberación
+
+La asignación de `mza-trad-16` a `tenant-default` está resuelta en Production y verificada. CI, E2E y QA visual del HEAD anterior están PASS. Sigue pendiente una validación Vercel Preview same-SHA (o alternativa formalmente aceptada) y la revisión/aprobación humana del PR completo. **NO-GO para merge/release** hasta cerrar esos dos puntos.
+
+No se modificó `main`, no se hizo merge ni se cambió Production en esta actualización.
