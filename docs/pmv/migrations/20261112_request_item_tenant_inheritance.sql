@@ -11,6 +11,8 @@
 --   * assigned support + matching tenant_id -> accept;
 --   * assigned support + mismatching tenant_id -> reject;
 --   * pending support + NULL tenant_id -> preserve quarantine;
+--   * historical request item + NULL tenant_id -> remain pending even if its
+--     support is assigned later; no automatic historical reclassification;
 --   * pending support + non-NULL tenant_id -> reject;
 --   * missing support -> reject.
 --
@@ -130,7 +132,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.enforce_mediakit_request_item_tenant();
 
 COMMENT ON FUNCTION public.enforce_mediakit_request_item_tenant() IS
-  'Inherits tenant_id from the exact support; preserves NULL only for quarantined supports and rejects mismatches.';
+  'Inherits tenant_id from the exact support for new/updated items; preserves historical NULL items and rejects mismatches.';
 
 
 -- Ownership is write-once: a documented assignment may move NULL -> tenant,
