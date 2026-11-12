@@ -11,7 +11,7 @@ import {
   ALLOWED_DOCUMENT_MIME_TYPES,
   MAX_DOCUMENT_UPLOAD_BYTES,
   createMediaKitAssetKey,
-  getStorageAdapter,
+  getMediaKitExportStorageAdapter,
   isValidMediaKitExportPayload,
 } from './r2StorageAdapter';
 
@@ -58,19 +58,19 @@ export async function handleMediaKitExportUpload(req: Request, res: Response) {
     }
 
     const key = createMediaKitAssetKey(kitId, format);
-    const uploaded = await getStorageAdapter().upload({ key, body, contentType });
+    const uploaded = await getMediaKitExportStorageAdapter().upload({ key, body, contentType });
     uploadedKey = uploaded.key;
     const sha256 = crypto.createHash('sha256').update(body).digest('hex');
     const saved = await attachMediaKitExport(kitId, format, uploaded.key, contentType, body.length, sha256);
     if (!saved) {
-      await getStorageAdapter().delete(uploaded.key);
+      await getMediaKitExportStorageAdapter().delete(uploaded.key);
       uploadedKey = null;
       return res.status(404).json({ status: 'error', message: 'No se pudo asociar el documento al Media Kit.' });
     }
 
     if (saved.previousStorageKey && saved.previousStorageKey !== uploaded.key) {
       try {
-        await getStorageAdapter().delete(saved.previousStorageKey);
+        await getMediaKitExportStorageAdapter().delete(saved.previousStorageKey);
       } catch (cleanupError) {
         console.error('Could not remove previous Media Kit export object:', cleanupError);
       }
@@ -87,7 +87,7 @@ export async function handleMediaKitExportUpload(req: Request, res: Response) {
     });
   } catch (error: any) {
     if (uploadedKey) {
-      try { await getStorageAdapter().delete(uploadedKey); } catch (cleanupError) {
+      try { await getMediaKitExportStorageAdapter().delete(uploadedKey); } catch (cleanupError) {
         console.error('Could not clean up failed Media Kit export upload:', cleanupError);
       }
     }
@@ -108,7 +108,7 @@ export async function handleMediaKitExportDownload(req: Request, res: Response) 
       return res.status(404).json({ status: 'error', message: 'Documento del Media Kit no encontrado.' });
     }
 
-    const signedUrl = getStorageAdapter().getAssetUrl(key, 300);
+    const signedUrl = getMediaKitExportStorageAdapter().getAssetUrl(key, 300);
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Referrer-Policy', 'no-referrer');
     return res.redirect(302, signedUrl);
@@ -129,7 +129,7 @@ export async function handleMediaKitExportDelete(req: Request, res: Response) {
     if (!existingKey.startsWith(`mediakit/${safeKitSegment(kitId)}/exports/`)) {
       return res.status(409).json({ status: 'error', message: 'La referencia de almacenamiento no pertenece al Media Kit.' });
     }
-    await getStorageAdapter().delete(existingKey);
+    await getMediaKitExportStorageAdapter().delete(existingKey);
     await removeMediaKitExport(kitId, format);
     return res.status(200).json({ status: 'success', data: { format, removed: true } });
   } catch (error) {

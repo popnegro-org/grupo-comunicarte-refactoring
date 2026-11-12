@@ -78,10 +78,10 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
   private readonly accessKey: string;
   private readonly secretKey: string;
 
-  constructor() {
+  constructor(bucketEnvName = 'R2_BUCKET_NAME') {
     const accountId = requiredEnv('R2_ACCOUNT_ID');
     this.endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
-    this.bucket = requiredEnv('R2_BUCKET_NAME');
+    this.bucket = requiredEnv(bucketEnvName);
     this.accessKey = requiredEnv('R2_ACCESS_KEY_ID');
     this.secretKey = requiredEnv('R2_SECRET_ACCESS_KEY');
   }
@@ -135,8 +135,21 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
   async delete(key: string): Promise<void> { await this.request('DELETE', key); }
 }
 
-let adapter: CloudflareR2StorageAdapter | null = null;
-export function getStorageAdapter(): StorageAdapter { return adapter ??= new CloudflareR2StorageAdapter(); }
+let mediaAdapter: CloudflareR2StorageAdapter | null = null;
+let mediaKitExportAdapter: CloudflareR2StorageAdapter | null = null;
+
+/** Existing catalogue media remains in the shared read/source bucket. */
+export function getStorageAdapter(): StorageAdapter {
+  return mediaAdapter ??= new CloudflareR2StorageAdapter('R2_BUCKET_NAME');
+}
+
+/** Media Kit documents are written to an environment-isolated bucket. */
+export function getMediaKitExportStorageAdapter(): StorageAdapter {
+  const bucketEnvName = process.env.R2_EXPORTS_BUCKET_NAME?.trim()
+    ? 'R2_EXPORTS_BUCKET_NAME'
+    : 'R2_BUCKET_NAME';
+  return mediaKitExportAdapter ??= new CloudflareR2StorageAdapter(bucketEnvName);
+}
 
 export function createMediaKitAssetKey(kitId: string, format: 'pdf' | 'pptx'): string {
   const safeId = kitId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100);
