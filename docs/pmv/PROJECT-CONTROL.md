@@ -209,3 +209,34 @@ This verifies data-branch isolation and quarantine behavior in that Vercel Previ
 The newest Vercel Preview deployment returned by the project for branch `pmv-validation-candidate` is `dpl_4Paj8F2nW9aB6fZ8F28MbNnUM7CD`, commit `40431d1a61bf59da47beeb216bf2365d12077d86`. The current candidate HEAD at the time of audit was `8b2954fe73ba72a5724a0729213280b6a62b30b7`, 33 commits ahead. No Vercel Preview deployment exists for that HEAD. The older deployment's public support model/service and API handler source files match current HEAD, but `server.ts`, `src/db/index.ts`, `src/server/tenantAccess.ts`, and `src/server/mediakitService.ts` differ. Thus its health/quarantine results are useful but are not a substitute for a same-SHA Vercel Preview validation.
 
 Render Preview/QA E2E are executed against the current candidate SHA by CI Candidate. Vercel Preview must also produce a READY deployment for the exact releasable SHA and repeat health, branch identity, public list/detail quarantine, admin 401, and pricing privacy checks before release. No manual Vercel deployment was created because the project has not produced a deployment for the current candidate HEAD; avoid consuming deployment quota until the reason for the stale integration/deploy history is understood.
+
+
+## Estado posterior a la asignación de mza-trad-16 — 2026-11-12 19:05 UTC
+
+Este apartado supersede las cifras y conclusiones anteriores sobre Production que describían `mza-trad-16` como un soporte sin ownership.
+
+### Ownership y datos actuales de Production
+
+- El responsable del proyecto confirmó expresamente que `mza-trad-16` (“Las Heras Centro”) pertenece a `tenant-default`.
+- Con HUMAN GATE explícito, la fila fue actualizada en Neon Production: `tenant_id=tenant-default`, tenant slug `mendoza-ooh`, `active=true`.
+- Se registró evidencia en `tenant_ownership_evidence`, `tenant_ownership_assigned_by` y `tenant_ownership_assigned_at`.
+- Consulta de solo lectura posterior: **29 soportes totales; 10 `ba-ooh`; 19 `mendoza-ooh`; 0 sin tenant**.
+- Live Production: `GET /api/health` HTTP 200 (`database=connected`); `GET /api/supports` HTTP 200 e incluye `mza-trad-16`; `GET /api/supports/mza-trad-16` HTTP 200 con media pública.
+- No se alteró el estado comercial, no se eliminó ni reasignó otro soporte, y no se hicieron cambios en QA/Preview.
+- El PDF de Mendoza no lista este ID; el ownership queda acreditado por confirmación explícita del responsable y evidencia persistida, no por atribución documental inventada.
+
+### Validación candidate — HEAD previo a esta actualización documental
+
+- HEAD de código/documentación anterior: `56e4eddddab285c7750e92ffc92d29ab48de72b2`.
+- CI #43284226491: PASS; lint/typecheck, 102 unit tests, build y bundle budget.
+- CI Candidate #43284226527: PASS; QA Deployment E2E 12/12, authenticated Render Preview smoke 9/9, Preview Deployment E2E 12/12.
+- Visual QA #43284226483: Playwright 96/96 PASS en dos ejecuciones. El flujo bootstrapeó snapshots faltantes y no comparó contra un baseline histórico independiente. La inspección manual del artefacto encontró catálogo y tarjetas seleccionadas ampliamente alineados; los dos screenshots del mapa son visiblemente más claros/lavados que sus snapshots comprometidos. La estabilidad de captura del mapa queda pendiente de corrección/revisión visual.
+- Artefacto Visual QA: `visual-qa-report`, ID `13974223368`.
+- Vercel Preview continúa sin deployment READY del HEAD candidato actual; el deployment encontrado sigue en SHA antiguo `40431d1a61bf59da47beeb216bf2365d12077d86`. Render Preview E2E no sustituye la verificación Vercel same-SHA.
+- PR #90 permanece abierto, sin merge y sin reviews submitidas. GitHub reporta 159 archivos, +12.544 / -2.184 y 579 commits.
+
+### Decisión
+
+**NO-GO para merge/release.** La asignación de ownership de Production queda resuelta; no debe seguir tratándose como P1. Permanecen pendientes la revisión/corrección de las capturas del mapa, una validación Vercel Preview sobre el SHA exacto que se pretenda liberar (o una alternativa equivalente documentada y aceptada), y la aprobación humana requerida del alcance completo del PR.
+
+No se ejecutó merge, despliegue ni otra modificación de Production.
