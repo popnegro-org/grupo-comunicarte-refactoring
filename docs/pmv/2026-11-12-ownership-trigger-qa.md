@@ -87,5 +87,5 @@ Postflight also confirmed the exact branch ID in each database, both trigger fun
 
 - The nullable historical request items (3 QA, 2 Preview) remain intentionally pending. Do not infer tenant ownership or auto-classify them.
 - The privileged `neondb_owner` role retains `BYPASSRLS=true` and administrative privileges; it is not the Render QA/Preview runtime identity. Current runtime roles are `app_runtime_qa_login` and `app_runtime_preview`, both with `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, and `rolcreaterole=false`. QA has 27 staged policies but no RLS-enabled tables; Preview has no policies and no RLS-enabled tables. Keep all staged policies inert; do not enable or delete them in this PMV.
-- GitHub/Neon main branch protection remains unresolved due integration permissions and Neon plan limits.
+- GitHub `main` protection is verified through active repository ruleset `main-production` (ID `23396703`): PR required, 1 approval, stale approvals dismissed, conversation resolution required, CI status check required, non-fast-forward blocked, squash-only merge, no bypass actors. The direct branch-protection endpoint returned 403 for this integration, but the ruleset endpoint exposed the active policy. Neon branch-protection policy remains unverified.
 - No Production migration, merge, or promotion was performed.
