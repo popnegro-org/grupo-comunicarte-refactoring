@@ -4,7 +4,8 @@
 **Repository:** popnegro-org/grupo-comunicarte-refactoring  
 **Candidate:** pmv-validation-candidate  
 **Migration:** [20261112_request_item_tenant_inheritance.sql](./migrations/20261112_request_item_tenant_inheritance.sql)  
-**Rollback test:** [20261112_request_item_tenant_inheritance.rollback.sql](./tests/20261112_request_item_tenant_inheritance.rollback.sql)
+**Rollback test:** [20261112_request_item_tenant_inheritance.rollback.sql](./tests/20261112_request_item_tenant_inheritance.rollback.sql)  
+**Corrective migration:** [20261112_reject_quarantine_support_reassignment.sql](./migrations/20261112_reject_quarantine_support_reassignment.sql)
 
 ## Scope and safety
 
@@ -18,6 +19,14 @@ The migration was applied transactionally to the two explicitly allowlisted Neon
 The migration preflight checked the Neon branch ID, database name, required tables/columns, tenant existence, and orphan/mismatch counts. It was run through a single transaction per branch. The migration adds two triggers and two invoker-security functions; it does not update existing rows, change roles/grants, enable RLS, or alter Production.
 
 **Neon Production br-wandering-sky-aunq6lad was not targeted or modified.**
+
+## Corrective finding — 2026-11-12
+
+A further adversarial review found an UPDATE path not covered by the original rollback test: a historical request item with `tenant_id IS NULL` could retain NULL while changing `support_id` from one quarantined support to another. The original trigger checked the new support's NULL tenant but did not require the historical support association to remain unchanged.
+
+This means the original QA/Preview PASS evidence below remains valid only for the scenarios explicitly listed; it did **not** prove rejection of cross-support reassignment into quarantine. The candidate now contains a corrective migration and a regression assertion for this case.
+
+**Current status of correction:** committed to `pmv-validation-candidate`; **NOT APPLIED** to Neon QA or Preview and **NOT EXECUTED**. Do not claim the new scenario passes until the migration is applied to the exact allowlisted branches and the rollback-only test is rerun. No DDL or data mutation was performed as part of this correction.
 
 ## Enforced behavior
 
@@ -43,7 +52,7 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Assigned item tenant cleared → re-inherited | PASS | PASS |
 | Mismatched tenant rejected | PASS | PASS |
 | Missing parent request rejected | PASS | PASS |
-| New request item + pending support + NULL tenant rejected | PASS | PASS |
+| New request item + pending support + NULL tenant rejected | PASS | PASS |\n| Historical item reassignment to a different quarantined support rejected | NOT RUN — corrective migration pending | NOT RUN — corrective migration pending |
 | Historical pending item UPDATE + NULL preserved after support assignment | PASS | PASS |
 | Pending support + non-NULL tenant rejected | PASS | PASS |
 | Missing support rejected | PASS | PASS |
@@ -53,7 +62,7 @@ The same single-statement PL/pgSQL test file was executed successfully on both Q
 | Historical pending item remains NULL after support assignment | PASS | PASS |
 | Test mutations rolled back / cleaned | PASS | PASS |
 
-The Neon SQL connector returned successful execution for both test statements with no exception.
+The Neon SQL connector returned successful execution for the original test statement on both branches with no exception. That result predates the newly added cross-support reassignment assertion and does not validate the corrective migration.
 
 The final rollback-only test was re-executed after the explicit historical-item UPDATE assertion was corrected to run before support assignment. Both QA and Preview returned successful execution with no exception. Postflight confirms the original 44/34 request-item counts, 3/2 historical NULL rows, and zero orphan/mismatch rows.
 
@@ -74,7 +83,7 @@ The final rollback-only test was re-executed after the explicit historical-item 
 
 Postflight also confirmed the exact branch ID in each database, both trigger functions present, the request-header-first lock (`FOR KEY SHARE`) in the INSERT path, and no test data persisted.
 
-## Remaining scope
+## Remaining scope\n\n- **P1 remains open:** apply the corrective migration only to QA and Preview after the migration is reviewed, then run the expanded rollback test and verify unchanged row counts. Production is excluded.
 
 - The nullable historical request items (3 QA, 2 Preview) remain intentionally pending. Do not infer tenant ownership or auto-classify them.
 - The privileged `neondb_owner` role retains `BYPASSRLS=true` and administrative privileges; it is not the Render QA/Preview runtime identity. Current runtime roles are `app_runtime_qa_login` and `app_runtime_preview`, both with `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, and `rolcreaterole=false`. QA has 27 staged policies but no RLS-enabled tables; Preview has no policies and no RLS-enabled tables. Keep all staged policies inert; do not enable or delete them in this PMV.
