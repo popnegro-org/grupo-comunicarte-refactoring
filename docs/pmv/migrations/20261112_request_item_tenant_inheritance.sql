@@ -213,7 +213,8 @@ COMMIT;
 -- Existing rows remain unchanged; verify their NULL/match counts against the
 -- branch-specific preflight snapshot. Then run
 -- docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql:
+-- INSERT locks parent request before support; missing request/support => rejected;
 -- assigned + omitted/cleared tenant => inherited; assigned + mismatch => rejected;
--- pending + NULL => accepted; pending + tenant => rejected; missing support => rejected;
--- assigned support ownership change/clear => rejected; assigning a pending support
--- does not retroactively classify existing request items that remain NULL.
+-- new pending support + NULL/tenant => rejected; historical pending UPDATE + NULL
+-- remains NULL even after support assignment; assigned support ownership
+-- change/clear => rejected.
