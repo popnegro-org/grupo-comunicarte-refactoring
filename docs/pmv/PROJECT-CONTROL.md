@@ -259,3 +259,44 @@ No se ejecutó merge, despliegue ni otra modificación de Production.
 La asignación de `mza-trad-16` a `tenant-default` está resuelta en Production y verificada. CI, E2E y QA visual del HEAD anterior están PASS. Sigue pendiente una validación Vercel Preview same-SHA (o alternativa formalmente aceptada) y la revisión/aprobación humana del PR completo. **NO-GO para merge/release** hasta cerrar esos dos puntos.
 
 No se modificó `main`, no se hizo merge ni se cambió Production en esta actualización.
+
+
+## Auditoría de continuación autónoma — 2026-11-12 21:45 UTC
+
+### Vercel Preview same-SHA — verificación completada
+
+Deployment Vercel Preview `dpl_Bo3WtZp3zme4PYttjsgs2JdA6M5u`:
+- Estado READY; rama `pmv-validation-candidate`.
+- SHA exacto: `8418ffa0835337202d6a3866866d1bfe60ddbbee`.
+- `GET /api/health`: HTTP 200; database connected; branch `br-muddy-cell-au64infb`; commit coincide con el SHA servido.
+- `GET /api/supports`: HTTP 200; 28 registros. `mza-trad-16` no aparece.
+- La respuesta pública de catálogo inspeccionada no contiene campos de precio/costo.
+- La variable branch-specific `DATABASE_URL` de Vercel Preview existe para `pmv-validation-candidate`; su metadata indica el runtime `app_runtime_vercel_preview_v2`. No se descifró ni expuso el secreto.
+- La llamada HTML a `/login` respondió HTTP 200. Esto solo prueba entrega de SPA, no autenticación funcional en navegador.
+
+### CI del mismo SHA
+
+- CI #43287742316: success.
+- CI Candidate #43287742278: success; jobs `validate`, Authenticated Preview Smoke (Render Preview), QA Deployment E2E (Neon QA) y Preview Deployment E2E (Neon Preview) completados con éxito.
+- Visual QA #43287742357: success.
+- Estos E2E y smoke corresponden a Render/Neon QA/Preview; no son una ejecución browser E2E contra el deployment Vercel.
+- PR #90 sigue abierto y sin merge. La lista de reviews y threads consultada no devolvió revisiones ni comentarios inline.
+
+### Render y roles Neon
+
+- Render service `srv-da50fdbm8hqs73b1m5pg` permanece configurado en `pmv-validation-candidate`, auto-deploy por commit, health path `/api/health`, plan Free. Último deployment consultado: `dep-dbr0v367bikc73apf8d0`, live, SHA `8418ffa0835337202d6a3866866d1bfe60ddbbee`.
+- La consulta de logs de requests Render para `/api/health` no devolvió registros; por ello no se declara HTTP health PASS para Render en esta auditoría.
+- El conector Render no permite leer `DATABASE_URL`. La identidad PostgreSQL efectiva de Render sigue sin confirmación concluyente; no inferirla a partir de archivos .env históricos ni de sesiones de auditoría.
+- En Neon Preview, `app_runtime_preview` aún existe y tiene SELECT/INSERT/UPDATE/DELETE en `supports` y SELECT en `leads`. No se observaron sesiones de ese rol en la consulta actual.
+- `app_runtime_vercel_preview_v2` tiene SELECT/INSERT/UPDATE en `supports`, sin DELETE y sin SELECT en `leads`; se observaron sesiones idle de pgbouncer.
+- No se modificaron roles, grants, secretos, datos, DDL, Production ni ramas.
+
+### Cierre
+
+La verificación Vercel Preview same-SHA por endpoints está **PASS**. Continúan pendientes:
+1. E2E browser autenticado y CRUD/Media Kit directamente contra Vercel Preview (los E2E actuales corrieron en Render/Neon).
+2. Identidad y permisos efectivos de la conexión Render; no retirar ni restringir `app_runtime_preview` hasta confirmar dependencia.
+3. Revisión integral del alcance amplio del PR #90 y aprobación humana.
+4. Verificación final de Git Integration / Ignored Build Step con evidencia de configuración.
+
+**NO-GO para merge/release** hasta cerrar las validaciones funcionales restantes y recibir `HUMAN GATE: APRUEBO PR #90`. No se ejecutó merge ni se modificó Production.
