@@ -47,7 +47,7 @@ export function InventoryToolbar({
   onClearFilters,
 }: InventoryToolbarProps) {
   return (
-    <div className="relative z-20 flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:px-4 lg:px-5">
+    <div data-inventory-toolbar className="relative z-20 flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:px-4 lg:px-5">
       <div className="relative min-w-[210px] flex-1 basis-full md:basis-auto lg:max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
         <Input
