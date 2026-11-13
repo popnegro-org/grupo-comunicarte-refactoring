@@ -63,7 +63,7 @@ test.describe('Inventario · regresión visual', () => {
 
 
   test('mapa responsive: marcadores y encuadre', async ({ page }, testInfo) => {
-    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
     const map = page.locator('.leaflet-container');
     await expect(map).toBeVisible();
     await expect(page.locator('.leaflet-marker-icon')).toHaveCount(2);
@@ -86,7 +86,7 @@ test.describe('Inventario · regresión visual', () => {
   });
 
   test('mapa mantiene tipologías normalizadas y detalle en escritorio/móvil', async ({ page }) => {
-    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
     await expect(page.locator('.leaflet-container')).toBeVisible();
     const markers = page.locator('.leaflet-marker-icon');
     await expect(markers).toHaveCount(2);
@@ -102,7 +102,7 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.getByRole('heading', { name: 'Inventario de soportes', exact: true })).toHaveCount(0);
     await expect(page.getByText('Explorá ubicaciones, compará formatos y armá tu selección.')).toHaveCount(0);
     await expect(page.getByText(/\d+ resultados/)).toHaveCount(0);
-    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
     await expect(page.locator('.leaflet-container')).toBeVisible();
     await expect(page.getByText(/\d+ soportes en esta vista/)).toHaveCount(0);
   });
@@ -155,8 +155,8 @@ test.describe('Inventario · regresión visual', () => {
       page.getByRole('combobox', { name: 'Filtrar por plaza' }),
       page.getByRole('combobox', { name: 'Filtrar por tipo de soporte' }),
       page.getByRole('combobox', { name: 'Filtrar por disponibilidad' }),
-      page.getByRole('radio', { name: 'Mapa' }),
-      page.getByRole('radio', { name: 'Catálogo' }),
+      page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }),
+      page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Catálogo' }),
     ];
     for (const control of controls) {
       await expect(control).toBeVisible();
@@ -182,7 +182,7 @@ test.describe('Inventario · regresión visual', () => {
   test('la barra de selección no tapa el mapa y solo aparece en catálogo', async ({ page }) => {
     await page.getByRole('button', { name: 'Seleccionar' }).first().click();
     await expect(page.getByRole('link', { name: 'Revisar selección' })).toBeVisible();
-    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
     await expect(page.getByRole('link', { name: 'Revisar selección' })).toHaveCount(0);
   });
 
