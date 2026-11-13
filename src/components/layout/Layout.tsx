@@ -1,11 +1,15 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const previousLocationRef = useRef(`${location.pathname}${location.search}`);
 
   useEffect(() => {
+    const currentLocation = `${location.pathname}${location.search}`;
+    if (previousLocationRef.current === currentLocation) return;
+    previousLocationRef.current = currentLocation;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     document.getElementById('main-content')?.focus({ preventScroll: true });
   }, [location.pathname, location.search]);
