@@ -107,4 +107,55 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
       expect(pageErrors, route.path + ' uncaught browser exceptions').toEqual([]);
     });
   }
+  test('las páginas públicas tienen un único landmark main y ofrecen salto al contenido', async ({ page }) => {
+    for (const path of ['/', '/nosotros', '/inventario', '/mediakits', '/contacto']) {
+      await page.goto(path);
+      await expect(page.locator('main')).toHaveCount(1);
+      await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toHaveCount(1);
+    }
+  });
+
+  test('el enlace Saltar al contenido mueve el foco al landmark principal', async ({ page }) => {
+    await page.goto('/');
+    const skipLink = page.getByRole('link', { name: 'Saltar al contenido' });
+    await skipLink.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#main-content')).toBeFocused();
+  });
+
+  test('la navegación SPA mueve el foco al contenido de la nueva ruta', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('navigation', { name: 'Navegación del pie de página' }).getByRole('link', { name: 'Nosotros' }).click();
+    await expect(page).toHaveURL(/\/nosotros$/);
+    await expect(page.locator('#main-content')).toBeFocused();
+  });
+
+  test('Mapa y Catálogo son botones accesibles y operables con teclado', async ({ page }) => {
+    await page.goto('/inventario');
+    const group = page.getByRole('group', { name: 'Modo de visualización del inventario' });
+    const catalog = group.getByRole('button', { name: 'Catálogo' });
+    await catalog.click();
+    await expect(catalog).toHaveAttribute('aria-pressed', 'true');
+    await catalog.focus();
+    await page.keyboard.press('Space');
+    await expect(catalog).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('la confirmación del formulario anuncia el resultado y recibe el foco', async ({ page }) => {
+    await page.route('**/api/mediakit/request', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'success', requestId: 'REQ-A11Y-001' }),
+      });
+    });
+    await page.goto('/contacto');
+    await page.getByLabel('Nombre completo *').fill('Prueba Accesibilidad');
+    await page.getByLabel('Email *').fill('qa@example.com');
+    await page.getByRole('button', { name: 'Enviar consulta' }).click();
+    const confirmation = page.getByRole('status');
+    await expect(confirmation).toContainText('Recibimos tu consulta.');
+    await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeFocused();
+  });
+
 });
