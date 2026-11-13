@@ -56,6 +56,27 @@ test.describe('Inicio · navegación principal', () => {
     }
   });
 
+
+  test('muestra la sección editorial de casos OOH y DOOH sin atribuir campañas o resultados no verificados', async ({ page }) => {
+    const section = page.getByRole('region', { name: 'Casos de éxito' });
+    await expect(section).toBeVisible();
+    await expect(section.getByRole('heading', { name: 'Casos de éxito' })).toBeVisible();
+    await expect(section.getByText('OOH · Buenos Aires')).toBeVisible();
+    await expect(section.getByText('DOOH · Mendoza')).toBeVisible();
+    await expect(section.getByText(/no representan campañas de anunciantes ni resultados medidos/i)).toBeVisible();
+    await expect(section.getByRole('link', { name: 'Desarrollá tu próxima campaña' })).toHaveAttribute('href', '/contacto');
+  });
+
+  test('la página Nosotros presenta el contenido institucional y las dos plazas', async ({ page }) => {
+    await page.goto('/nosotros');
+    await expect(page.getByRole('heading', { name: 'Conectamos marcas con audiencias en movimiento.' })).toBeVisible();
+    await expect(page.getByText(/más de 20 años en la industria del OOH/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Buenos Aires', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mendoza', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Explorar soportes' }).first()).toHaveAttribute('href', '/inventario?plaza=buenos-aires');
+    await expect(page.getByRole('link', { name: 'Explorar soportes' }).nth(1)).toHaveAttribute('href', '/inventario?plaza=mendoza');
+  });
+
   test('el CTA principal navega al inventario', async ({ page }) => {
     const heading = page.getByRole('heading', {
       level: 1,
