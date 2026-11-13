@@ -356,6 +356,20 @@ test.describe('Preview deployment · PMV smoke', () => {
           output.c3ContactedAliasStatus = c3ContactedAlias.status;
           if (c3ContactedAlias.status === 200) await patch(nullOwnershipRequestId, c3BeforeStatus);
 
+          const sentWithoutExports = await fetch('/api/admin/mediakits', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kitId: 'KIT-QA-EXPORT-RECOVERY',
+              clientName: 'QA Sent Guard',
+              supportIds: [],
+              status: 'sent',
+            }),
+            signal: AbortSignal.timeout(15_000),
+          });
+          output.sentWithoutExportsStatus = sentWithoutExports.status;
+
           const c4 = await patch(noItemsRequestId, 'closed');
           output.c4Status = c4.status;
           if (c4.status === 200) await patch(noItemsRequestId, c4BeforeStatus);
@@ -381,6 +395,7 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.c3Status).toBe(409);
       expect(result.c3ContactadoStatus).toBe(409);
       expect(result.c3ContactedAliasStatus).toBe(409);
+      expect(result.sentWithoutExportsStatus).toBe(409);
       expect(result.c4Status).toBe(409);
       expect(result.c6Statuses.every((status) => [200, 409].includes(status))).toBe(true);
       expect(result.c6Statuses).toContain(200);
