@@ -11,7 +11,9 @@ on:
 
 # Every candidate run validates its own immutable commit and never reuses a pinned Preview URL.
 concurrency:
-  group: ci-candidate-${{ github.ref }}
+  # Push and pull_request events for the same source branch must share one lock.
+  # This prevents overlapping E2E suites from writing to the same Neon Preview branch.
+  group: ci-candidate-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 # This workflow executes repository code. Grant only read access needed to resolve GitHub deployment records.
