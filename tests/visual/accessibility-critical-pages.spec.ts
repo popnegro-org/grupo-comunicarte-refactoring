@@ -143,6 +143,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
 
   test('la confirmación del formulario anuncia el resultado y recibe el foco', async ({ page }) => {
     await page.route('**/api/mediakit/request', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,6 +154,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     await page.getByLabel('Nombre completo *').fill('Prueba Accesibilidad');
     await page.getByLabel('Email *').fill('qa@example.com');
     await page.getByRole('button', { name: 'Enviar consulta' }).click();
+    await expect(page.getByRole('status')).toHaveText('Enviando tu solicitud.');
     const confirmation = page.getByRole('status');
     await expect(confirmation).toContainText('Recibimos tu consulta.');
     await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeFocused();
