@@ -117,11 +117,11 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
   delete metadata.exports;
   delete metadata.deliveryEvents;
   const proposalPeriod = input.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
-  if ((status === 'ready' || status === 'sent') && !isProposalDurationValid({
+  if (status === 'ready' && !isProposalDurationValid({
     duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
     duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
   })) {
-    throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.', 409);
+    throw new MediaKitDomainError('El Media Kit no puede marcarse como listo sin una duración estándar válida.', 409);
   }
   let tenantId: string | null = null;
   const tenantBySupportId = new Map<string, string>();
@@ -184,8 +184,8 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     throw new MediaKitDomainError('La moneda del Media Kit no está permitida.', 400);
   }
 
-  if ((status === 'ready' || status === 'sent') && supportIds.length === 0) {
-    throw new MediaKitDomainError('Un Media Kit listo o enviado debe incluir al menos un soporte conciliado.', 400);
+  if (status === 'ready' && supportIds.length === 0) {
+    throw new MediaKitDomainError('Un Media Kit listo debe incluir al menos un soporte conciliado.', 400);
   }
   const kitId = input.kitId?.trim() || makeKitId();
   const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
