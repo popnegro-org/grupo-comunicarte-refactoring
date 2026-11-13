@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Target, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Target, TrendingUp, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { buttonStyles } from '../components/ui/Button';
 import { InteriorHero } from '../components/layout/InteriorHero';
