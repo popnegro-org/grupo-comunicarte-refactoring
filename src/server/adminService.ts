@@ -295,8 +295,7 @@ export async function updateRequestStatusByAdmin(requestId: string, status: stri
   }
   if (!isDatabaseConfigured) throw new Error('La persistencia de solicitudes no está disponible.');
 
-  // Quarantined requests may be inspected or cancelled, but cannot enter the commercial pipeline.
-  const requiresOwnership = ['contacted', 'contactado', 'quoted', 'enviado', 'closed', 'cerrado'].includes(status);
+  const requiresOwnership = ['quoted', 'enviado', 'closed', 'cerrado'].includes(status);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
