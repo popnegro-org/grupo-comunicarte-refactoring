@@ -400,3 +400,47 @@ Los 18 soportes Preview sin tenant **no son un bloqueo de PMV mientras permanezc
 La lectura de `get_git_deployment_context` identifica el vínculo del proyecto Vercel `prj_LocmTWT0E6LyQ2p0dtGRsUmDj54m` como `popnegro/grupo-comunicarte-refactoring`, mientras que el repositorio candidato y los metadatos de deployments son `popnegro-org/grupo-comunicarte-refactoring`. El namespace `popnegro-org` sí aparece accesible en la instalación GitHub de Vercel con rol admin; no existe una acción de reconexión de repositorio en los conectores disponibles.
 
 Acción manual pendiente en Vercel: Settings → Git → reconectar el proyecto existente a `popnegro-org/grupo-comunicarte-refactoring`, preservando el proyecto, dominios y variables actuales. Después verificar Production Branch `main`, Preview deployments y `Ignored Build Step`. No crear un segundo proyecto ni mover dominios como workaround.
+
+
+## Reconciliación de cierre — 2026-11-13
+
+### HEAD y alcance real de validación
+- HEAD candidato: `874a8f5f6049c538a7c673e255e37c52cffdb823`.
+- PR #90: 588 commits adelante de `main`, 0 atrás; 159 archivos, +12.869 / -2.184 líneas.
+- La comparación entre el SHA de aplicación validado `8418ffa0835337202d6a3866866d1bfe60ddbbee` y el HEAD actual muestra solo dos archivos modificados: `.github/workflows/ci-candidate.yml` y este documento. No hubo cambios de runtime entre ambos SHA.
+- CI #43316892964: PASS.
+- CI Candidate #43316892980: PASS en validación, authenticated Render Preview smoke, Neon QA E2E, Neon Preview E2E y Vercel Preview E2E.
+- Vercel Preview E2E: **12/12 PASS**. El preflight comprobó explícitamente deployment SHA `8418ffa...`, Neon branch `br-muddy-cell-au64infb`, 28 soportes públicos, `mza-trad-16` fuera del catálogo y detalle 404, endpoints administrativos anónimos 401 y ausencia de precios públicos.
+- Visual QA #43316892932: **96/96 PASS en dos ejecuciones**.
+- Esta evidencia valida el runtime de aplicación SHA `8418ffa...`; los cambios posteriores hasta HEAD son workflow/documentación, no código de aplicación.
+
+### Riesgo de permisos Render Preview — verificación SQL directa
+Consulta read-only en Neon Preview confirma:
+- `app_runtime_preview`: LOGIN true; SUPERUSER false; CREATEDB false; CREATEROLE false; REPLICATION false; BYPASSRLS false.
+- Sin membresías a otros roles.
+- SELECT, INSERT, UPDATE y DELETE sobre **36/36 tablas públicas** (144 grants).
+- USAGE sobre 12 secuencias.
+- RLS habilitado en **0/36 tablas**.
+- Incluye tablas sensibles `users`, `roles`, `permissions`, `google_credentials` y `leads`.
+
+Comparación con el runtime Vercel Preview validado `app_runtime_vercel_preview_v2`:
+- SELECT: 14 tablas.
+- INSERT: 13 tablas.
+- UPDATE: 10 tablas.
+- DELETE: 7 tablas.
+- 6 secuencias con USAGE.
+- El E2E de Vercel pasó con esa matriz.
+
+**Conclusión:** Render Preview conserva privilegios excesivos P1. No se ejecutaron REVOKE/GRANT ni se cambió su `DATABASE_URL`; la restricción puede afectar rutas de Render y requiere autorización específica antes de aplicarse. La matriz Vercel es una referencia probada, no se asume automáticamente como matriz final de Render.
+
+### Git Integration Vercel
+- El contexto Git de Vercel confirma que el proyecto `prj_LocmTWT0E6LyQ2p0dtGRsUmDj54m` sigue vinculado a `popnegro/grupo-comunicarte-refactoring`.
+- El repositorio activo es `popnegro-org/grupo-comunicarte-refactoring`.
+- El deployment Preview actual consultado sigue READY en SHA `8418ffa...`, con metadata `githubOrg=popnegro-org`; esto no corrige el vínculo Git configurado en el proyecto.
+- No hay acción disponible en el conector para reconectar el proyecto existente. La reconexión desde Vercel Settings → Git y la comprobación de Production Branch / Ignored Build Step siguen siendo tareas manuales. No crear proyecto duplicado ni cambiar dominios.
+
+### Decisión
+**NO-GO para merge.** No se modificó `main`, no se hizo merge y no se tocaron datos, roles ni configuración de Production en esta continuación. Mantener PR #90 abierto hasta que:
+1. Se autorice y valide la reducción de privilegios de `app_runtime_preview` en Neon Preview.
+2. Se reconecte Git Integration Vercel y se verifique `Ignored Build Step`.
+3. Se revise el alcance completo de 588 commits / 159 archivos y se reciba `HUMAN GATE: APRUEBO PR #90`.
