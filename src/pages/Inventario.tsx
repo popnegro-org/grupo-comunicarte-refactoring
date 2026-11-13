@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef, lazy, Suspense } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { Plaza, Disponibilidad, InventoryItem } from '../types';
 import { ViewMode } from '../components/inventory/ViewModeToggle';
@@ -7,7 +7,7 @@ import { toInventoryPresentationItem } from '../lib/inventoryPresentationAdapter
 import { SupportCardGrid } from '../components/inventory/SupportCardGrid';
 import { useSelection } from '../context/SelectionContext';
 import { Button } from '../components/ui/Button';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Loader2, AlertCircle, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 
 type DisponibilidadFilter = Disponibilidad | 'todos';
@@ -28,6 +28,25 @@ function distanceKm(from: [number, number], item: InventoryItem) {
 
 export default function Inventario() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const pendingToolbarFocusRef = useRef<HTMLElement | null>(null);
+  const previousSearchRef = useRef(location.search);
+
+  useLayoutEffect(() => {
+    if (previousSearchRef.current === location.search) return;
+    previousSearchRef.current = location.search;
+    const focusTarget = pendingToolbarFocusRef.current;
+    pendingToolbarFocusRef.current = null;
+    if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
+  }, [location.search]);
+
+  const preserveToolbarFocus = <T,>(setter: (value: T) => void) => (value: T) => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && activeElement.closest('[data-inventory-toolbar]')) {
+      pendingToolbarFocusRef.current = activeElement;
+    }
+    setter(value);
+  };
   const { fixedLocations, mobileRoutes, loading, error, refetch } = useInventory();
   const plazaParam = searchParams.get('plaza') as Plaza | 'todos' | null;
   const rawTipoParam = searchParams.get('tipo');
@@ -148,22 +167,28 @@ export default function Inventario() {
       <div className="relative z-10 flex h-full min-w-0 flex-grow flex-col">
         <InventoryToolbar
           selectedPlaza={selectedPlaza}
-          setSelectedPlaza={setSelectedPlaza}
+          setSelectedPlaza={preserveToolbarFocus(setSelectedPlaza)}
           selectedTipo={selectedTipo}
-          setSelectedTipo={setSelectedTipo}
+          setSelectedTipo={preserveToolbarFocus(setSelectedTipo)}
           selectedDisponibilidad={selectedDisponibilidad}
-          setSelectedDisponibilidad={setSelectedDisponibilidad}
+          setSelectedDisponibilidad={preserveToolbarFocus(setSelectedDisponibilidad)}
           searchText={searchText}
-          setSearchText={setSearchText}
+          setSearchText={preserveToolbarFocus(setSearchText)}
           selectedCount={selectedCount}
           viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
+          onViewModeChange={preserveToolbarFocus(handleViewModeChange)}
           onNearMe={handleNearMe}
           locating={locating}
           nearMeActive={Boolean(userLocation)}
           onClearNearMe={() => setUserLocation(null)}
           hasActiveFilters={selectedPlaza !== 'todos' || selectedTipo !== 'todos' || selectedDisponibilidad !== 'todos' || Boolean(searchText.trim())}
-          onClearFilters={handleResetFilters}
+          onClearFilters={() => {
+            const activeElement = document.activeElement;
+            if (activeElement instanceof HTMLElement && activeElement.closest('[data-inventory-toolbar]')) {
+              pendingToolbarFocusRef.current = activeElement;
+            }
+            handleResetFilters();
+          }}
         />
         <div className="relative min-h-0 flex-1">
           {allFilteredItems.length === 0 ? (
