@@ -4,15 +4,14 @@ import { Navbar } from './Navbar';
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const previousLocationRef = useRef(`${location.pathname}${location.search}`);
+  const previousLocationRef = useRef(location.pathname);
 
   useEffect(() => {
-    const currentLocation = `${location.pathname}${location.search}`;
-    if (previousLocationRef.current === currentLocation) return;
-    previousLocationRef.current = currentLocation;
+    if (previousLocationRef.current === location.pathname) return;
+    previousLocationRef.current = location.pathname;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     document.getElementById('main-content')?.focus({ preventScroll: true });
-  }, [location.pathname, location.search]);
+  }, [location.pathname]);
 
   const footerLinks = [
     { name: 'Inicio', path: '/' },
