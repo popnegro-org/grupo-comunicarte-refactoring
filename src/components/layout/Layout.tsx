@@ -7,6 +7,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.getElementById('main-content')?.focus({ preventScroll: true });
   }, [location.pathname, location.search]);
 
   const footerLinks = [
@@ -20,8 +21,14 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col w-full overflow-x-hidden bg-[#F9F9F9]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-gray-950 focus:shadow-lg"
+      >
+        Saltar al contenido
+      </a>
       <Navbar />
-      <main className="flex-grow flex flex-col">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-grow flex flex-col outline-none">{children}</main>
       <footer id="site-footer" className="bg-gray-950 text-white border-t border-gray-900 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
           <div className="flex flex-col md:flex-row justify-between items-start gap-10">
