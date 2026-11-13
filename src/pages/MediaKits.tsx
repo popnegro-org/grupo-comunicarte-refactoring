@@ -39,7 +39,7 @@ export default function MediaKits() {
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-[#F9F9F9]">
+    <div className="flex flex-1 flex-col bg-[#F9F9F9]">
       <div className="border-b border-gray-200 bg-white">
         <div className="page-container py-8 md:py-10">
           <Link to="/inventario" className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-gray-950">
@@ -119,6 +119,6 @@ export default function MediaKits() {
           </p>
         )}
       </div>
-    </main>
+    </div>
   );
 }
