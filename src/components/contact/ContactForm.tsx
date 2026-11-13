@@ -113,6 +113,8 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
         {isMediaKit && <p className="mt-2 text-sm text-gray-700">{selectedCount} {selectedCount === 1 ? 'soporte seleccionado' : 'soportes seleccionados'}.</p>}
       </div>
 
+      <p role="status" aria-live="polite" className="sr-only">{loading ? 'Enviando tu solicitud.' : ''}</p>
+
       {error && <p role="alert" className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2">
