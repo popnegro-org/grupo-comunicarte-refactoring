@@ -147,6 +147,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     await catalog.click();
     await expect(catalog).toHaveAttribute('aria-pressed', 'true');
     await expect(map).toHaveAttribute('aria-pressed', 'false');
+    await expect(page).toHaveURL(/vista=catalogo/);
     await map.focus();
     await page.keyboard.press('Space');
     await expect(map).toHaveAttribute('aria-pressed', 'true');
