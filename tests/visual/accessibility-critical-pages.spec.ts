@@ -130,6 +130,14 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     await expect(page.locator('#main-content')).toBeFocused();
   });
 
+  test('los cambios de filtros no desplazan el foco fuera del control activo', async ({ page }) => {
+    await page.goto('/inventario');
+    const plazaFilter = page.getByLabel('Filtrar por plaza');
+    await plazaFilter.selectOption('mendoza');
+    await expect(plazaFilter).toBeFocused();
+    await expect(page).toHaveURL(/plaza=mendoza/);
+  });
+
   test('Mapa y Catálogo son botones accesibles y operables con teclado', async ({ page }) => {
     await page.goto('/inventario');
     const group = page.getByRole('group', { name: 'Modo de visualización del inventario' });
