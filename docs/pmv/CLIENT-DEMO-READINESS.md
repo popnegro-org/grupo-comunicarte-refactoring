@@ -3,7 +3,7 @@
 **Fecha de auditoría:** 2026-11-13  
 **PR:** [#90](https://github.com/popnegro-org/grupo-comunicarte-refactoring/pull/90)  
 **Rama:** `pmv-validation-candidate`  
-**Estado:** **APTO PARA RECORRIDO CONTROLADO, CON BLOQUEO DE CONTENIDO PENDIENTE**. No equivale a aprobación de merge ni de release.
+**Estado:** **APTO PARA DEMO CONTROLADA CON CONTENIDO CONFIRMADO**. No equivale a aprobación de merge ni de release.
 
 ## Enlace de demostración
 
@@ -32,15 +32,15 @@
 
 La ejecución autoritativa del 2026-11-13 es CI Candidate run [43426671496](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43426671496), Visual QA run [43426671350](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43426671350) y CI run [43426671382](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43426671382). La validación Vercel comprobó la revisión de aplicación `8418ffa...`; los commits posteriores hasta el HEAD revisado solo modifican workflows/documentación.
 
-## Bloqueo de contenido antes de una presentación comercial
+## Contenido comercial confirmado y corregido — 2026-11-13
 
-La respuesta pública de catálogo contiene 28 soportes con `disponibilidad=disponible`. Sin embargo, tres descripciones todavía incluyen el texto “No disponible por el momento”:
+El responsable del inventario confirmó que los tres soportes están disponibles. En consecuencia, se corrigieron únicamente sus descripciones en Neon Preview (`preview/pmv-validation-candidate`), eliminando el texto contradictorio “No disponible por el momento”. Se conservaron los estados estructurados `disponibilidad=disponible`, `active=true`, el tenant `tenant-ba` y la fecha `available_from=15 OCT 2026`.
 
 - `bue-trad-09` — Av. Rivadavia 6646.
 - `bue-trad-10` — Au. 25 de Mayo y Membrillar.
 - `bue-trad-08` — Av. Donado y Ruiz Huidobro.
 
-Los tres registros también informan `availableFrom=15 OCT 2026`, fecha ya transcurrida al momento de esta auditoría. Esto parece texto comercial desactualizado, pero no se modifica sin confirmación del responsable del inventario. Antes de mostrar estos tres soportes al cliente, confirmar su disponibilidad real y corregir la descripción o el estado estructurado según corresponda.
+Verificación posterior por API pública de Preview: catálogo HTTP 200 y detalle de `bue-trad-08` HTTP 200, con descripción corregida y disponibilidad visible. No se modificó Production.
 
 ## Guion sugerido para el recorrido
 
