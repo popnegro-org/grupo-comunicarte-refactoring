@@ -9,7 +9,7 @@ export default function Contacto() {
   const isMediaKit = searchParams.get('origen') === 'mediakit';
 
   return (
-    <main className="flex flex-1 flex-col bg-[#F9F9F9]">
+    <div className="flex flex-1 flex-col bg-[#F9F9F9]">
       <InteriorHero
         eyebrow={isMediaKit ? 'Media Kit' : 'Contacto'}
         title={isMediaKit ? 'Tu selección, lista para avanzar.' : 'Hablemos de tu próxima campaña.'}
@@ -47,6 +47,6 @@ export default function Contacto() {
           </aside>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
