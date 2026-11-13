@@ -188,6 +188,46 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Casos de éxito */}
+      <section className="border-b border-gray-100 bg-white py-16 md:py-20" aria-labelledby="success-cases-title">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <div>
+              <div className="mb-3 flex items-center gap-3"><span className="h-px w-8 bg-gray-900" /><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-700">Experiencias de marca</span></div>
+              <h2 id="success-cases-title" className="text-3xl font-semibold leading-tight tracking-tight text-gray-950 md:text-4xl">Casos de éxito</h2>
+            </div>
+            <p className="max-w-2xl text-base leading-7 text-gray-700 md:text-lg md:leading-7">Cada campaña empieza por entender el objetivo, la audiencia y el contexto de cada plaza. Muy pronto vas a poder conocer aquí proyectos, marcas y resultados desarrollados junto a nuestros anunciantes.</p>
+          </div>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            <article className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <img src="/images/bue-trad-09.jpg" alt="Soporte de publicidad exterior en Buenos Aires" className="h-full w-full object-cover" loading="lazy" />
+                <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-800">OOH · Buenos Aires</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold tracking-tight text-gray-950">Presencia en la vía pública</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-700">Un espacio para que las marcas formen parte del recorrido cotidiano de la ciudad.</p>
+              </div>
+            </article>
+            <article className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <img src="/images/pantallas-led-mendoza.webp" alt="Pantalla LED de publicidad exterior en Mendoza" className="h-full w-full object-cover" loading="lazy" />
+                <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-800">DOOH · Mendoza</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold tracking-tight text-gray-950">Comunicación digital en movimiento</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-700">Formatos dinámicos para acercar mensajes a las audiencias en espacios urbanos.</p>
+              </div>
+            </article>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-gray-600">Las imágenes ilustran formatos y ubicaciones disponibles; no representan campañas de anunciantes ni resultados medidos.</p>
+          <div className="mt-7">
+            <Link to="/contacto" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-800 hover:text-gray-950">Desarrollá tu próxima campaña <MoveRight className="h-4 w-4" /></Link>
+          </div>
+        </div>
+      </section>
+
       {/* Call to action */}
       <section className="px-4 py-14 sm:px-6 md:py-20 lg:px-8">
         <div className="mx-auto max-w-7xl">
