@@ -13,9 +13,8 @@ async function mockPublicSupports(page: import('@playwright/test').Page) {
 
 async function waitForPageTransition(page: import('@playwright/test').Page) {
   const transition = page.getByTestId('page-transition');
-  if (await transition.count()) {
-    await expect(transition).toHaveCSS('opacity', '1');
-  }
+  await expect(transition).toBeAttached();
+  await expect(transition).toHaveCSS('opacity', '1');
 }
 
 test.describe('Accesibilidad · navegación y formularios', () => {
