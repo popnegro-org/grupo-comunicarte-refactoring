@@ -133,6 +133,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
   test('los cambios de filtros no desplazan el foco fuera del control activo', async ({ page }) => {
     await page.goto('/inventario');
     const plazaFilter = page.getByLabel('Filtrar por plaza');
+    await plazaFilter.focus();
     await plazaFilter.selectOption('mendoza');
     await expect(plazaFilter).toBeFocused();
     await expect(page).toHaveURL(/plaza=mendoza/);
@@ -142,10 +143,13 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     await page.goto('/inventario');
     const group = page.getByRole('group', { name: 'Modo de visualización del inventario' });
     const catalog = group.getByRole('button', { name: 'Catálogo' });
+    const map = group.getByRole('button', { name: 'Mapa' });
     await catalog.click();
     await expect(catalog).toHaveAttribute('aria-pressed', 'true');
-    await catalog.focus();
+    await expect(map).toHaveAttribute('aria-pressed', 'false');
+    await map.focus();
     await page.keyboard.press('Space');
+    await expect(map).toHaveAttribute('aria-pressed', 'true');
     await expect(catalog).toHaveAttribute('aria-pressed', 'false');
   });
 
