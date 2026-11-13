@@ -107,6 +107,12 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
   const supportIds = normalizeSupportIds(input.supportIds);
   const status = normalizeStatus(input.status);
+  if (status === 'sent') {
+    throw new MediaKitDomainError(
+      'La entrega solo puede confirmarse después de persistir PDF y PPTX mediante el flujo de entrega.',
+      409,
+    );
+  }
   const metadata = { ...(input.metadata || {}) };
   delete metadata.exports;
   delete metadata.deliveryEvents;
