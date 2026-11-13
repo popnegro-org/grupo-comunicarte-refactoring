@@ -40,7 +40,7 @@ test.describe('Inventario público · selección persistente', () => {
   test('oculta la barra contextual al volver al mapa', async ({ page }) => {
     await page.getByRole('button', { name: 'Seleccionar' }).click();
     await expect(page.getByRole('link', { name: 'Revisar selección' })).toBeVisible();
-    await page.getByRole('radio', { name: 'Mapa' }).click();
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
     await expect(page.getByRole('link', { name: 'Revisar selección' })).toHaveCount(0);
     await expect(page.locator('.leaflet-container')).toBeVisible();
   });
