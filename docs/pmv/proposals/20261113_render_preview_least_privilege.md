@@ -1,6 +1,6 @@
-# Propuesta: reducir privilegios de Render Preview
+# Registro de ejecución: least-privilege de Render Preview
 
-**Estado:** propuesta revisada; no ejecutada.  
+**Estado:** **EJECUTADA Y VERIFICADA** en Neon Preview; no re-ejecutar el SQL de referencia.  
 **Fecha:** 2026-11-13  
 **Proyecto Neon:** `mute-math-07036388`  
 **Branch Neon:** `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`)  
@@ -51,9 +51,9 @@ Privilegios de columna adicionales: UPDATE únicamente en `clientes.created_at` 
 
 La referencia de secuencias permite tanto USAGE como SELECT; no permite UPDATE.
 
-## 3. Plan de aplicación propuesto
+## 3. SQL aplicado — referencia histórica (NO REEJECUTAR)
 
-**No ejecutar hasta autorizar expresamente el cambio de permisos del runtime Render Preview.**
+La autorización expresa del propietario del proyecto fue otorgada en la conversación de auditoría Neon. El estado efectivo actual fue verificado por consultas read-only; este bloque SQL se conserva como referencia del modelo aplicado y no debe volver a ejecutarse.
 
 Preflight inmediato:
 1. Confirmar que el servicio Render sigue en `pmv-validation-candidate`, deployment LIVE y SHA esperado.
@@ -114,7 +114,7 @@ COMMIT;
 
 La transacción debe abortarse si el preflight detecta una branch distinta, un rol distinto, grants adicionales no inventariados o cambios de esquema inesperados. No tocar Production, QA, `app_runtime_prod`, `app_runtime_vercel_preview_v2` ni datos.
 
-## 4. Validación obligatoria post-cambio
+## 4. Postflight read-only — 2026-11-13
 
 1. Confirmar flags del rol y ausencia de membresías.
 2. Confirmar grants efectivos exactos: SELECT 14, INSERT 13, UPDATE 10, DELETE 7, dos UPDATE de columna y seis secuencias.
@@ -142,9 +142,24 @@ COMMIT;
 
 El rollback restaura el alcance amplio actual y por eso solo debe usarse ante una regresión confirmada y con aprobación operativa. No se incluye ningún cambio de datos.
 
-## 6. Gate
+## 6. Gate para modificaciones futuras
 
-La ejecución requiere autorización explícita porque cambia permisos efectivos de un runtime conectado y puede afectar solicitudes en curso:
+La restricción ya está aplicada y no requiere una nueva ejecución. Cualquier modificación adicional de grants, default privileges, rol runtime o conexión requiere una nueva autorización expresa.
 
-`HUMAN GATE: AUTORIZO RESTRINGIR app_runtime_preview EN NEON PREVIEW AL MODELO DE 14 TABLAS DE app_runtime_vercel_preview_v2`
 
+
+## 7. Resultado verificado — 2026-11-13
+
+Consultas read-only posteriores confirmaron en la branch Preview `br-muddy-cell-au64infb`:
+
+- `app_runtime_preview` y `app_runtime_vercel_preview_v2` tienen exactamente la misma matriz: SELECT 14 tablas, INSERT 13, UPDATE 10 y DELETE 7.
+- Ambos roles tienen USAGE + SELECT en 6 secuencias y no tienen UPDATE en ninguna secuencia.
+- Ninguno tiene grants sobre las secuencias `google_credentials_id_seq`, `leads_id_seq`, `media_kit_comments_id_seq`, `sync_errors_id_seq`, `sync_history_id_seq` o `users_id_seq`.
+- No pertenecen a otros roles.
+- No existen default privileges de `neondb_owner` que vuelvan a otorgar privilegios a esos roles.
+- Ambos roles: LOGIN true; SUPERUSER, CREATEDB, CREATEROLE, REPLICATION y BYPASSRLS false.
+- Conexiones directas probadas: `current_user=session_user=app_runtime_preview` y `app_runtime_vercel_preview_v2`; ambas en la branch Preview esperada. Para ambos: SELECT en `supports` permitido, DELETE en `supports` denegado y SELECT en `leads` denegado.
+- RLS sigue deshabilitado en 0/36 tablas, de acuerdo con la decisión del PMV. No se activó ni modificó ninguna política.
+- No se ejecutó DDL/DML durante este postflight. Neon Production no fue modificado.
+
+La sección de rollback conserva únicamente un procedimiento de contingencia: no ejecutarlo sin autorización expresa, porque restauraría privilegios globales amplios.
