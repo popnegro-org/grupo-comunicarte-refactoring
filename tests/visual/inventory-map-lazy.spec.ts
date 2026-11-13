@@ -32,10 +32,11 @@ test('Inventario adapta la vista inicial y carga Leaflet solo cuando se solicita
   });
 
   await page.goto('/inventario');
-  await expect(page.getByRole('radiogroup', { name: 'Modo de visualización del inventario' })).toBeVisible();
-  const catalog = page.getByRole('radio', { name: 'Catálogo' });
-  const map = page.getByRole('radio', { name: 'Mapa' });
-  await expect(isMobile ? catalog : map).toHaveAttribute('aria-checked', 'true');
+  const viewGroup = page.getByRole('group', { name: 'Modo de visualización del inventario' });
+  await expect(viewGroup).toBeVisible();
+  const catalog = viewGroup.getByRole('button', { name: 'Catálogo' });
+  const map = viewGroup.getByRole('button', { name: 'Mapa' });
+  await expect(isMobile ? catalog : map).toHaveAttribute('aria-pressed', 'true');
 
   if (isMobile) {
     const firstCardImage = page.locator('article').first().locator('img').first();
