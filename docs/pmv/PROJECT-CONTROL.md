@@ -513,3 +513,54 @@ El código de catálogo público aplica filtro fail-closed: requiere ownership a
 - Hallazgo de datos: dos soportes activos sin tenant, no uno como indicaban recuentos anteriores; ambos siguen en cuarentena por código.
 - No se modificó Production, main, roles, grants, secrets ni despliegues.
 - PR #90 permanece abierto y sin merge. Continúa **NO-GO** hasta revisar el alcance amplio, completar la tarea manual de Git Integration Vercel y recibir `HUMAN GATE: APRUEBO PR #90`.
+
+
+## Fase 2 — auditoría técnica y cierre de regresiones — 2026-11-13
+
+**Código validado:** `69909b11aece7a9ad8d710fbfaf479b64a87a050`.  
+**PR:** #90, `pmv-validation-candidate`, abierto y sin merge.
+
+### Cambios de runtime y regresiones
+
+- `saveMediaKit()` ahora rechaza `status = sent` con HTTP 409. La confirmación de entrega debe pasar por `PATCH /api/admin/mediakits/:kitId/status`, que exige PDF y PPTX persistidos y registra el evento de entrega.
+- `tests/deployment/deployment-smoke.spec.ts` agrega regresión autenticada para impedir la confirmación directa de entrega.
+- Se conserva la regla documentada de revalidación fuerte para `quoted`, `enviado`, `closed` y `cerrado`. No se amplió a `contacted/contactado`, porque `HUMAN_GATE_VALIDATION.md` documenta expresamente esos estados como no sujetos a revalidación fuerte. La UI mantiene un bloqueo más estricto para solicitudes en cuarentena; resolver esa diferencia requiere decisión funcional, no un cambio implícito del backend.
+
+### Validación del código en SHA 69909b11
+
+- CI [#43488806278](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43488806278): PASS.
+- CI Candidate [#43488806162](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43488806162): PASS. Typecheck, tests unitarios, build, bundle budget y dependency audit; Render Preview smoke 9/9; Neon QA E2E 12/12; Neon Preview E2E 12/12; Vercel Preview E2E 12/12.
+- Visual QA [#43488806215](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43488806215): PASS, 122/122 en baseline bootstrap y 122/122 en validación del baseline.
+- Render Preview deployment `dep-dbrluo9chj1c73cgv340`: LIVE sobre el SHA exacto `69909b11...`.
+- Vercel Preview E2E usa el deployment fijado a `8418ffa...`; no equivale a un deployment Vercel del SHA exacto `69909b11...`. El deployment más reciente consultado apunta a `f03fb0b...`. No afirmar validación Vercel same-HEAD.
+
+### Neon Preview — postflight read-only
+
+- `app_runtime_preview` y `app_runtime_vercel_preview_v2` se probaron con conexiones directas; `current_user=session_user` coincide con cada rol y la branch es `br-muddy-cell-au64infb`.
+- Ambos tienen LOGIN; no tienen SUPERUSER, CREATEDB, CREATEROLE, REPLICATION, BYPASSRLS ni membresías de otros roles.
+- Matriz efectiva idéntica: SELECT 14 tablas, INSERT 13, UPDATE 10, DELETE 7; USAGE + SELECT en 6 secuencias; sin UPDATE de secuencias. Sin grants sobre `leads`, `users`, `roles`, `permissions` o `google_credentials`.
+- Default privileges de `neondb_owner` no contienen grants para esos roles.
+- RLS sigue deshabilitado en 0/36 tablas por decisión expresa del PMV; no se activó ni se modificó.
+- Conteos Preview: 46 supports, 18 sin tenant (2 activas), 23 solicitudes, 37 ítems de solicitud, 8 Media Kits y 5 líneas de Media Kit. Cero ítems huérfanos o mismatches de tenant en las comprobaciones ejecutadas.
+- Catálogo Preview: 28 soportes públicos; `mza-trad-16` devuelve 404. Las dos filas activas sin ownership permanecen en cuarentena y no fueron reasignadas.
+- Registro histórico pendiente: `REQ-2026-4997-9171` figura `enviado` con una línea sin tenant y sin Media Kit asociado. Se conserva sin cambios; requiere reconciliación comercial explícita antes de tratarlo como una entrega válida.
+- La prueba de rechazo de `status=sent` no alteró el fixture `KIT-QA-EXPORT-RECOVERY`: continúa `draft`, sin PDF/PPTX.
+
+La propuesta `proposals/20261113_render_preview_least_privilege.md` queda actualizada como registro de ejecución; no repetir el SQL histórico.
+
+### Production — lectura únicamente
+
+- `/api/health`: HTTP 200, DB conectada.
+- `/api/supports`: HTTP 200, 29 registros; `mza-trad-16` presente y detalle HTTP 200, conforme a la asignación Production autorizada a `tenant-default`.
+- `app_runtime_prod` se probó directamente: LOGIN true; SUPERUSER, CREATEDB, CREATEROLE, REPLICATION y BYPASSRLS false; misma matriz efectiva 14/13/10/7. RLS continúa en 0/36.
+- No se ejecutó DDL/DML ni se modificaron roles, grants, secretos, configuración o despliegues de Production en esta Fase 2.
+
+La diferencia entre Preview (28 públicos; `mza-trad-16` en cuarentena) y Production (29 públicos; `mza-trad-16` asignado) es una divergencia deliberada derivada de la autorización previa. No sincronizarla automáticamente.
+
+### Release governance y bloqueos
+
+- PR #90: 162 archivos, 626 commits, 0 commits detrás de `main`; cero reviews registradas.
+- Ruleset `main-production` (ID `23396703`) activo: una aprobación, conversaciones resueltas, squash-only, no bypass. Solo `CI` figura como status check obligatorio; CI Candidate y Visual QA pasan, pero no están marcados como checks requeridos por el ruleset.
+- Vercel Git Integration continúa enlazada al namespace anterior `popnegro`; el repositorio actual es `popnegro-org/grupo-comunicarte-refactoring`. Requiere reconexión manual del proyecto existente desde Vercel Settings → Git. No crear un proyecto duplicado.
+- Seis snapshots visuales incorporados en fases previas siguen sujetos a revisión visual humana; los tests automáticos no equivalen a aceptación visual manual.
+- PR #90 continúa **NO-GO para merge**. Requiere reconexión/validación Vercel same-HEAD, reconciliación del registro histórico señalado, revisión humana del diff/snapshots y aprobación requerida. No mergear ni promover a Production sin `HUMAN GATE: APRUEBO PR #90`.
