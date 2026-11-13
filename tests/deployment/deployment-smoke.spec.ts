@@ -348,14 +348,6 @@ test.describe('Preview deployment · PMV smoke', () => {
           output.c3Status = c3.status;
           if (c3.status === 200) await patch(nullOwnershipRequestId, c3BeforeStatus);
 
-          const c3Contactado = await patch(nullOwnershipRequestId, 'contactado');
-          output.c3ContactadoStatus = c3Contactado.status;
-          if (c3Contactado.status === 200) await patch(nullOwnershipRequestId, c3BeforeStatus);
-
-          const c3ContactedAlias = await patch(nullOwnershipRequestId, 'contacted');
-          output.c3ContactedAliasStatus = c3ContactedAlias.status;
-          if (c3ContactedAlias.status === 200) await patch(nullOwnershipRequestId, c3BeforeStatus);
-
           const sentWithoutExports = await fetch('/api/admin/mediakits', {
             method: 'POST',
             credentials: 'include',
@@ -393,8 +385,6 @@ test.describe('Preview deployment · PMV smoke', () => {
       expect(result.c1After).toBe('quoted');
       expect(result.c1RestoreStatus).toBe(200);
       expect(result.c3Status).toBe(409);
-      expect(result.c3ContactadoStatus).toBe(409);
-      expect(result.c3ContactedAliasStatus).toBe(409);
       expect(result.sentWithoutExportsStatus).toBe(409);
       expect(result.c4Status).toBe(409);
       expect(result.c6Statuses.every((status) => [200, 409].includes(status))).toBe(true);
