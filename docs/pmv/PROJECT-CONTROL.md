@@ -444,3 +444,72 @@ Comparación con el runtime Vercel Preview validado `app_runtime_vercel_preview_
 1. Se autorice y valide la reducción de privilegios de `app_runtime_preview` en Neon Preview.
 2. Se reconecte Git Integration Vercel y se verifique `Ignored Build Step`.
 3. Se revise el alcance completo de 588 commits / 159 archivos y se reciba `HUMAN GATE: APRUEBO PR #90`.
+
+
+## Auditoría posterior de CI Candidate, Visual QA y RLS Neon Preview — 2026-11-13
+
+### Pipelines después de corregir concurrency
+
+HEAD revisado: `b29e6ead5c3374374a566c43be1e625f069470d4`.
+
+| Workflow | Run | Evento | Resultado |
+|---|---:|---|---|
+| CI Candidate | [43358491963](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43358491963) | pull_request | PASS |
+| Visual QA | [43358491915](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43358491915) | pull_request | PASS — 96/96 |
+| Visual QA | [43358486007](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43358486007) | push | PASS — 96/96 |
+| CI Candidate | [43358485726](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43358485726) | push | Cancelled |
+
+El CI Candidate del evento pull_request ejecutó y completó correctamente validate, Render Preview authenticated smoke, Neon QA E2E, Neon Preview E2E y Vercel Preview E2E. La ejecución push del mismo SHA quedó cancelada por concurrencia al entrar la ejecución pull_request; no se interpreta como fallo de tests. En el SHA anterior, las ejecuciones push de CI Candidate completaron validate y Render smoke, mientras los E2E exclusivos del evento PR quedaron skipped; los runs PR correspondientes terminaron PASS. Algunas ejecuciones de commits intermedios quedaron cancelled al ser sustituidas por commits posteriores de la misma rama, sin evidencia de fallo funcional.
+
+Visual QA completó tanto push como pull_request sobre el HEAD revisado. El log del job PR confirma **96 passed (2.1m)** y artefacto `visual-qa-report` ID `14007362250`. No se observó ninguna ejecución fallida de CI Candidate ni Visual QA posterior a la corrección de concurrency en la ventana consultada. La ejecución autoritativa de validación integral es la del PR.
+
+### Auditoría RLS — Neon Preview, solo lectura
+
+Objetivo: Neon project `mute-math-07036388`, branch `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`), database `neondb`. No se ejecutaron DDL, DML, GRANT, REVOKE ni cambios de configuración.
+
+**Estado real de las 36 tablas públicas:**
+- RLS habilitado: **0/36**.
+- FORCE ROW LEVEL SECURITY: **0/36**.
+- Políticas RLS existentes: **0**.
+- Owner de las 36 tablas: `neondb_owner`.
+- El rol runtime Render `app_runtime_preview` fue probado directamente: `current_user=app_runtime_preview`, `row_security=on`, branch coincide con Preview.
+- `app_runtime_preview` y `app_runtime_vercel_preview_v2`: LOGIN true; SUPERUSER, CREATEDB, CREATEROLE, REPLICATION y BYPASSRLS false.
+- `neondb_owner` conserva BYPASSRLS true y privilegios administrativos; no es el rol runtime usado en la comprobación directa anterior.
+- Los grants efectivos de Render Preview y Vercel Preview coinciden con la matriz restringida de 14 tablas/6 secuencias; no hay acceso runtime a `users`, `roles`, `permissions`, `google_credentials` ni `leads`.
+
+**Cobertura actual de ownership en el esquema:**
+- Solo 10 de las 36 tablas tienen columna `tenant_id`; `mediakit_requests` tiene además `request_scope`.
+- Las tablas relacionadas de soporte (`support_faces`, `support_locations`, `support_media`, `support_pricing`, `support_routes`, `support_technical`) no tienen `tenant_id` propio y dependen de la relación con `supports`.
+- Las políticas RLS no pueden activarse en bloque: hay que definir políticas específicas por tabla, relaciones y propósito. El modelo de autorización vigente no tiene principal tenant-scoped ni contexto tenant de sesión en PostgreSQL.
+- La aplicación conserva un único administrador autenticado de alcance global. `requireAdmin` valida el token compartido y origen/CSRF, pero no establece identidad o tenant en la sesión SQL.
+- Las rutas públicas `/api/supports`, `/api/supports/:id` y `/api/mediakit/request` son globales entre los tenants activos; el catálogo debe seguir publicando los soportes asignados de ambos tenants. El ownership `tenant_id` actual es comercial/operativo, no autorización individual.
+
+**Conclusión de seguridad:** RLS no constituye hoy una frontera de aislamiento multi-tenant porque no existen identidades tenant-scoped, contexto de tenant confiable ni políticas. Habilitarlo ahora sin rediseño podría bloquear el catálogo global, las operaciones del administrador único y las consultas de tablas hijas; una política permisiva global sería equivalente a no aislar. No habilitar RLS ni crear políticas en este PMV. Mantener la decisión ya documentada: RLS queda diferido hasta que exista autorización tenant-scoped y un contrato explícito para rutas públicas, administrador global, tablas relacionadas y rol runtime sin BYPASSRLS.
+
+### Reconciliación de datos Preview durante la auditoría
+
+Los conteos actuales difieren de algunos registros documentales anteriores; prevalece esta lectura directa de Neon Preview:
+
+| Tabla | Total | Sin tenant / scope |
+|---|---:|---:|
+| supports | 46 | 18 sin tenant |
+| mediakit_request_items | 37 | 2 sin tenant |
+| mediakit_requests | 23 | 2 sin scope |
+| mediakits | 8 | 0 sin tenant |
+| mediakit_items | 5 | 0 sin tenant |
+
+En `supports`, 28 filas están asignadas y 18 permanecen sin ownership; **2 de las 18 están activas**:
+- `mza-trad-16` — Las Heras Centro.
+- `buenos-aires-traditional-nuevo-soporte-18b264` — Nuevo soporte.
+
+La segunda fila también está sin tenant y activa; su ciudad Buenos Aires no es evidencia suficiente para asignarla a `tenant-ba`. Ambas deben permanecer fuera del catálogo público y sin reasignación hasta contar con evidencia y autorización. Las otras 16 filas sin tenant están inactivas. La consulta de consistencia no encontró ítems huérfanos ni mismatches de tenant en `mediakit_request_items` o `mediakit_items`; sí existen 2 request items sin tenant y 2 cabeceras de solicitud sin scope que siguen pendientes de clasificación.
+
+El código de catálogo público aplica filtro fail-closed: requiere ownership asignado y soporte activo; el detalle público también devuelve no encontrado para filas sin tenant. No se modificaron estos datos.
+
+### Resultado y decisión
+
+- CI Candidate / Visual QA después de concurrency: **PASS** en la ejecución PR del HEAD actual; 96/96 visual tests.
+- Neon Preview RLS: **deshabilitado intencionalmente**, sin policies y sin cambios aplicados.
+- Hallazgo de datos: dos soportes activos sin tenant, no uno como indicaban recuentos anteriores; ambos siguen en cuarentena por código.
+- No se modificó Production, main, roles, grants, secrets ni despliegues.
+- PR #90 permanece abierto y sin merge. Continúa **NO-GO** hasta revisar el alcance amplio, completar la tarea manual de Git Integration Vercel y recibir `HUMAN GATE: APRUEBO PR #90`.
