@@ -20,6 +20,11 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
   const [success, setSuccess] = useState('');
   const [requestId, setRequestId] = useState('');
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (success) successHeadingRef.current?.focus();
+  }, [success]);
 
   useEffect(() => {
     if (!isMediaKit || selectedCount > 0) return;
@@ -89,9 +94,9 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
 
   if (success) {
     return (
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 md:p-8">
+      <div role="status" aria-live="polite" aria-atomic="true" className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 md:p-8">
         <CheckCircle2 className="h-7 w-7 text-emerald-600" aria-hidden="true" />
-        <h2 className="mt-4 text-xl font-semibold text-gray-950">Solicitud enviada</h2>
+        <h2 ref={successHeadingRef} tabIndex={-1} id="contact-success-title" className="mt-4 text-xl font-semibold text-gray-950 outline-none">Solicitud enviada</h2>
         <p className="mt-2 text-sm text-gray-600">{success}</p>
         {isMediaKit && requestId && <p className="mt-3 text-sm font-semibold text-gray-800">Solicitud {requestId}</p>}
         {isMediaKit && <p className="mt-1 text-xs text-gray-700">El equipo comercial recibió tu selección y preparará el Media Kit.</p>}
@@ -101,7 +106,7 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 md:p-8 shadow-sm space-y-4">
+    <form onSubmit={submit} aria-busy={loading} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 md:p-8 shadow-sm space-y-4">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-700">{isMediaKit ? 'Media Kit' : 'Contacto'}</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-950">{isMediaKit ? 'Solicitá tu Media Kit' : 'Contanos qué necesitás'}</h2>
@@ -111,10 +116,10 @@ export function ContactForm({ isMediaKit = false }: { isMediaKit?: boolean }) {
       {error && <p role="alert" className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div><Label htmlFor="contact-name">Nombre completo *</Label><Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Tu nombre y apellido" /></div>
-        <div><Label htmlFor="contact-company">Empresa</Label><Input id="contact-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Empresa o agencia" /></div>
-        <div><Label htmlFor="contact-email">Email *</Label><Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="nombre@empresa.com" /></div>
-        <div><Label htmlFor="contact-phone">Teléfono</Label><Input id="contact-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 9 ..." /></div>
+        <div><Label htmlFor="contact-name">Nombre completo *</Label><Input id="contact-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Tu nombre y apellido" /></div>
+        <div><Label htmlFor="contact-company">Empresa</Label><Input id="contact-company" autoComplete="organization" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Empresa o agencia" /></div>
+        <div><Label htmlFor="contact-email">Email *</Label><Input id="contact-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="nombre@empresa.com" /></div>
+        <div><Label htmlFor="contact-phone">Teléfono</Label><Input id="contact-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 9 ..." /></div>
       </div>
 
       <div><Label htmlFor="contact-message">Mensaje</Label><Textarea id="contact-message" rows={5} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={isMediaKit ? "Opcional: fechas, campaña, objetivos o comentarios." : "Contanos brevemente qué necesitás."} /></div>
