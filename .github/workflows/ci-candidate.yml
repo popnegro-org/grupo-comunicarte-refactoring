@@ -2,12 +2,21 @@ name: CI Candidate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, pmv-validation-candidate]
   push:
     branches:
+      - pmv-validation-candidate
       - canonical-candidate
       - canonical-refinement
 
+# Every candidate run validates its own immutable commit and never reuses a pinned Preview URL.
+concurrency:
+  # Push and pull_request events for the same source branch must share one lock.
+  # This prevents overlapping E2E suites from writing to the same Neon Preview branch.
+  group: ci-candidate-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# This workflow executes repository code. Grant only read access needed to resolve GitHub deployment records.
 permissions:
   contents: read
 
@@ -16,10 +25,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Generate semver-compatible audit remediation lockfile
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Upload audit remediation lockfile
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'audit-remediation:')
+        uses: actions/upload-artifact@v5
+        with:
+          name: audit-remediation-lockfile
+          path: package-lock.json
+          retention-days: 1
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Check JavaScript bundle budget
+        run: npm run check:bundle
+
+  authenticated-preview-smoke:
+    name: Authenticated Preview Smoke · Render Preview
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/pmv-validation-candidate') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [validate]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    outputs:
+      url: ${{ steps.preview.outputs.url }}
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -27,11 +97,392 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Typecheck
-        run: npm run lint
-
-      - name: Build
+      - name: Build expected frontend artifact
         run: npm run build
 
-      - name: Tests (if configured)
-        run: npm test --if-present
+      - name: Wait for stable Render Preview and isolated Neon Preview branch
+        id: preview
+        shell: bash
+        env:
+          PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring.onrender.com
+          EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
+          EXPECTED_DEPLOYMENT_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
+          const expectedAsset = readFileSync('dist/index.html', 'utf8')
+            .split('"')
+            .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
+
+          if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastHealth = null;
+          let consecutiveHealthy = 0;
+
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            try {
+              const [healthResponse, pageResponse] = await Promise.all([
+                fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(15000) }),
+                fetch(base, { signal: AbortSignal.timeout(15000) }),
+              ]);
+
+              if (healthResponse.ok && pageResponse.ok) {
+                const health = await healthResponse.json();
+                const html = await pageResponse.text();
+                lastHealth = health;
+
+                if (
+                  health.status === 'ok' &&
+                  health.database === 'connected' &&
+                  health.databaseBranch === expectedBranch &&
+                  health.commit === expectedCommit &&
+                  html.includes(expectedAsset)
+                ) {
+                  consecutiveHealthy += 1;
+                  if (consecutiveHealthy >= 3) {
+                    appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + new URL(base).origin + String.fromCharCode(10));
+                    console.log('Render Preview served three consecutive healthy responses with the expected commit, asset and isolated Neon Preview branch.');
+                    process.exit(0);
+                  }
+                } else {
+                  consecutiveHealthy = 0;
+                }
+              } else {
+                consecutiveHealthy = 0;
+              }
+            } catch {
+              consecutiveHealthy = 0;
+            }
+
+            console.log('Waiting for stable Render Preview; attempt ' + attempt + '/60; healthy confirmations: ' + consecutiveHealthy + '/3.');
+            await sleep(3000);
+          }
+
+          throw new Error('Render Preview did not serve the expected commit, build and Neon branch. Expected commit: ' + expectedCommit + '. Last health: ' + JSON.stringify(lastHealth));
+          NODE
+
+      - name: Verify E2E credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Preview."
+            exit 1
+          fi
+          echo "Preview credentials are present; values are intentionally not logged."
+
+      - name: Verify public smoke, authenticated dashboard and admin API on Render Preview
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts --grep-invert "ownership, tenant spoofing, quarantine and pricing remain fail-closed|C1/C3/C4/C6|PDF/PPTX se persisten, se recuperan con autorización y la entrega queda auditada"
+
+  vercel-preview-e2e:
+    name: Vercel Preview E2E · Neon Preview
+    # Validate the exact Vercel Preview runtime after Render Preview E2E has completed,
+    # avoiding concurrent writes to the shared Neon Preview branch.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [validate, preview-deployment-e2e]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app
+      EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
+      EXPECTED_DEPLOYMENT_COMMIT: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Vercel Preview branch, code revision, quarantine and pricing privacy
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
+
+          const [healthResponse, supportsResponse, quarantinedResponse, sessionResponse, pricingResponse] = await Promise.all([
+            fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/supports', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/supports/mza-trad-16', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/admin/session', base), { signal: AbortSignal.timeout(20000) }),
+            fetch(new URL('/api/admin/support-pricing', base), { signal: AbortSignal.timeout(20000) }),
+          ]);
+
+          if (!healthResponse.ok) throw new Error('Vercel health check returned HTTP ' + healthResponse.status);
+          const health = await healthResponse.json();
+          if (health.status !== 'ok' || health.database !== 'connected') {
+            throw new Error('Vercel Preview database is not connected: ' + JSON.stringify(health));
+          }
+          if (health.databaseBranch !== expectedBranch) {
+            throw new Error('Unexpected Neon branch: ' + health.databaseBranch);
+          }
+          if (health.commit !== expectedCommit) {
+            throw new Error('Vercel deployment is stale or code SHA changed. Expected ' + expectedCommit + ', received ' + health.commit);
+          }
+
+          if (!supportsResponse.ok) throw new Error('Public supports endpoint returned HTTP ' + supportsResponse.status);
+          const catalog = await supportsResponse.json();
+          if (!Array.isArray(catalog.data) || catalog.data.length !== 28) {
+            throw new Error('Expected 28 owned supports, received ' + (catalog.data?.length ?? 'invalid payload'));
+          }
+          if (catalog.data.some((support) => support.canonical_id === 'mza-trad-16')) {
+            throw new Error('Quarantined support mza-trad-16 leaked into the public catalog.');
+          }
+          const containsPricing = (value) => {
+            if (Array.isArray(value)) return value.some(containsPricing);
+            if (!value || typeof value !== 'object') return false;
+            return Object.entries(value).some(([key, child]) =>
+              /(price|precio|cost|costo)/i.test(key) || containsPricing(child)
+            );
+          };
+          if (containsPricing(catalog)) throw new Error('Public catalog exposes pricing fields.');
+
+          if (quarantinedResponse.status !== 404) {
+            throw new Error('Quarantined support detail must return 404, received ' + quarantinedResponse.status);
+          }
+          if (sessionResponse.status !== 401 || pricingResponse.status !== 401) {
+            throw new Error('Admin session and pricing endpoints must reject anonymous access.');
+          }
+
+          console.log('Vercel Preview preflight PASS: same code revision, isolated Neon branch, 28 public supports, quarantine 404, pricing private.');
+          NODE
+
+      - name: Verify Vercel Preview E2E credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Vercel Preview E2E."
+            exit 1
+          fi
+          echo "Vercel Preview credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Vercel Preview
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload Vercel Preview E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: vercel-preview-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
+
+  qa-deployment-e2e:
+    name: QA Deployment E2E · Neon QA
+    # This job creates/updates one deterministic synthetic request and Media Kit in Neon QA.
+    # Run once on the PR event, not again on the matching branch push.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [validate]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-qa.onrender.com
+      EXPECTED_DATABASE_BRANCH: br-bold-block-aua43ua0
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build expected frontend artifact
+        run: npm run build
+
+      - name: Wait for Render QA to serve this frontend and the isolated Neon QA branch
+        shell: bash
+        run: |
+          node <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const base = process.env.PLAYWRIGHT_BASE_URL;
+          const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedAsset = readFileSync('dist/index.html', 'utf8')
+            .split('"')
+            .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
+
+          if (!expectedAsset) throw new Error('Could not identify the built frontend asset.');
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastHealth = null;
+          let consecutiveHealthy = 0;
+
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            try {
+              const [healthResponse, pageResponse] = await Promise.all([
+                fetch(new URL('/api/health', base), { signal: AbortSignal.timeout(15000) }),
+                fetch(base, { signal: AbortSignal.timeout(15000) }),
+              ]);
+
+              if (healthResponse.ok && pageResponse.ok) {
+                const health = await healthResponse.json();
+                const html = await pageResponse.text();
+                lastHealth = health;
+
+                if (
+                  health.status === 'ok' &&
+                  health.database === 'connected' &&
+                  health.databaseBranch === expectedBranch &&
+                  html.includes(expectedAsset)
+                ) {
+                  consecutiveHealthy += 1;
+                  if (consecutiveHealthy >= 3) {
+                    console.log('Render QA served three consecutive healthy responses with the expected asset and isolated Neon QA branch.');
+                    process.exit(0);
+                  }
+                } else {
+                  consecutiveHealthy = 0;
+                }
+              } else {
+                consecutiveHealthy = 0;
+              }
+            } catch {
+              // Render may still be deploying the candidate or restarting an instance.
+              consecutiveHealthy = 0;
+            }
+
+            console.log('Waiting for stable Render QA candidate; attempt ' + attempt + '/60; healthy confirmations: ' + consecutiveHealthy + '/3.');
+            await sleep(3000);
+          }
+
+          throw new Error('Render QA did not serve the expected build and Neon branch. Last health: ' + JSON.stringify(lastHealth));
+          NODE
+
+      - name: Verify QA credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated QA."
+            exit 1
+          fi
+          echo "QA credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Neon QA
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload QA E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-deployment-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
+
+  preview-deployment-e2e:
+    name: Preview Deployment E2E · Neon Preview
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'pmv-validation-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [validate, authenticated-preview-smoke]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ needs.authenticated-preview-smoke.outputs.url }}
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Preview credentials are configured
+        shell: bash
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [[ -z "$E2E_ADMIN_USER" || -z "$E2E_ADMIN_PASSWORD" ]]; then
+            echo "::error::E2E_ADMIN_USER and E2E_ADMIN_PASSWORD must be configured to run authenticated Preview E2E."
+            exit 1
+          fi
+          echo "Preview credentials are present; values are intentionally not logged."
+
+      - name: Run full authenticated PMV E2E against Neon Preview and isolated R2 bucket
+        env:
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test --config=playwright.deployment.config.ts
+
+      - name: Upload Preview E2E evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: preview-deployment-e2e-evidence
+          path: |
+            test-results/deployment/
+            playwright-report/
+          retention-days: 14
+

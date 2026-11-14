@@ -36,12 +36,13 @@ export const SupportCardGrid: React.FC<SupportCardGridProps> = ({
     <div className="h-full overflow-y-auto bg-gray-50/50 p-4 sm:p-6 lg:p-8 pb-28">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <SupportCard
               key={item.canonical_id}
               item={item}
               variant="selectable"
               selectable={true}
+              imagePriority={index === 0}
             />
           ))}
         </div>

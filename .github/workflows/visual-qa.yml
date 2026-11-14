@@ -2,9 +2,9 @@ name: Visual QA
 
 on:
   pull_request:
-    branches: [main, pmv-production-refinement, 'feat/**']
+    branches: [main, pmv-validation-candidate, pmv-production-refinement, 'feat/**']
   push:
-    branches: [main, pmv-production-refinement]
+    branches: [main, pmv-validation-candidate, pmv-production-refinement]
 
 permissions:
   contents: read
@@ -32,7 +32,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build
@@ -46,34 +46,71 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4173/ >/dev/null
 
-      - name: Restore visual baseline
+      - name: Restore trusted visual baseline
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate'
         id: baseline
         uses: actions/cache/restore@v4
         with:
           path: tests/visual/__snapshots__
-          key: visual-baseline-${{ github.base_ref || github.ref_name }}-${{ github.sha }}
+          key: visual-baseline-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.sha }}
           restore-keys: |
-            visual-baseline-${{ github.base_ref || github.ref_name }}-
+            visual-baseline-${{ github.event.pull_request.head.ref || github.ref_name }}-
 
       - name: Bootstrap missing baseline
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-hit != 'true'
-        continue-on-error: true
-        run: npx playwright test --update-snapshots
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
+        run: npx playwright test --update-snapshots=missing
+
+      - name: Ensure committed visual snapshots were not overwritten
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
+        run: git diff --exit-code -- tests/visual/__snapshots__
 
       - name: Validate bootstrapped baseline
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-hit != 'true'
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
         run: npx playwright test
 
-      - name: Run visual regression
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-hit == 'true'
-        run: npx playwright test
+      - name: Summarize baseline bootstrap
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
+        run: |
+          echo "## Visual QA: baseline bootstrap" >> "$GITHUB_STEP_SUMMARY"
+          echo "PR visual QA compares against snapshots committed in this candidate branch. It generates only missing snapshots, asserts that committed snapshots were not modified, and never imports a cache from another commit or base branch." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Refresh baseline on trusted branch
-        if: github.event_name == 'push'
-        run: npx playwright test --update-snapshots=all
+      - name: Validate candidate snapshots on push
+        if: github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate'
+        run: |
+          npx playwright test
+          echo "Candidate push validated against its committed snapshots; no cross-commit cache was restored." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bootstrap trusted baseline and validate Playwright
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate' && steps.baseline.outputs.cache-matched-key == ''
+        run: |
+          npx playwright test --update-snapshots=all
+          npx playwright test
+          {
+            echo "## Visual QA: trusted baseline bootstrap"
+            echo "No previous trusted-branch baseline was available. Playwright tests passed against newly generated snapshots; this run establishes a baseline but is not a regression comparison."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refresh manually reviewed visual snapshots
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'visual-baseline:')
+        run: |
+          npx playwright test --update-snapshots=changed
+          npx playwright test
+          {
+            echo "## Visual QA: reviewed baseline refresh"
+            echo "Only changed snapshots were refreshed by an explicitly named visual-baseline commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compare against previous trusted baseline
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
+        run: |
+          npx playwright test
+          {
+            echo "## Visual QA: trusted baseline regression"
+            echo "Playwright passed against the previously cached trusted-branch baseline: ${{ steps.baseline.outputs.cache-matched-key }}."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save trusted baseline
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate'
         uses: actions/cache/save@v4
         with:
           path: tests/visual/__snapshots__
@@ -87,5 +124,6 @@ jobs:
           path: |
             playwright-report/
             test-results/visual/
+            tests/visual/__snapshots__/
             /tmp/gc-preview.log
           retention-days: 14

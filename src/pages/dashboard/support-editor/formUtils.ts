@@ -14,8 +14,13 @@ export const numeric = (v: unknown): NumericFieldValue => {
   return Number.isFinite(n) ? n : '';
 };
 
-const numberOrZero = (v: NumericFieldValue) => (v === '' ? 0 : v);
-const numberOrNull = (v: NumericFieldValue) => (v === '' ? null : v);
+const toFiniteNumber = (v: NumericFieldValue): number | null => {
+  if (v === '' || v == null) return null;
+  const value = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(value) ? value : null;
+};
+const numberOrZero = (v: NumericFieldValue) => toFiniteNumber(v) ?? 0;
+const numberOrNull = (v: NumericFieldValue) => toFiniteNumber(v);
 
 export const splitPeriod = (v: unknown) => {
   if (typeof v !== 'string' || !v) return { from: '', until: '' };
@@ -24,7 +29,7 @@ export const splitPeriod = (v: unknown) => {
 };
 
 export function isFormDirty(a: FormState, b: FormState): boolean {
-  if (a.publicName !== b.publicName || a.ciudad !== b.ciudad || a.tipo_soporte !== b.tipo_soporte) return true;
+  if (a.tenant_id !== b.tenant_id || a.tenant_ownership_evidence !== b.tenant_ownership_evidence || a.publicName !== b.publicName || a.ciudad !== b.ciudad || a.tipo_soporte !== b.tipo_soporte) return true;
   if (a.active !== b.active || a.disponibilidad !== b.disponibilidad || a.isFeatured !== b.isFeatured) return true;
   if (a.address !== b.address || a.lat !== b.lat || a.lng !== b.lng || a.mapa_url !== b.mapa_url) return true;
   if (a.description !== b.description || a.coverUrl !== b.coverUrl || a.coverKind !== b.coverKind) return true;
@@ -63,6 +68,8 @@ export function normalize(item: any): FormState {
   const period = splitPeriod(item?.availableFrom);
   return {
     ...emptyForm,
+    tenant_id: text(item?.tenant_id),
+    tenant_ownership_evidence: text(item?.tenant_ownership_evidence),
     publicName: text(item?.name),
     ciudad: (item?.ciudad || 'mendoza') as Plaza,
     tipo_soporte: (item?.tipo_soporte || 'tradicional') as SupportType,
@@ -158,7 +165,13 @@ export function payloadFrom(form: FormState) {
   }
   technical.metadata = { cover_media_type: form.coverKind };
 
+  if (form.tenant_id.trim() && !form.tenant_ownership_evidence.trim()) {
+    throw new Error('Indicá el PDF y la posición que acreditan el ownership seleccionado.');
+  }
+
   return {
+    ...(form.tenant_id.trim() ? { tenant_id: form.tenant_id.trim() } : {}),
+    ...(form.tenant_ownership_evidence.trim() ? { tenant_ownership_evidence: form.tenant_ownership_evidence.trim() } : {}),
     name: form.publicName.trim(),
     ciudad: form.ciudad,
     tipo_soporte: form.tipo_soporte,

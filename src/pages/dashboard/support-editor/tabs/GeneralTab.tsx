@@ -26,8 +26,9 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div>
-            <label className={labelClass}>Tipología *</label>
+            <label htmlFor="support-type" className={labelClass}>Tipología *</label>
             <select
+              id="support-type"
               className={inputClass}
               value={form.tipo_soporte}
               onChange={(e) => set({ tipo_soporte: e.target.value as SupportType })}
@@ -43,9 +44,40 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             onChange={() => undefined}
             readOnly
           />
-          <div>
-            <label className={labelClass}>Plaza *</label>
+          <div className="md:col-span-2">
+            <label htmlFor="support-tenant" className={labelClass}>Unidad de negocio / ownership *</label>
             <select
+              id="support-tenant"
+              className={inputClass}
+              value={form.tenant_id}
+              disabled={Boolean(canonicalId && form.tenant_id)}
+              onChange={(e) => set({ tenant_id: e.target.value })}
+              aria-describedby="support-tenant-help"
+            >
+              <option value="">Pendiente de conciliación (no publicable)</option>
+              <option value="tenant-ba">Buenos Aires · tenant-ba</option>
+              <option value="tenant-default">Mendoza · tenant-default</option>
+            </select>
+            <p id="support-tenant-help" className="mt-1 text-xs text-gray-500">
+              La ciudad no asigna ownership automáticamente. Las asignaciones existentes requieren corrección auditada.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <Field
+              label="Evidencia documental de ownership *"
+              value={form.tenant_ownership_evidence}
+              onChange={(value) => set({ tenant_ownership_evidence: value })}
+              placeholder="docs/inventario/source/soportes-mendoza.pdf · posición 01"
+              readOnly={Boolean(canonicalId && form.tenant_id)}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Referencia al PDF fuente y posición exacta. Obligatoria para asignar un tenant; queda registrada con actor y fecha.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="support-city" className={labelClass}>Plaza *</label>
+            <select
+              id="support-city"
               className={inputClass}
               value={form.ciudad}
               onChange={(e) => set({ ciudad: e.target.value as Plaza })}
@@ -63,8 +95,9 @@ export function GeneralTab({ form, canonicalId, typeLabel, set }: Props) {
             />
           </div>
           <div className="md:col-span-2">
-            <label className={labelClass}>Descripción · máximo 250 caracteres</label>
+            <label htmlFor="support-description" className={labelClass}>Descripción · máximo 250 caracteres</label>
             <textarea
+              id="support-description"
               className={`${textareaClass} min-h-28`}
               maxLength={250}
               value={form.description}

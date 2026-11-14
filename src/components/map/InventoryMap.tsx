@@ -5,6 +5,7 @@ import { LocationRecord, MobileRoute, InventoryItem, Plaza, getDisponibilidad } 
 import { SupportCard } from '../inventory/SupportCard';
 import { X, SearchX } from 'lucide-react';
 import { getIcon } from '../../lib/map-icons';
+import { toInventoryPresentationItem } from '../../lib/inventoryPresentationAdapter';
 import { useSelection } from '../../context/SelectionContext';
 
 interface InventoryMapProps {
@@ -22,7 +23,7 @@ function MapUpdater({ locations, routes, userLocation }: { locations: LocationRe
     const validLocations = locations.filter(loc => loc.lat !== null && loc.lng !== null);
     if (validLocations.length === 0 && routes.length === 0) return;
     const bounds = L.latLngBounds([]);
-    validLocations.forEach(loc => { if (loc.lat && loc.lng) bounds.extend([loc.lat, loc.lng]); });
+    validLocations.forEach(loc => { if (loc.lat !== null && loc.lng !== null) bounds.extend([loc.lat, loc.lng]); });
     routes.forEach(route => { if (route.routePath?.length) route.routePath.forEach(point => bounds.extend(point as [number, number])); });
     if (userLocation) {
       map.flyTo(userLocation, 13, { duration: 0.8 });
@@ -59,6 +60,8 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
             <Marker
               key={loc.canonical_id}
               position={[loc.lat!, loc.lng!]}
+              title={`${loc.name} · ${loc.ciudad} · ${toInventoryPresentationItem(loc).tipo}`}
+              alt={`${toInventoryPresentationItem(loc).tipo}: ${loc.name}`}
               icon={getIcon(loc.tipo_soporte, {
                 isActive: isItemActive,
                 isReservado: isItemReservado,
@@ -75,7 +78,7 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
                 <div className="px-3 py-2 text-left min-w-[160px] max-w-[220px]">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500">
-                      {loc.tipo_soporte.replace('_', ' ')}
+                      {toInventoryPresentationItem(loc).tipo}
                     </span>
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
@@ -115,6 +118,30 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
         ))}
         <MapUpdater locations={locations} routes={routes} userLocation={userLocation} />
       </MapContainer>
+
+      <aside aria-label="Listado de soportes del mapa" className="absolute left-4 top-4 z-[800] hidden w-[276px] max-h-[min(72vh,620px)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm xl:flex">
+        <div className="border-b border-gray-100 px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">Explorá en el mapa</p>
+        </div>
+        <ul className="min-h-0 divide-y divide-gray-100 overflow-y-auto">
+          {[...locations, ...routes].map((item) => {
+            const active = selectedItem?.canonical_id === item.canonical_id;
+            const selected = isSelected(item.canonical_id);
+            return (
+              <li key={item.canonical_id}>
+                <button type="button" onClick={() => handleSelect(item)} aria-pressed={active} className={'flex min-h-[68px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ' + (active ? 'bg-gray-50' : '')}>
+                  <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (selected ? 'bg-emerald-600' : active ? 'bg-gray-950' : 'bg-gray-300')} aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-gray-950">{item.name}</span>
+                    <span className="mt-1 block truncate text-[11px] capitalize text-gray-500">{item.ciudad.replace('-', ' ')}</span>
+                  </span>
+                  <span className="shrink-0 text-[10px] font-semibold text-gray-500">{selected ? 'Elegido' : 'Ver'}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
 
       {selectedItem && (
         <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-4 md:left-auto md:right-4 md:w-[410px] bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:shadow-xl z-[1000] border-t md:border border-gray-200/80 overflow-hidden max-h-[82vh] md:max-h-[88vh]">

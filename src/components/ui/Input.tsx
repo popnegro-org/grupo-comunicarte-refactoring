@@ -32,7 +32,7 @@ Textarea.displayName = "Textarea"
 export interface LabelProps extends React.ComponentProps<'label'> {}
 
 function Label({ className, ...props }: LabelProps) {
-  return <label className={cn("mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] leading-[1.4] text-gray-500", className)} {...props} />
+  return <label className={cn("mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] leading-[1.4] text-gray-700", className)} {...props} />
 }
 
 export { Input, Textarea, Label }

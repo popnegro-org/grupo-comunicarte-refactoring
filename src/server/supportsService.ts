@@ -3,15 +3,41 @@ import { db } from '../db/index.ts';
 import { supportTechnical } from '../db/schema.ts';
 import { inArray } from 'drizzle-orm';
 import { InventoryItem } from '../types.ts';
+import { sanitizePublicSupport } from './publicSupportDto.ts';
+import { getStorageAdapter, isSafeSupportMediaKey } from './r2StorageAdapter.ts';
+import { isSafePublicImagePath } from './publicMediaPath.ts';
 
-/**
- * Public inventory DTO boundary.
- * Pricing is intentionally removed from all public catalog/detail responses.
- * Administrative pricing remains available through protected /api/admin/* pricing endpoints.
- */
-function sanitizePublicSupport(item: InventoryItem): InventoryItem {
-  const { pricing: _pricing, ...publicItem } = item as InventoryItem & { pricing?: unknown };
-  return publicItem as InventoryItem;
+const R2_URI_PREFIX = 'r2://';
+
+/** Resolve private R2 object references into short-lived read URLs for public catalog imagery. */
+function resolvePublicMediaUrl(canonicalId: string, media: { url: string; metadata?: Record<string, unknown>; media_type?: string }): string | null {
+  // Storage-backed media rows use this same-origin route, which checks public-catalog eligibility
+  // before redirecting to a short-lived R2 URL.
+  if (/^\/api\/media\/[1-9]\d*$/.test(media.url)) return media.url;
+  // Checked-in public images may use same-origin /images paths; reject arbitrary relative URLs.
+  if (isSafePublicImagePath(media.url)) return media.url;
+  if (!media.url.startsWith(R2_URI_PREFIX)) return /^https?:\/\//i.test(media.url) ? media.url : null;
+  const metadataKey = typeof media.metadata?.storage_key === 'string' ? media.metadata.storage_key : '';
+  const key = metadataKey || media.url.slice(R2_URI_PREFIX.length);
+  if (!isSafeSupportMediaKey(canonicalId, key)) return null;
+  try {
+    return getStorageAdapter().getAssetUrl(key, 300);
+  } catch (error) {
+    console.warn(`Unable to sign public support image for ${canonicalId}:`, error);
+    return null;
+  }
+}
+
+function withPublicMediaUrls(item: InventoryItem): InventoryItem {
+  const media = (item.media || [])
+    .filter((entry) => entry.active !== false && (entry.media_type === 'image' || entry.media_type === 'video'))
+    .map((entry) => ({ ...entry, url: resolvePublicMediaUrl(item.canonical_id, entry) }))
+    .filter((entry): entry is typeof entry & { url: string } => Boolean(entry.url));
+  const imageUrls = media.filter((entry) => entry.media_type === 'image').map((entry) => entry.url);
+  const legacyImageUrls = (item.imageUrls || [])
+    .map((url) => resolvePublicMediaUrl(item.canonical_id, { url, media_type: 'image' }))
+    .filter((url): url is string => Boolean(url));
+  return { ...item, media, imageUrls: imageUrls.length ? imageUrls : legacyImageUrls } as InventoryItem;
 }
 
 function monthlyImpactsFromMetadata(metadata: unknown): number | string | null {
@@ -60,17 +86,17 @@ async function enrichTechnicalMetadata(items: InventoryItem[]): Promise<Inventor
   }
 }
 
-export async function getAllSupportsFromDB(options?: { includeInactive?: boolean }): Promise<InventoryItem[]> {
+export async function getAllSupportsFromDB(options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem[]> {
   const supports = await getSupportCatalog(options);
   const enriched = await enrichTechnicalMetadata(supports);
-  return enriched.map(sanitizePublicSupport);
+  return enriched.map((item) => withPublicMediaUrls(sanitizePublicSupport(item, options?.includeUnassigned === true)));
 }
 
-export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean }): Promise<InventoryItem | null> {
+export async function getSupportByIdFromDB(canonicalId: string, options?: { includeInactive?: boolean; includeUnassigned?: boolean }): Promise<InventoryItem | null> {
   const support = await getSupportDetail(canonicalId, options);
   if (!support) return null;
   const [enriched] = await enrichTechnicalMetadata([support]);
-  return sanitizePublicSupport(enriched);
+  return withPublicMediaUrls(sanitizePublicSupport(enriched, options?.includeUnassigned === true));
 }
 
 export async function validateSupportsForRequest(selectedIds: string[]): Promise<{
@@ -87,18 +113,30 @@ export async function validateSupportsForRequest(selectedIds: string[]): Promise
     };
   }
 
+  if (selectedIds.some((id) => typeof id !== 'string' || !id.trim())) {
+    return {
+      valid: false,
+      statusCode: 400,
+      message: 'La selección contiene identificadores de soporte inválidos.',
+    };
+  }
+
+  if (new Set(selectedIds).size !== selectedIds.length) {
+    return {
+      valid: false,
+      statusCode: 400,
+      message: 'La selección contiene soportes duplicados.',
+    };
+  }
+
+  // Fetch the catalog once and resolve all requested IDs in memory instead of
+  // issuing one support + technical-metadata query per selected item.
+  const catalog = await getAllSupportsFromDB();
+  const supportsById = new Map(catalog.map((item) => [item.canonical_id, item]));
   const matchedSupports: InventoryItem[] = [];
 
   for (const id of selectedIds) {
-    if (typeof id !== 'string') {
-      return {
-        valid: false,
-        statusCode: 400,
-        message: `Identificador de soporte inválido: ${String(id)}`,
-      };
-    }
-
-    const item = await getSupportByIdFromDB(id);
+    const item = supportsById.get(id);
     if (!item) {
       return {
         valid: false,
