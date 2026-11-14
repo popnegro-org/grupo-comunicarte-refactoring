@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.describe('public header redesign', () => {
   test('desktop navigation exposes the commercial action without duplicate Contact link', async ({ page }) => {
-    if ((page.viewportSize()?.width ?? 1024) < 600) await page.setViewportSize({ width: 1440, height: 900 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     const navigation = page.getByRole('navigation', { name: 'Navegación principal' });
     await expect(navigation.getByRole('link', { name: 'Inventario' })).toBeVisible();
@@ -18,13 +18,26 @@ test.describe('public header redesign', () => {
     expect(accessibility.violations).toEqual([]);
   });
 
-  test('desktop header fits without horizontal overflow from 1024px upward', async ({ page }) => {
-    for (const width of [1024, 1100, 1280, 1440]) {
+  test('header switches to compact navigation before the desktop layout gets crowded', async ({ page }) => {
+    for (const width of [1024, 1050, 1100, 1279, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
       const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
       expect(dimensions.content, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(dimensions.viewport);
-      await expect(page.getByRole('link', { name: 'Solicitar cotización' })).toBeVisible();
+
+      if (width < 1280) {
+        await expect(page.getByRole('button', { name: 'Abrir menú' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Abrir Media Kit' })).toBeVisible();
+        await page.getByRole('button', { name: 'Abrir menú' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Menú de navegación' });
+        await expect(dialog.getByRole('link', { name: 'Solicitar cotización' })).toBeVisible();
+        await page.getByRole('button', { name: 'Cerrar menú' }).click();
+      } else {
+        const navigation = page.getByRole('navigation', { name: 'Navegación principal' });
+        await expect(navigation.getByRole('link', { name: 'Inventario' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Solicitar cotización' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Abrir menú' })).toHaveCount(0);
+      }
     }
   });
 

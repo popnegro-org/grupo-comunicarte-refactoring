@@ -66,7 +66,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
 
   if (!open) return null;
   return (
-    <div id="mobile-navigation" className="lg:hidden fixed inset-0 z-[3000]">
+    <div id="mobile-navigation" className="xl:hidden fixed inset-0 z-[3000]">
       <button
         type="button"
         className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xs"

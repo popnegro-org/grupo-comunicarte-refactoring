@@ -51,7 +51,7 @@ export function Navbar() {
             <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-8 w-auto max-w-[190px] object-contain" />
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegación principal">
+          <nav className="hidden items-center gap-1 xl:flex" aria-label="Navegación principal">
             {links.map(([name, path]) => (
               <Link
                 key={path}
@@ -67,7 +67,7 @@ export function Navbar() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center gap-2 xl:flex">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
@@ -108,7 +108,7 @@ export function Navbar() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 xl:hidden">
             <button
               type="button"
               onClick={() => setMediakitOpen(true)}
