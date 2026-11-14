@@ -81,7 +81,24 @@ test.describe('Inventario · regresión visual', () => {
       await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     }
     await expect(page.getByTestId('page-transition')).toHaveCSS('opacity', '1');
-      await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
+    // Leaflet fades newly loaded tiles in. Capture only after every visible tile has
+    // finished loading and its opacity transition, otherwise the candidate artifact
+    // can look washed out even when the visual assertion later passes.
+    await page.waitForFunction(() => {
+      const tiles = Array.from(document.querySelectorAll<HTMLImageElement>('.leaflet-container img.leaflet-tile'));
+      const visibleTiles = tiles.filter((tile) => {
+        const rect = tile.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0
+          && rect.top < window.innerHeight && rect.left < window.innerWidth;
+      });
+      return visibleTiles.length > 0 && visibleTiles.every((tile) =>
+        tile.complete
+        && tile.naturalWidth > 0
+        && tile.classList.contains('leaflet-tile-loaded')
+        && Number(window.getComputedStyle(tile).opacity) >= 0.99
+      );
+    }, { timeout: 20000 });
+    await map.screenshot({ path: testInfo.outputPath('candidate-inventory-map-responsive.png') });
     await expect(map).toHaveScreenshot('inventory-map-responsive.png', { stylePath: 'tests/visual/screenshot.css' });
   });
 
