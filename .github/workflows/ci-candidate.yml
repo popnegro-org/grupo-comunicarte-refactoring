@@ -106,12 +106,14 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring.onrender.com
           EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
+          EXPECTED_DEPLOYMENT_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
 
           const base = process.env.PLAYWRIGHT_BASE_URL;
           const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
+          const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
           const expectedAsset = readFileSync('dist/index.html', 'utf8')
             .split('"')
             .find((value) => value.startsWith('/assets/') && value.endsWith('.js'));
@@ -138,12 +140,13 @@ jobs:
                   health.status === 'ok' &&
                   health.database === 'connected' &&
                   health.databaseBranch === expectedBranch &&
+                  health.commit === expectedCommit &&
                   html.includes(expectedAsset)
                 ) {
                   consecutiveHealthy += 1;
                   if (consecutiveHealthy >= 3) {
                     appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + new URL(base).origin + String.fromCharCode(10));
-                    console.log('Render Preview served three consecutive healthy responses with the expected asset and isolated Neon Preview branch.');
+                    console.log('Render Preview served three consecutive healthy responses with the expected commit, asset and isolated Neon Preview branch.');
                     process.exit(0);
                   }
                 } else {
@@ -160,7 +163,7 @@ jobs:
             await sleep(3000);
           }
 
-          throw new Error('Render Preview did not serve the expected build and Neon branch. Last health: ' + JSON.stringify(lastHealth));
+          throw new Error('Render Preview did not serve the expected commit, build and Neon branch. Expected commit: ' + expectedCommit + '. Last health: ' + JSON.stringify(lastHealth));
           NODE
 
       - name: Verify E2E credentials are configured
