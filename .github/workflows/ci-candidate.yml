@@ -197,9 +197,9 @@ jobs:
       options: --user 1001
     timeout-minutes: 25
     env:
-      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-ctozn8xxv-popnegros-projects.vercel.app
+      PLAYWRIGHT_BASE_URL: https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app
       EXPECTED_DATABASE_BRANCH: br-muddy-cell-au64infb
-      EXPECTED_DEPLOYMENT_COMMIT: 8418ffa0835337202d6a3866866d1bfe60ddbbee
+      EXPECTED_DEPLOYMENT_COMMIT: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout exact candidate commit
         uses: actions/checkout@v6
