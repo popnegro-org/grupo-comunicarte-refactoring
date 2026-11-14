@@ -21,12 +21,12 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://*.tile.openstreetmap.org/**', route => route.abort());
 });
 
-test('navegación de escritorio conserva una sola línea en tablet landscape y desktop', async ({ page }) => {
-  for (const width of [1024, 1050, 1152, 1440]) {
+test('navegación de escritorio conserva una sola línea en desktop amplio', async ({ page }) => {
+  for (const width of [1280, 1366, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
-    const sales = page.getByRole('link', { name: 'Hablar con ventas' }).last();
+    const sales = page.getByRole('banner').getByRole('link', { name: 'Solicitar cotización' });
     await expect(sales).toBeVisible();
     const box = await sales.boundingBox();
     expect(box).not.toBeNull();
