@@ -31,7 +31,8 @@ test.describe('public header redesign', () => {
         await page.getByRole('button', { name: 'Abrir menú' }).click();
         const dialog = page.getByRole('dialog', { name: 'Menú de navegación' });
         await expect(dialog.getByRole('link', { name: 'Solicitar cotización' })).toBeVisible();
-        await page.locator('#mobile-navigation').getByRole('button', { name: 'Cerrar menú' }).click();
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('button', { name: 'Abrir menú' })).toBeVisible();
       } else {
         const navigation = page.getByRole('navigation', { name: 'Navegación principal' });
         await expect(navigation.getByRole('link', { name: 'Inventario' })).toBeVisible();
