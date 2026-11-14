@@ -86,6 +86,21 @@ test.describe('Preview deployment · PMV smoke', () => {
     await expect(page.getByRole('button', { name: 'Seleccionar' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Av. J. B. Justo y Lope de Vega' })).toBeVisible();
 
+    // Load the first support image before capturing responsive evidence.
+    // Lazy loading can otherwise leave a blank media panel in full-page screenshots.
+    const firstSupportImage = page.locator('article img[src]').first();
+    await expect(firstSupportImage).toBeVisible();
+    await firstSupportImage.evaluate((image) => {
+      (image as HTMLImageElement).loading = 'eager';
+    });
+    await expect.poll(
+      () => firstSupportImage.evaluate((image) => {
+        const element = image as HTMLImageElement;
+        return element.complete && element.naturalWidth > 0;
+      }),
+      { timeout: 15000 },
+    ).toBe(true);
+
     for (const viewport of [
       { width: 320, height: 800 },
       { width: 390, height: 844 },
