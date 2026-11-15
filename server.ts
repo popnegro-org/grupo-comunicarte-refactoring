@@ -168,7 +168,7 @@ export async function createApp() {
         database: 'connected',
         databaseBranch: identity.branch_id || null,
         databaseEndpoint: identity.endpoint_id || null,
-        commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
+        commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT_SHA || null,
       });
     } catch (err: any) {
       console.error('Database health check failed:', err);
