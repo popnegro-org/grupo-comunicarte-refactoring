@@ -111,7 +111,6 @@ jobs:
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
 
-          import { execFileSync } from 'node:child_process';
           const base = process.env.PLAYWRIGHT_BASE_URL;
           const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
           const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
@@ -225,6 +224,7 @@ jobs:
         shell: bash
         run: |
           node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
           const base = process.env.PLAYWRIGHT_BASE_URL;
           const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
           const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
