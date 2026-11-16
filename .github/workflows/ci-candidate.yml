@@ -249,7 +249,7 @@ jobs:
             execFileSync('git', ['fetch', '--no-tags', 'origin', health.commit, '--depth=1'], { stdio: 'inherit' });
             const changedFiles = execFileSync('git', ['diff', '--name-only', health.commit, expectedCommit], {
               encoding: 'utf8',
-            }).split(/\\r?\\n/).filter(Boolean);
+            }).split(/\r?\n/).filter(Boolean);
             const nonRuntimeOnly = changedFiles.every((path) =>
               path.startsWith('docs/') ||
               path.startsWith('tests/') ||
