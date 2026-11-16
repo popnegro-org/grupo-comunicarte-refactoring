@@ -564,3 +564,57 @@ La diferencia entre Preview (28 públicos; `mza-trad-16` en cuarentena) y Produc
 - Vercel Git Integration continúa enlazada al namespace anterior `popnegro`; el repositorio actual es `popnegro-org/grupo-comunicarte-refactoring`. Requiere reconexión manual del proyecto existente desde Vercel Settings → Git. No crear un proyecto duplicado.
 - Seis snapshots visuales incorporados en fases previas siguen sujetos a revisión visual humana; los tests automáticos no equivalen a aceptación visual manual.
 - PR #90 continúa **NO-GO para merge**. Requiere reconexión/validación Vercel same-HEAD, reconciliación del registro histórico señalado, revisión humana del diff/snapshots y aprobación requerida. No mergear ni promover a Production sin `HUMAN GATE: APRUEBO PR #90`.
+
+
+## Cierre de auditoría Demo Ready — 2026-11-16
+
+**HEAD auditado:** b1ea823b939a31795b2f0fd021f379a6bc0625a7  
+**PR:** #90 — pmv-validation-candidate → main  
+**Vercel Preview:** deployment dpl_EWVxxqqV2gqoxxpK84x1zV5HrjEP, READY, SHA exacto.  
+**Repositorio de origen informado por Vercel:** popnegro-org/grupo-comunicarte-refactoring.
+
+### Verificación same-HEAD e identidad runtime
+
+1. Vercel /api/health respondió HTTP 200 con Neon conectado, branch br-muddy-cell-au64infb, endpoint ep-patient-butterfly-aure9s02 y commit b1ea823...
+2. Tras invocar /api/supports en ese deployment, pg_stat_activity mostró cuatro sesiones de aplicación bajo app_runtime_vercel_preview_v2 y application_name=pgbouncer. La identidad efectiva queda confirmada para Vercel Preview.
+3. El rol tiene LOGIN y no tiene SUPERUSER, BYPASSRLS, CREATEDB, CREATEROLE ni REPLICATION.
+4. Grants comprobados: SELECT 14 tablas, INSERT 13, UPDATE 10, DELETE 7; USAGE + SELECT en 6 secuencias, UPDATE en 0; sin membresías elevadas ni default privileges heredables.
+5. RLS continúa 0/36 tablas y 0 policies en Preview, deliberadamente diferido según el contrato de PMV. No se modificó.
+6. No se descifró ni expuso ningún secreto. La verificación se realizó con metadatos de entorno y actividad SQL de solo lectura.
+
+La metadata del deployment ahora identifica el namespace popnegro-org y el SHA exacto. Esto reemplaza como evidencia de deployment same-HEAD los reportes históricos de deployments Vercel fijados a SHA anteriores. No se afirma que se haya cambiado el entorno Production ni que la configuración de Git Integration de Production se haya alterado.
+
+### CI / E2E / Visual QA — HEAD exacto
+
+- CI [#43677574397](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43677574397): PASS.
+- CI Candidate [#43677574356](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43677574356): PASS. Validate, QA Deployment E2E 12/12, Render Preview Smoke 9/9, Neon Preview E2E 12/12 y Vercel Preview E2E 12/12.
+- Visual QA [#43677574369](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43677574369): 122/122 PASS dos veces; artefacto visual ID 14147760407.
+- La auditoría de inventario incluye desktop/mobile catalog, selected card y responsive map. Se compararon los seis candidate screenshots con sus snapshots versionados; no se encontró regresión estructural bloqueante. La revisión técnica no sustituye aceptación visual formal del cliente.
+
+### Recorrido comercial verificado
+
+- Navegación pública e inventario responsive, filtros, tarjetas, mapa y selección.
+- Selección de soportes → apertura de Media Kit → contacto con origen mediakit, sin envío de solicitud real.
+- E2E autenticado de QA: solicitud sintética idempotente, Media Kit, persistencia/recuperación de PDF y PPTX en R2 Preview aislado, validación de formatos, confirmación de entrega y evento de auditoría.
+- Soportes sin ownership excluidos del catálogo; detalle de mza-trad-16 responde 404.
+- Rutas administrativas redirigen a login y endpoints anónimos devuelven 401.
+- Catálogo público: 28 soportes, sin datos de precios.
+
+### Seguridad y límites de la demo
+
+- Preview usa Neon branch br-muddy-cell-au64infb, no Production.
+- x-robots-tag: noindex; no implica privacidad.
+- Password protection, SSO y trusted IP de Vercel están deshabilitados. El sitio de demo puede abrirse por URL; tratarlo como Preview accesible, no como entorno privado.
+- No mostrar dashboard, credenciales ni datos administrativos al cliente.
+- No ejecutar solicitudes reales durante la demo sin fixture y autorización comercial.
+- No se modificó Production, main, secretos, roles, grants, DNS ni configuración productiva en esta ejecución.
+
+### Decisión Demo Ready
+
+**APTO PARA DEMO COMERCIAL CONTROLADA EN PREVIEW.** La aceptación técnica está completa para el recorrido público descrito. Queda pendiente la aceptación formal del cliente y confirmar el navegador/dispositivo de presentación. Esta decisión no habilita merge ni release.
+
+### Gobierno del PR
+
+PR #90 permanece abierto, sin reviews registradas. El ruleset main-production requiere una aprobación, conversaciones resueltas y CI; merge squash-only y sin bypass. El diff continúa siendo amplio (162 archivos; 636 commits ahead, 0 behind al HEAD previo a este commit documental). Mantener **NO-GO para merge** hasta revisión humana del alcance completo y aprobación requerida.
+
+**HUMAN GATE obligatorio:** HUMAN GATE: APRUEBO PR #90. No ejecutar merge ni promover a Production sin esa frase explícita.

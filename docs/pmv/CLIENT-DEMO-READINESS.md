@@ -59,3 +59,88 @@ No mostrar al cliente el dashboard administrativo ni compartir credenciales. No 
 - No autoriza merge de PR #90, despliegue a Production, cambios de datos comerciales, cambios de roles/permisos ni publicación de credenciales.
 - RLS permanece diferido deliberadamente para este PMV; el aislamiento actual se valida mediante ownership y filtros fail-closed del catálogo, no mediante políticas RLS.
 - Antes de declarar “demo lista para cliente” sin reservas, cerrar la confirmación de los tres registros señalados y validar el recorrido en el dispositivo/navegador que se usará en la reunión.
+
+
+## Actualización de aceptación técnica — 2026-11-16
+
+**HEAD de auditoría:** b1ea823b939a31795b2f0fd021f379a6bc0625a7  
+**Deployment Vercel Preview:** dpl_EWVxxqqV2gqoxxpK84x1zV5HrjEP — READY  
+**URL:** https://grupo-comunicarte-refactoring-6pme74p49-popnegros-projects.vercel.app/  
+**Origen registrado por Vercel:** popnegro-org/grupo-comunicarte-refactoring, branch pmv-validation-candidate, SHA exacto b1ea823.
+
+Esta actualización prevalece sobre los identificadores de deployment y el diagnóstico de Git Integration que figuran en las secciones históricas anteriores.
+
+### Vercel Preview y Neon — identidad efectiva confirmada
+
+- GET /api/health: HTTP 200; database=connected; Neon branch br-muddy-cell-au64infb; endpoint ep-patient-butterfly-aure9s02; commit informado igual al HEAD auditado.
+- Después de invocar el catálogo público de ese mismo deployment, una consulta read-only a pg_stat_activity encontró las sesiones PostgreSQL de Vercel bajo app_runtime_vercel_preview_v2 (application_name=pgbouncer; 4 sesiones observadas). La muestra se tomó inmediatamente después de las solicitudes HTTP del deployment exacto.
+- Flags del rol: LOGIN=true; SUPERUSER=false; BYPASSRLS=false; CREATEDB=false; CREATEROLE=false; REPLICATION=false.
+- Matriz de grants ya verificada directamente para el rol: SELECT 14 tablas, INSERT 13, UPDATE 10, DELETE 7; USAGE + SELECT en 6 secuencias; UPDATE de secuencias 0. Sin membresías elevadas ni default privileges heredables.
+- RLS permanece deshabilitado en 0/36 tablas y Preview tiene 0 políticas. Esto sigue siendo una decisión explícita del PMV, no una certificación de aislamiento mediante RLS.
+- Vercel metadata del deployment identifica el repositorio y namespace correctos. La evidencia resuelve el bloqueo de deployment same-HEAD; no se afirma que se haya cambiado configuración de Production ni que se haya modificado el vínculo de Production.
+
+No se descifró ni expuso DATABASE_URL; se usaron únicamente metadatos de Preview y evidencia de sesión PostgreSQL.
+
+### Comprobaciones HTTP sobre el deployment exacto
+
+| Ruta | Resultado |
+|---|---|
+| /, /soportes, /inventario, /soluciones, /nosotros, /contacto, /mediakits, /login, /dashboard | HTTP 200 |
+| /api/health | HTTP 200; Neon conectado; SHA y branch exactos |
+| /api/supports | HTTP 200; 28 soportes publicados; sin campos de precios |
+| /api/supports/bue-trad-08 | HTTP 200 |
+| /api/supports/mza-trad-16 | HTTP 404; soporte en cuarentena |
+| /api/media/83 | HTTP 302; image/webp |
+| Endpoints administrativos sin sesión | HTTP 401 verificado por E2E |
+
+El deployment incluye x-robots-tag: noindex. La protección Vercel de Preview (password, SSO y trusted IP) está deshabilitada: el sitio comercial de Preview es accesible mediante su URL; no debe tratarse como un entorno privado. Los endpoints administrativos mantienen autenticación. No compartir credenciales ni usar registros reales durante la demo.
+
+### Revisión de los seis snapshots de inventario
+
+Artefacto descargado desde Visual QA run [#43677574369](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/43677574369), artifact ID 14147760407.
+
+Se compararon los seis screenshots candidate con sus snapshots versionados:
+
+1. inventory-catalog-desktop.png
+2. inventory-catalog-mobile.png
+3. inventory-card-selected.png — desktop
+4. inventory-card-selected.png — mobile
+5. inventory-map-responsive.png — desktop
+6. inventory-map-responsive.png — mobile
+
+Resultado de inspección visual comparativa: las seis parejas conservan estructura, jerarquía, estados y distribución responsive; no se observó regresión visual bloqueante. Las diferencias de píxeles son pequeñas y compatibles con renderizado dinámico/antialiasing y tiles cartográficos; no se detectó desplazamiento estructural ni pérdida de controles. Esta inspección no equivale a aceptación formal del cliente.
+
+Visual QA ejecutó 122 tests PASS en la validación de baseline y 122 PASS en la segunda validación del baseline. Run y artefacto quedan enlazados arriba.
+
+### Recorrido comercial — cobertura verificada
+
+- Inventario: filtros, tarjetas, estados, selección, mapa responsive y barra de selección que abre Media Kit.
+- Navegación de demo: selección pública continúa al cierre de Media Kit en /contacto?origen=mediakit; el test no envía una solicitud real.
+- Solicitud y Media Kit sintéticos de QA: creación idempotente, persistencia PDF/PPTX en almacenamiento Preview aislado, recuperación autenticada, validación de firmas PDF/ZIP, confirmación de entrega y registro de evento de entrega.
+- Controles negativos: soporte sin ownership fuera del catálogo y detalle 404; rutas administrativas redirigen a login; APIs administrativas rechazan acceso anónimo; datos de precios permanecen privados.
+- Vercel Preview E2E: 12/12 PASS en el mismo SHA y branch.
+- Neon Preview E2E: 12/12 PASS.
+- Neon QA E2E: 12/12 PASS.
+- Render Preview smoke: 9/9 PASS.
+- CI y CI Candidate: PASS; lint/typecheck, tests, build, bundle budget y dependency audit completados.
+
+### Criterios Demo Ready consolidados
+
+| Criterio | Estado |
+|---|---|
+| Deployment Vercel Preview READY en HEAD exacto | PASS |
+| Identidad PostgreSQL efectiva dedicada y least-privilege | PASS |
+| Catálogo público: 28 soportes y sin precios | PASS |
+| Cuarentena: soporte sin ownership no publicado | PASS |
+| Rutas comerciales principales responden | PASS |
+| Selección → Media Kit → contacto sin envío real | PASS |
+| Exportación/recuperación PDF y PPTX en QA aislado | PASS |
+| Acceso administrativo anónimo rechazado | PASS |
+| Visual QA 122/122 dos veces y seis snapshots inspeccionados | PASS |
+| Aceptación formal del cliente/dispositivo de presentación | PENDIENTE |
+| Protección Vercel de Preview por password/SSO/IP | DESHABILITADA; URL accesible |
+| Merge/Production release | NO AUTORIZADO |
+
+**Conclusión:** APTO PARA DEMO COMERCIAL CONTROLADA EN PREVIEW, con datos públicos no sensibles y sin mostrar dashboard/credenciales ni enviar solicitudes reales. No es aprobación de merge, release ni aceptación formal del cliente.
+
+No se modificó Production ni se ejecutó DDL/DML durante esta verificación.
