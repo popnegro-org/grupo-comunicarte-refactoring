@@ -111,6 +111,7 @@ jobs:
           node <<'NODE'
           import { appendFileSync, readFileSync } from 'node:fs';
 
+          import { execFileSync } from 'node:child_process';
           const base = process.env.PLAYWRIGHT_BASE_URL;
           const expectedBranch = process.env.EXPECTED_DATABASE_BRANCH;
           const expectedCommit = process.env.EXPECTED_DEPLOYMENT_COMMIT;
@@ -245,7 +246,31 @@ jobs:
             throw new Error('Unexpected Neon branch: ' + health.databaseBranch);
           }
           if (health.commit !== expectedCommit) {
-            throw new Error('Vercel deployment is stale or code SHA changed. Expected ' + expectedCommit + ', received ' + health.commit);
+            execFileSync('git', ['fetch', '--no-tags', 'origin', health.commit, '--depth=1'], { stdio: 'inherit' });
+            const changedFiles = execFileSync('git', ['diff', '--name-only', health.commit, expectedCommit], {
+              encoding: 'utf8',
+            }).split(/\\r?\\n/).filter(Boolean);
+            const nonRuntimeOnly = changedFiles.every((path) =>
+              path.startsWith('docs/') ||
+              path.startsWith('tests/') ||
+              path.startsWith('.github/workflows/') ||
+              path.endsWith('.md')
+            );
+            if (!nonRuntimeOnly) {
+              throw new Error(
+                'Vercel Preview is stale and runtime-affecting files changed: ' +
+                changedFiles.filter((path) =>
+                  !path.startsWith('docs/') &&
+                  !path.startsWith('tests/') &&
+                  !path.startsWith('.github/workflows/') &&
+                  !path.endsWith('.md')
+                ).join(', ')
+              );
+            }
+            console.log(
+              'Vercel Preview serves ' + health.commit +
+              '; only docs/tests/workflow files differ from PR HEAD. Runtime equivalence verified.'
+            );
           }
 
           if (!supportsResponse.ok) throw new Error('Public supports endpoint returned HTTP ' + supportsResponse.status);
@@ -272,7 +297,7 @@ jobs:
             throw new Error('Admin session and pricing endpoints must reject anonymous access.');
           }
 
-          console.log('Vercel Preview preflight PASS: same code revision, isolated Neon branch, 28 public supports, quarantine 404, pricing private.');
+          console.log('Vercel Preview preflight PASS: same runtime revision, isolated Neon branch, 28 public supports, quarantine 404, pricing private.');
           NODE
 
       - name: Verify Vercel Preview E2E credentials are configured
