@@ -173,4 +173,22 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeFocused();
   });
 
+
+  test('las rutas públicas no presentan overflow horizontal en la matriz responsive', async ({ page }) => {
+    const paths = ['/', '/nosotros', '/soluciones', '/inventario', '/mediakits', '/contacto'];
+    const widths = [320, 360, 390, 414, 768, 1024, 1280, 1440];
+    for (const path of paths) {
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
+        await page.goto(path);
+        await expect(page.locator('main').first()).toBeVisible();
+        const dimensions = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          content: document.documentElement.scrollWidth,
+        }));
+        expect(dimensions.content, `${path} presenta overflow horizontal a ${width}px`).toBeLessThanOrEqual(dimensions.viewport);
+      }
+    }
+  });
+
 });
