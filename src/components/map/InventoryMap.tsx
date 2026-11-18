@@ -44,6 +44,19 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
   const { isSelected, selectedCount } = useSelection();
   const handleSelect = (item: InventoryItem) => setSelectedItem(item);
   const handleCloseDetail = () => setSelectedItem(null);
+
+  useEffect(() => {
+    if (!selectedItem) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
+      event.preventDefault();
+      handleCloseDetail();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItem]);
   const validLocations = locations.filter(loc => loc.lat !== null && loc.lng !== null);
 
   return (
@@ -153,7 +166,7 @@ export default function InventoryMap({ locations, routes, initialSelectedId, sel
             <button
               type="button"
               onClick={handleCloseDetail}
-              className="p-2 bg-gray-100 rounded-full text-gray-500 hover:text-black hover:bg-gray-200 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              className="p-2 bg-gray-100 rounded-full text-gray-500 hover:text-black hover:bg-gray-200 transition-colors min-h-11 min-w-11 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
               aria-label="Cerrar detalle"
             >
               <X className="w-4 h-4" />
