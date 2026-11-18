@@ -214,4 +214,25 @@ test.describe('Inventario · regresión visual', () => {
     await expect(page.getByRole('article')).toHaveCount(3);
     await expect(clear).toHaveCount(0);
   });
+
+  test('el detalle del mapa se cierra con Escape y el control táctil mide al menos 44px', async ({ page }, testInfo) => {
+    if (testInfo.project.name !== 'chromium-mobile') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.reload();
+      await expect(page.getByRole('article')).toHaveCount(3);
+    }
+    await page.getByRole('group', { name: 'Modo de visualización del inventario' }).getByRole('button', { name: 'Mapa' }).click();
+    const markers = page.locator('.leaflet-marker-icon');
+    await expect(markers).toHaveCount(2);
+    await markers.nth(1).click();
+    await expect(page.getByText('Soporte seleccionado')).toBeVisible();
+    const closeButton = page.getByRole('button', { name: 'Cerrar detalle' });
+    await expect(closeButton).toBeVisible();
+    const bounds = await closeButton.boundingBox();
+    expect(bounds?.width ?? 0).toBeGreaterThanOrEqual(43.9);
+    expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(43.9);
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('Soporte seleccionado')).toHaveCount(0);
+  });
+
 });
