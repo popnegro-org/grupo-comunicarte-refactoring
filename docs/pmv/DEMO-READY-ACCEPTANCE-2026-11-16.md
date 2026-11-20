@@ -141,3 +141,55 @@ Proyecto `mute-math-07036388`, rama `preview/pmv-validation-candidate` (`br-mudd
 - Aceptación formal del cliente y validación en el dispositivo/navegador de presentación siguen pendientes.
 - RLS permanece diferido deliberadamente para este PMV. Los grants de 14 tablas no deben presentarse como aislamiento tenant-level.
 - PR #90 continúa OPEN, sin merge y sin reviews registradas. No se modificaron `main`, Neon Production ni Vercel Production. El merge sigue sujeto a `HUMAN GATE: APRUEBO PR #90`.
+
+
+---
+
+## Revalidación autónoma — 2026-11-20 16:55 UTC
+
+**Rama:** `pmv-validation-candidate`  
+**HEAD auditado:** `abc1903f53989400413572a5d74f51f7d1172ad3`  
+**Vercel Preview:** `dpl_B7H5TTj5aVBYM1MevgNFPzRZUf7h` — READY, SHA exacto.  
+**Alias estable:** https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app/
+
+### Validación automatizada sobre el HEAD exacto
+
+- CI general [#44686132960](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44686132960): PASS.
+- CI Candidate [#44686132981](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44686132981): PASS. Incluye dependency audit, typecheck, unit tests, build, bundle budget, Render Preview Smoke, Neon QA E2E, Neon Preview E2E y Vercel Preview E2E.
+- Visual QA [#44686132979](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44686132979): PASS.
+- CI Candidate ejecutó los jobs de smoke y E2E sobre el SHA exacto `abc1903f...`; el preflight de Vercel comprobó branch, revisión de código, cuarentena y privacidad de precios.
+
+### Recorrido comercial — verificación directa
+
+Sobre el alias estable de Preview:
+
+- `/`, `/inventario`, `/mediakits` y `/contacto?origen=mediakit`: respuesta HTML de la aplicación.
+- `GET /api/health`: HTTP 200; Neon conectado; branch `br-muddy-cell-au64infb`; commit `abc1903f...`.
+- `GET /api/supports`: HTTP 200; 28 soportes; no se exponen campos de precio/costo.
+- `GET /api/supports/bue-trad-08`: HTTP 200.
+- `GET /api/supports/mza-trad-16`: HTTP 404; el soporte sin ownership sigue fuera del catálogo.
+- El código de Media Kit enlaza la selección con `/contacto?origen=mediakit`; la cobertura E2E del flujo comercial y de la operación sintética permanece PASS. No se envió ninguna solicitud real.
+- Los endpoints administrativos anónimos y el flujo autenticado se validaron mediante los jobs E2E/smoke de CI Candidate; no se utilizaron credenciales ni se modificaron registros comerciales.
+
+### Neon Preview — auditoría de solo lectura
+
+Proyecto `mute-math-07036388`, branch `br-muddy-cell-au64infb`:
+
+- 36 tablas públicas; 0 con RLS habilitado.
+- `app_runtime_preview` y `app_runtime_vercel_preview_v2`: LOGIN=true; SUPERUSER/BYPASSRLS/CREATEDB/CREATEROLE=false.
+- Ambos roles conservan grants sobre 14 tablas: SELECT 14, INSERT 13, UPDATE 10 y DELETE 7.
+- `supports`: 46 filas; 28 con tenant y activas; 18 con `tenant_id IS NULL` en cuarentena.
+- `bue-trad-08`, `bue-trad-09` y `bue-trad-10`: activos, disponibles y asignados a `tenant-ba`.
+- `mza-trad-16`: activo pero sin tenant; no se publica en el catálogo ni en el endpoint de detalle.
+
+**Límite de seguridad:** los grants restringen tablas, no filas. Con RLS deshabilitado, el runtime puede leer las 46 filas de `supports`; el filtro de la API pública no equivale a aislamiento tenant-level en PostgreSQL. RLS continúa diferido para este PMV y no se modificó.
+
+### Estado de integración y límites de aceptación
+
+- PR #90: OPEN, sin merge; HEAD `abc1903f...`; 646 commits ahead, 0 behind; 164 archivos modificados; 0 reviews registradas.
+- La Preview responde públicamente mediante su URL y usa `x-robots-tag: noindex`; noindex no es control de acceso.
+- Demo permitida únicamente sobre el recorrido comercial público en Preview. No mostrar dashboard ni credenciales; no enviar solicitudes reales ni modificar datos comerciales.
+- La aceptación formal del cliente y la validación en el dispositivo/navegador de presentación siguen pendientes.
+- No se modificaron `main`, Neon Production, Vercel Production, roles, grants, políticas ni datos de Production.
+
+**Decisión:** APTO PARA DEMO COMERCIAL CONTROLADA EN PREVIEW. **Merge y release siguen NO-GO** y requieren revisión humana y `HUMAN GATE: APRUEBO PR #90`.
