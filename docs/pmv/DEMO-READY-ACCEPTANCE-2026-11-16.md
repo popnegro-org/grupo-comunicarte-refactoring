@@ -96,3 +96,48 @@ No se utilizaron registros comerciales reales para la prueba transaccional.
 **Merge PR #90: NO-GO.** PR #90 mantiene 0 reviews; el ruleset main-production exige una aprobación, conversaciones resueltas y CI. El diff es amplio y requiere revisión humana.
 
 El merge exige la autorización explícita: HUMAN GATE: APRUEBO PR #90.
+
+
+## Addendum — revalidación autónoma 2026-11-20
+
+**HEAD actual:** `936907d954cd29a63171cfa30a0c46c9bf961049`  
+**Vercel Preview deployment:** `dpl_EMAV7BdDpSkHk4sGvXaYm4szD37R` — READY, SHA exacto, rama `pmv-validation-candidate`.  
+**URL estable de Preview:** https://grupo-comunicarte-refactoring-git-pmv-1fe190-popnegros-projects.vercel.app/
+
+### 1. CI y recorrido autenticado — PASS
+
+- CI general [44223147752](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44223147752): PASS sobre el SHA exacto.
+- CI Candidate [44223147763](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44223147763), intento 3: PASS. El primer intento detectó una Preview Vercel obsoleta; se generó un único deployment Preview para el SHA exacto y se reejecutó únicamente el job fallido.
+- Dependency audit: 0 vulnerabilidades de producción; unit tests: 102 PASS; lint/typecheck, build y bundle budget: PASS.
+- Render Preview Smoke: 9/9 PASS.
+- Neon QA E2E: 12/12 PASS.
+- Neon Preview E2E: 12/12 PASS.
+- Vercel Preview E2E: 12/12 PASS. Preflight PASS: health conectado a la rama Neon esperada, catálogo público con 28 soportes y sin precios, soporte en cuarentena `mza-trad-16` devuelve 404, endpoints administrativos anónimos devuelven 401.
+- Evidencia Vercel E2E: [artifact 14606636839](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44223147763/artifacts/14606636839).
+
+### 2. Visual QA
+
+- [Visual QA 44223147804](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44223147804): 126/126 PASS en dos ejecuciones.
+- La ejecución inicializó snapshots que faltaban y luego ejecutó la suite completa. El resultado es un PASS técnico; el bootstrap no debe confundirse con una aprobación visual independiente de cliente.
+- Artefacto: [visual-qa-report 14391847642](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44223147804/artifacts/14391847642).
+- Inspección de capturas E2E del SHA exacto: catálogo responsive mobile, pantalla de login y formulario Media Kit → contacto. El formulario conserva un soporte seleccionado y muestra los datos comerciales; no se envió una solicitud real.
+
+### 3. Neon Preview — auditoría read-only
+
+Proyecto `mute-math-07036388`, rama `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`):
+
+- 36 tablas públicas; 0 con RLS habilitado; 0 políticas en `public`.
+- `app_runtime_preview` y `app_runtime_vercel_preview_v2` tienen el mismo conjunto de 14 tablas y los mismos privilegios: SELECT 14, INSERT 13, UPDATE 10, DELETE 7; USAGE en 6 secuencias.
+- Ambos roles: LOGIN=true; SUPERUSER/BYPASSRLS/CREATEDB/CREATEROLE/REPLICATION=false. Schema `public`: USAGE=true, CREATE=false. Base `neondb`: CONNECT/TEMP=true. No tienen grants de funciones ni membresías hacia roles elevados. No se encontraron default privileges asignados a estos roles.
+- Login de lectura probado directamente como `app_runtime_preview`; el rol efectivo fue confirmado y el acceso de tabla quedó limitado a 14 tablas. Vercel fue observado en `pg_stat_activity` como `app_runtime_vercel_preview_v2` vía PgBouncer.
+- Importante: los grants limitan el alcance por tabla, no por fila. Como RLS sigue deshabilitado, el rol puede leer las 46 filas de `supports`, incluidas filas de distintos tenants y en cuarentena. La API pública filtra el catálogo a los 28 soportes asignados y bloquea el detalle de `mza-trad-16`; esto no equivale a aislamiento de filas en PostgreSQL.
+- `bue-trad-08`, `bue-trad-09` y `bue-trad-10`: `active=true`, `disponibilidad=disponible`, `tenant-ba`; descripciones sin el aviso contradictorio de indisponibilidad.
+- Todas las consultas de esta revalidación fueron SELECT/read-only. No se modificaron datos, roles, grants ni políticas de Neon.
+
+### 4. Límites vigentes de la demo
+
+- Vercel Preview tiene password protection, SSO y trusted IP deshabilitados. La URL es accesible para quien la tenga; `noindex` no es un control de acceso.
+- Demo permitida únicamente sobre el recorrido comercial público en Preview. No mostrar dashboard ni credenciales; no enviar solicitudes reales ni modificar datos comerciales durante la presentación.
+- Aceptación formal del cliente y validación en el dispositivo/navegador de presentación siguen pendientes.
+- RLS permanece diferido deliberadamente para este PMV. Los grants de 14 tablas no deben presentarse como aislamiento tenant-level.
+- PR #90 continúa OPEN, sin merge y sin reviews registradas. No se modificaron `main`, Neon Production ni Vercel Production. El merge sigue sujeto a `HUMAN GATE: APRUEBO PR #90`.
