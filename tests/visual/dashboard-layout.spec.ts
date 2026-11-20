@@ -43,7 +43,7 @@ test.describe('Dashboard · estructura responsive', () => {
     await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Inventario', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Solicitudes Media Kits' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Crear Media Kit' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Crear Media Kit' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Inventario público' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Clientes' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Inventario por tipología' })).toBeVisible();
