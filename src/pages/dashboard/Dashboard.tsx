@@ -167,7 +167,7 @@ export default function Dashboard() {
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs">
                       <span className="font-medium text-emerald-700">{number(city.available)} disponibles</span>
-                      <span className="text-slate-500">{number(Math.max(city.total - city.available, 0))} reservados / no disponibles</span>
+                      <span className="text-slate-500">{number(Math.max(city.total - city.available, 0))} no disponibles</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={`Disponibilidad en ${city.name}`} aria-valuenow={rate} aria-valuemin={0} aria-valuemax={100}>
                       <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${rate}%` }} />
