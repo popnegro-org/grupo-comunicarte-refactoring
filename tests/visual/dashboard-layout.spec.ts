@@ -38,7 +38,7 @@ test.describe('Dashboard · estructura responsive', () => {
   });
 
   test('mantiene navegación funcional y jerarquía del shell', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Panel de control' })).toBeVisible();
     await expect(page.getByRole('img', { name: 'Grupo Comunicarte' }).first()).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Inventario', exact: true })).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Dashboard · estructura responsive', () => {
     await expect(page.getByRole('link', { name: 'Inventario público' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Clientes' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Inventario por tipología' })).toBeVisible();
-    await expect(page.getByText('Tradicional', { exact: true })).toBeVisible();
+    await expect(page.getByText('Tradicionales', { exact: true })).toBeVisible();
     await expect(page.getByText('Pantallas LED', { exact: true })).toBeVisible();
     await expect(page.getByText('LED móvil', { exact: true })).toBeVisible();
 
