@@ -76,7 +76,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
     { path: '/nosotros' },
     { path: '/mediakits' },
     { path: '/contacto', heading: 'Hablemos de tu próxima campaña.' },
-    { path: '/dashboard', heading: 'Dashboard' },
+    { path: '/dashboard', heading: 'Panel de control' },
     { path: '/dashboard/solicitudes', heading: 'Solicitudes de Media Kit' },
     { path: '/dashboard/mediakits/nuevo', heading: 'Constructor de Media Kit' },
   ]) {
