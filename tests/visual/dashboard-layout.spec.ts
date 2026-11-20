@@ -92,4 +92,16 @@ test.describe('Dashboard · estructura responsive', () => {
     );
     expect(hasHorizontalOverflow).toBe(false);
   });
+  test('captura el panel completo en desktop y mobile', async ({ page }) => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Panel de control' })).toBeVisible();
+    await expect(page.getByText('Inventario total')).toBeVisible();
+    await expect(page.getByText('7', { exact: true }).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => true));
+
+    const isDesktop = (page.viewportSize()?.width ?? 0) >= 768;
+    await expect(page).toHaveScreenshot(`dashboard-${isDesktop ? 'desktop' : 'mobile'}.png`, {
+      fullPage: true,
+    });
+  });
+
 });
