@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
   Activity, ArrowDownRight, ArrowUpRight, Building2, FilePlus2, FileText,
   LayoutGrid, MapPin, Monitor, Plus, Radio, RefreshCw, TrendingUp,
@@ -37,7 +39,7 @@ function percentage(value: number, total: number) {
 
 function MetricCard({ label, value, detail, icon: Icon, accent = 'blue' }: {
   label: string; value: number | string; detail: string;
-  icon: typeof Monitor; accent?: 'blue' | 'green' | 'amber' | 'slate';
+  icon: LucideIcon; accent?: 'blue' | 'green' | 'amber' | 'slate';
 }) {
   const accents = {
     blue: 'bg-blue-50 text-blue-700 ring-blue-100',
@@ -59,7 +61,7 @@ function MetricCard({ label, value, detail, icon: Icon, accent = 'blue' }: {
   );
 }
 
-function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: string; action?: React.ReactNode }) {
+function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: string; action?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
