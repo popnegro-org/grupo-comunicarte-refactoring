@@ -1,11 +1,22 @@
 import crypto from 'crypto';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_DOCUMENT_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+export const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 export const ALLOWED_MEDIA_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp',
   'video/mp4', 'video/webm', 'video/quicktime',
 ]);
+
+export function isValidMediaKitExportPayload(format: 'pdf' | 'pptx', body: Buffer): boolean {
+  if (format === 'pdf') return body.subarray(0, 5).toString('ascii') === '%PDF-';
+  return body.length >= 4 && body[0] === 0x50 && body[1] === 0x4b && body[2] === 0x03 && body[3] === 0x04;
+}
 
 const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
@@ -14,9 +25,9 @@ const EXTENSIONS: Record<string, string> = {
 
 export interface StorageUploadInput { key: string; body: Buffer; contentType: string; }
 export interface StorageAdapter {
-  upload(input: StorageUploadInput): Promise<{ key: string; url: string }>;
-  delete(key: string): Promise<void>;
-  getAssetUrl(key: string): string;
+  upload(input: StorageUploadInput): Promise<{ key: string; url: string; bucket?: string }>;
+  delete(key: string, bucketOverride?: string): Promise<void>;
+  getAssetUrl(key: string, expiresInSeconds?: number, bucketOverride?: string): string;
 }
 
 function requiredEnv(name: string): string {
@@ -27,27 +38,62 @@ function requiredEnv(name: string): string {
 function sha256(value: string | Buffer): string { return crypto.createHash('sha256').update(value).digest('hex'); }
 function hmac(key: Buffer | string, value: string): Buffer { return crypto.createHmac('sha256', key).update(value).digest(); }
 function encodePath(key: string): string { return key.split('/').map((part) => encodeURIComponent(part)).join('/'); }
+export function isSafeSupportMediaKey(canonicalId: string, key: string): boolean {
+  if (!key.startsWith(`soporte/${canonicalId}/`)) return false;
+  return key.split('/').every((segment) => Boolean(segment) && segment !== '.' && segment !== '..' && !segment.includes('\\') && !segment.includes('\0'));
+}
+
+export function createPresignedGetUrl(input: { endpoint: string; bucket: string; accessKey: string; secretKey: string; key: string; expiresInSeconds?: number; now?: Date }): string {
+  const expiresInSeconds = input.expiresInSeconds ?? 300;
+  if (!Number.isInteger(expiresInSeconds) || expiresInSeconds < 1 || expiresInSeconds > 600) {
+    throw new Error('La expiración de URL firmada debe estar entre 1 y 600 segundos.');
+  }
+  const url = new URL(`${input.endpoint.replace(/\/$/, '')}/${encodePath(input.bucket)}/${encodePath(input.key)}`);
+  const amzDate = (input.now ?? new Date()).toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/auto/s3/aws4_request`;
+  const query: Record<string, string> = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': `${input.accessKey}/${credentialScope}`,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': String(expiresInSeconds),
+    'X-Amz-SignedHeaders': 'host',
+  };
+  const encode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  const canonicalQuery = Object.keys(query).sort().map((name) => `${encode(name)}=${encode(query[name])}`).join('&');
+  const canonicalRequest = ['GET', url.pathname, canonicalQuery, `host:${url.host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope, sha256(canonicalRequest)].join('\n');
+  const kDate = hmac(`AWS4${input.secretKey}`, dateStamp);
+  const kRegion = hmac(kDate, 'auto');
+  const kService = hmac(kRegion, 's3');
+  const kSigning = hmac(kService, 'aws4_request');
+  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+  url.search = `${canonicalQuery}&X-Amz-Signature=${signature}`;
+  return url.toString();
+}
 
 class CloudflareR2StorageAdapter implements StorageAdapter {
   private readonly endpoint: string;
   private readonly bucket: string;
+  private readonly uploadBucket: string;
   private readonly accessKey: string;
   private readonly secretKey: string;
-  private readonly publicUrl: string;
 
-  constructor() {
+  constructor(bucketEnvName = 'R2_BUCKET_NAME', uploadBucketEnvName = bucketEnvName) {
     const accountId = requiredEnv('R2_ACCOUNT_ID');
     this.endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
-    this.bucket = requiredEnv('R2_BUCKET_NAME');
+    this.bucket = requiredEnv(bucketEnvName);
+    this.uploadBucket = process.env[uploadBucketEnvName]?.trim() || this.bucket;
     this.accessKey = requiredEnv('R2_ACCESS_KEY_ID');
     this.secretKey = requiredEnv('R2_SECRET_ACCESS_KEY');
-    this.publicUrl = requiredEnv('R2_PUBLIC_URL').replace(/\/$/, '');
   }
 
-  getAssetUrl(key: string): string { return `${this.publicUrl}/${encodePath(key)}`; }
+  getAssetUrl(key: string, expiresInSeconds = 300, bucketOverride = this.bucket): string {
+    return createPresignedGetUrl({ endpoint: this.endpoint, bucket: bucketOverride, accessKey: this.accessKey, secretKey: this.secretKey, key, expiresInSeconds });
+  }
 
-  private async request(method: 'PUT' | 'DELETE', key: string, body?: Buffer, contentType?: string) {
-    const url = `${this.endpoint}/${encodePath(this.bucket)}/${encodePath(key)}`;
+  private async request(method: 'PUT' | 'DELETE', key: string, body?: Buffer, contentType?: string, bucket = this.uploadBucket) {
+    const url = `${this.endpoint}/${encodePath(bucket)}/${encodePath(key)}`;
     const parsed = new URL(url);
     const payloadHash = body ? sha256(body) : sha256('');
     const now = new Date();
@@ -77,20 +123,41 @@ class CloudflareR2StorageAdapter implements StorageAdapter {
     }
   }
 
-  async upload(input: StorageUploadInput): Promise<{ key: string; url: string }> {
+  async upload(input: StorageUploadInput): Promise<{ key: string; url: string; bucket: string }> {
     const contentType = input.contentType.toLowerCase();
-    if (!ALLOWED_MEDIA_MIME_TYPES.has(contentType)) throw new Error(`MIME no permitido: ${contentType}.`);
+    const isDocument = ALLOWED_DOCUMENT_MIME_TYPES.has(contentType);
+    if (!ALLOWED_MEDIA_MIME_TYPES.has(contentType) && !isDocument) throw new Error(`MIME no permitido: ${contentType}.`);
     if (input.body.length === 0) throw new Error('El archivo está vacío.');
-    if (input.body.length > MAX_UPLOAD_BYTES) throw new Error('El archivo excede el límite máximo permitido.');
+    const maxBytes = isDocument ? MAX_DOCUMENT_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+    if (input.body.length > maxBytes) throw new Error('El archivo excede el límite máximo permitido.');
     await this.request('PUT', input.key, input.body, contentType);
-    return { key: input.key, url: this.getAssetUrl(input.key) };
+    return { key: input.key, url: `r2://${this.uploadBucket}/${input.key}`, bucket: this.uploadBucket };
   }
 
-  async delete(key: string): Promise<void> { await this.request('DELETE', key); }
+  async delete(key: string, bucketOverride = this.uploadBucket): Promise<void> { await this.request('DELETE', key, undefined, undefined, bucketOverride); }
 }
 
-let adapter: CloudflareR2StorageAdapter | null = null;
-export function getStorageAdapter(): StorageAdapter { return adapter ??= new CloudflareR2StorageAdapter(); }
+let mediaAdapter: CloudflareR2StorageAdapter | null = null;
+let mediaKitExportAdapter: CloudflareR2StorageAdapter | null = null;
+
+/** Existing catalogue media remains in the shared read/source bucket. */
+export function getStorageAdapter(): StorageAdapter {
+  return mediaAdapter ??= new CloudflareR2StorageAdapter('R2_BUCKET_NAME', 'R2_UPLOAD_BUCKET_NAME');
+}
+
+/** Media Kit documents are written to an environment-isolated bucket. */
+export function getMediaKitExportStorageAdapter(): StorageAdapter {
+  const bucketEnvName = process.env.R2_EXPORTS_BUCKET_NAME?.trim()
+    ? 'R2_EXPORTS_BUCKET_NAME'
+    : 'R2_BUCKET_NAME';
+  return mediaKitExportAdapter ??= new CloudflareR2StorageAdapter(bucketEnvName, bucketEnvName);
+}
+
+export function createMediaKitAssetKey(kitId: string, format: 'pdf' | 'pptx'): string {
+  const safeId = kitId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100);
+  const extension = format === 'pdf' ? 'pdf' : 'pptx';
+  return `mediakit/${safeId}/exports/${format}.${extension}`;
+}
 
 export function createAssetKey(canonicalId: string, mimeType: string, role: 'cover' | 'gallery' = 'gallery'): string {
   const extension = EXTENSIONS[mimeType.toLowerCase()];

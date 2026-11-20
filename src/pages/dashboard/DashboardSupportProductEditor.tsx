@@ -223,7 +223,7 @@ export default function DashboardSupportProductEditor({ mode: explicitMode }: { 
             )}
           </div>
 
-          <aside id="support-card-preview" className="lg:sticky lg:top-6">
+          <aside id="support-card-preview" aria-label="Vista previa del soporte" className="lg:sticky lg:top-6">
             <div className="rounded-xl border border-gray-200 bg-white p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>

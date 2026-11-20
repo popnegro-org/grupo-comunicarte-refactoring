@@ -24,19 +24,21 @@ test('normalize preserves editorial monthly impacts', () => {
     tipo_soporte: 'tradicional',
     technical: { measures: '430 x 460 cm.', monthly_impacts: 123 },
   });
-  assert.equal(normalized.traditional.monthly_impacts, '123');
+  assert.equal(normalized.traditional.monthly_impacts, 123);
 });
 
 test('payloadFrom produces canonical numeric payloads', () => {
   const form = {
     ...emptyForm,
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01',
     publicName: 'Soporte test',
     tipo_soporte: 'tradicional' as const,
     traditional: {
       ...emptyForm.traditional,
       medidas: '430 x 460 cm.',
-      caras: '2',
-      monthly_impacts: '123',
+      caras: 2,
+      monthly_impacts: 123,
     },
     pricing: {
       ...emptyForm.pricing,
@@ -46,13 +48,15 @@ test('payloadFrom produces canonical numeric payloads', () => {
     },
   };
   const payload = payloadFrom(form);
+  assert.equal(payload.tenant_id, 'tenant-ba');
+  assert.equal(payload.tenant_ownership_evidence, 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01');
   assert.equal(payload.technical.caras, 2);
   assert.equal(payload.technical.monthly_impacts, 123);
   assert.equal(payload.pricing.exhibition_price, 1000);
 });
 
 test('isFormDirty detects nested field changes', () => {
-  const changed = { ...emptyForm, traditional: { ...emptyForm.traditional, monthly_impacts: '123' } };
+  const changed = { ...emptyForm, traditional: { ...emptyForm.traditional, monthly_impacts: 123 } };
   assert.equal(isFormDirty(emptyForm, changed), true);
   assert.equal(isFormDirty(emptyForm, emptyForm), false);
 });
@@ -69,4 +73,214 @@ test('payloadFrom preserves empty optional monthly impacts as null', () => {
   const form = { ...emptyForm, publicName: 'Soporte test', traditional: { ...emptyForm.traditional, monthly_impacts: '' } };
   const payload = payloadFrom(form);
   assert.equal(payload.technical.monthly_impacts, null);
+});
+
+
+test('getCardFacts follows the PMV facts contract for traditional supports', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'SC-FACTS-01',
+    name: 'Soporte con ficha completa',
+    ciudad: 'mendoza',
+    tipo_soporte: 'tradicional',
+    lat: -32.9,
+    lng: -68.8,
+    address: 'Dirección de prueba',
+    description: 'Ficha de prueba',
+    characteristics: '',
+    mapa_url: '',
+    technical: { measures: '8 x 4 m', format: 'Backlight', caras: 2, monthly_impacts: 420000 },
+  } as import('../../src/types').InventoryItem;
+  const facts = getCardFacts(item);
+  assert.deepEqual(facts.map((fact) => fact.label), ['Medidas', 'Caras', 'Impactos / mes']);
+});
+
+test('getCardFacts follows the PMV facts contract for LED supports', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'SC-LED-FACTS-01',
+    name: 'Pantalla LED',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led',
+    family: 'led',
+    technical: { measures: '4 x 2 m', resolution: 'P4', caras: 2, monthly_impacts: 100000 },
+  } as import('../../src/types').InventoryItem;
+  assert.deepEqual(getCardFacts(item).map((fact) => fact.label), ['Medidas', 'Resolución', 'Impactos / mes']);
+});
+
+test('getCardFacts follows the PMV facts contract for LED mobile supports', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'SC-LED-MOBILE-FACTS-01',
+    name: 'Camión LED móvil',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led_movil',
+    family: 'led_mobile',
+    duration: '4 horas',
+    schedule: 'Lunes a Viernes',
+    waypoints: [],
+    routePath: [],
+    technical: { resolution: 'P4', spot_duration_seconds: 10, monthly_impacts: 100000 },
+  } as import('../../src/types').InventoryItem;
+  assert.deepEqual(getCardFacts(item).map((fact) => fact.label), ['Duración', 'Spot', 'Impactos / mes']);
+});
+
+test('getCardFacts preserves a manually entered zero monthly impact for LED mobile', async () => {
+  const { getCardFacts } = await import('../../src/components/inventory/SupportCardPrimitives');
+  const item = {
+    canonical_id: 'MZA-LED-MOVIL-ZERO',
+    name: 'Camión LED móvil',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led_movil',
+    family: 'led_mobile',
+    duration: '4 horas',
+    schedule: 'Lunes a Viernes',
+    waypoints: [],
+    routePath: [],
+    technical: { route_duration_hours: 4, spot_duration_seconds: 10, monthly_impacts: 0 },
+  } as import('../../src/types').InventoryItem;
+  const facts = getCardFacts(item);
+  assert.deepEqual(facts.map((fact) => fact.label), ['Duración', 'Spot', 'Impactos / mes']);
+  assert.equal(facts.find((fact) => fact.label === 'Impactos / mes')?.value, '0');
+});
+
+test('inventory presentation adapter keeps unknown LED types unmapped and excludes internal pricing', async () => {
+  const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
+  const item = {
+    canonical_id: 'SC-TEST-LED',
+    name: 'Pantalla heredada',
+    ciudad: 'mendoza',
+    tipo_soporte: 'led',
+    lat: -32.9,
+    lng: -68.8,
+    address: 'Dirección de prueba',
+    description: 'Ficha de prueba',
+    characteristics: '',
+    mapa_url: '',
+    disponibilidad: 'reservado',
+    isFeatured: true,
+    pricing: {
+      exhibition_price: 100,
+      installation_price: 20,
+      printing_price: 30,
+      monthly_price: 150,
+      exclusive_price: 0,
+      currency: 'ARS',
+      tax_included: true,
+      price_public: false,
+    },
+    technical: { measures: '8 x 4 m', format: 'Formato de prueba', monthly_impacts: 420000, caras: 2 },
+  } as import('../../src/types').InventoryItem;
+
+  const result = toInventoryPresentationItem(item);
+  assert.equal(result.tipo, 'Pendiente de mapeo');
+  assert.equal(result.disponibilidad, 'Reservado');
+  assert.equal(result.destacado, true);
+  assert.equal(result.medidas, '8 x 4 m');
+  assert.equal(result.impactoMensual, '420000');
+  assert.equal('pricing' in result, false);
+});
+
+test('inventory presentation adapter maps Neon legacy LED family to Pantallas LED', async () => {
+  const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
+  const item = {
+    canonical_id: 'SC-NEON-LED', name: 'Pantalla LED Acceso Este', ciudad: 'mendoza',
+    tipo_soporte: 'led', family: 'led', address: 'Acceso Este', lat: null, lng: null,
+    description: '', characteristics: '', imageUrls: ['https://example.com/led.webp'],
+  } as import('../../src/types').InventoryItem;
+  assert.equal(toInventoryPresentationItem(item).tipo, 'Pantallas LED');
+});
+
+test('inventory presentation adapter classifies known support types conservatively', async () => {
+  const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
+  const base = {
+    canonical_id: 'SC-TEST-MOBILE',
+    name: 'LED móvil de prueba',
+    ciudad: 'buenos-aires',
+    tipo_soporte: 'led_movil',
+    description: '',
+    characteristics: '',
+    schedule: '',
+    duration: '',
+    waypoints: [{ name: 'Punto inicial', lat: -34.6, lng: -58.4 }],
+    routePath: [],
+  } as import('../../src/types').InventoryItem;
+
+  const result = toInventoryPresentationItem(base);
+  assert.equal(result.tipo, 'LED móvil');
+  assert.equal(result.direccion, 'Punto inicial');
+  assert.equal(result.localidad, 'Buenos Aires');
+  assert.equal(result.estadoOperativo, 'En revisión');
+});
+
+
+test('inventory adapter keeps legacy inactive state separate from reservation availability', async () => {
+  const { toInventoryPresentationItem } = await import('../../src/lib/inventoryPresentationAdapter');
+  const item = {
+    canonical_id: 'SC-LEGACY-INACTIVE',
+    name: 'Soporte inactivo heredado',
+    ciudad: 'mendoza',
+    tipo_soporte: 'tradicional',
+    lat: -32.9,
+    lng: -68.8,
+    address: 'Dirección de prueba',
+    description: '',
+    characteristics: '',
+    disponibilidad: 'inactivo',
+    active: true,
+  } as import('../../src/types').InventoryItem;
+
+  const result = toInventoryPresentationItem(item);
+  assert.equal(result.disponibilidad, 'Disponible');
+  assert.equal(result.estadoOperativo, 'Inactivo');
+});
+
+
+test('normalize preserves persisted tenant ownership and dirty state tracks reassignment', () => {
+  const normalized = normalize({ name: 'Soporte test', tenant_id: 'tenant-ba', tenant_ownership_evidence: 'PDF fuente · posición 01' });
+  assert.equal(normalized.tenant_id, 'tenant-ba');
+  assert.equal(normalized.tenant_ownership_evidence, 'PDF fuente · posición 01');
+  assert.equal(isFormDirty(normalized, { ...normalized, tenant_id: 'tenant-default' }), true);
+});
+
+test('new support payload carries explicit tenant ownership without inferring it from city', () => {
+  const form = { ...emptyForm, publicName: 'Soporte sin asignación', ciudad: 'buenos-aires' as const };
+  const payload = payloadFrom(form);
+  assert.equal('tenant_id' in payload, false);
+  assert.throws(() => payloadFrom({ ...form, tenant_id: 'tenant-ba' }), /PDF y la posición/);
+  const assigned = payloadFrom({
+    ...form,
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'docs/inventario/source/soportes-buenos-aires.pdf · posición 01',
+  });
+  assert.equal(assigned.tenant_id, 'tenant-ba');
+  assert.ok(assigned.tenant_ownership_evidence);
+});
+
+
+test('public support DTO strips pricing and ownership while admin DTO preserves ownership only', async () => {
+  const { sanitizePublicSupport } = await import('../../src/server/publicSupportDto');
+  const item = {
+    canonical_id: 'qa-tenant-dto',
+    tenant_id: 'tenant-ba',
+    tenant_ownership_evidence: 'PDF privado · posición 01',
+    name: 'Soporte QA',
+    ciudad: 'buenos-aires',
+    tipo_soporte: 'tradicional',
+    lat: null,
+    lng: null,
+    address: '',
+    description: '',
+    characteristics: '',
+    mapa_url: '',
+    pricing: { exhibition_price: 123456, installation_price: 654321 },
+  } as import('../../src/types').InventoryItem;
+  const publicItem = sanitizePublicSupport(item);
+  assert.equal('tenant_id' in publicItem, false);
+  assert.equal('tenant_ownership_evidence' in publicItem, false);
+  assert.equal('pricing' in publicItem, false);
+  const adminItem = sanitizePublicSupport(item, true) as any;
+  assert.equal(adminItem.tenant_id, 'tenant-ba');
+  assert.equal(adminItem.tenant_ownership_evidence, 'PDF privado · posición 01');
+  assert.equal('pricing' in adminItem, false);
 });

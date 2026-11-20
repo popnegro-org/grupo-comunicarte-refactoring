@@ -30,7 +30,7 @@ El producto actual está implementado como una Single Page Application (SPA) en 
 - **Funcional:** Sí (implementado con `react-leaflet`).
 - **Markers:** Corresponden a soportes fijos y rutas móviles (`Polyline`).
 - **Interacción:** Funciona correctamente. Al hacer clic en un marker se abre `LocationDetail`.
-- **Mobile:** El mapa ocupa todo el espacio disponible y los filtros se ocultan en un Drawer lateral (`isMobileFiltersOpen`), excelente decisión UX.
+- **Mobile:** El mapa ocupa el espacio disponible; los controles de inventario se mantienen en `InventoryToolbar`. El detalle seleccionado se presenta como panel inferior en móvil y lateral en escritorio.
 
 ## 7. Support Audit
 - Evaluado desde `LocationDetail.tsx` que se abre sobre el mapa.
@@ -96,9 +96,10 @@ El producto actual está implementado como una Single Page Application (SPA) en 
 - El Landing, el Inventario, y los modales (Media Kit/Detail) comparten idéntico espaciado, jerarquías, estilo de botones y paleta de colores. El producto público se siente como una pieza única.
 
 ## 19. Responsive Audit
-- El `Layout`, la `Landing` y el `Inventario` utilizan reglas responsivas de Tailwind (`md:`, `sm:`).
-- Elementos complejos como los filtros se adaptan a un Drawer flotante en pantallas pequeñas (`<div className="md:hidden absolute...">`).
-- **Estado:** PASS.
+- El `Layout`, la `Landing` y el `Inventario` utilizan reglas responsivas de Tailwind (`sm:`, `md:`, `lg:`, `xl:`).
+- El header usa navegación compacta por debajo de 1280 px; el mapa muestra el listado auxiliar desde `xl` y el detalle como panel inferior en móvil.
+- Los filtros permanecen en `InventoryToolbar`; no se documenta un Drawer de filtros porque no corresponde a la implementación actual.
+- **Estado:** PASS, sujeto a la matriz de viewports y rutas ampliada en la suite Playwright.
 
 ## 20. Accessibility Audit
 - **HTML Semántico:** Parcial. Uso de `<button>`, `<nav>`, `<form>`, `<section>`.
@@ -177,3 +178,15 @@ Ninguno. Lo desarrollado públicamente está en excelentes condiciones.
 
 ## 30. Final Verdict
 PMV NOT READY
+
+
+## 31. Responsive and interaction follow-up · 2026-11-18
+
+Auditoría de seguimiento del código vigente en `pmv-validation-candidate`:
+
+- Header: navegación compacta por debajo de 1280 px; navegación principal de escritorio desde 1280 px.
+- Mapa: detalle seleccionado como panel inferior en móvil y panel lateral en escritorio.
+- Cierre del detalle: botón táctil mínimo 44 × 44 px, foco visible y cierre mediante Escape.
+- Escape no cierra el panel cuando el foco está en un campo editable.
+- Pruebas Playwright añadidas para verificar el tamaño real del botón de cierre, el cierre con teclado y overflow horizontal en las rutas públicas (`/`, `/nosotros`, `/soluciones`, `/inventario`, `/mediakits`, `/contacto`) a 320, 360, 390, 414, 768, 1024, 1280 y 1440 px.
+- Estas pruebas deben ejecutarse en CI antes de declarar la validación responsive ampliada como aprobada. La documentación registra cobertura añadida, no resultados de ejecución.

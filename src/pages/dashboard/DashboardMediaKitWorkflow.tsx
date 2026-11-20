@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
   FileText,
@@ -9,20 +9,32 @@ import {
   FilterX,
   Inbox,
   Save,
+  Building2,
+  BriefcaseBusiness,
+  CalendarClock,
+  ExternalLink,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../components/dashboard/DashboardShell';
 import { StatusBadge } from '../../components/dashboard/ui/StatusBadge';
 import { Input } from '../../components/ui/Input';
 import { apiFetch } from '../../lib/api';
+import { formatProposalDuration, isProposalDurationValid, normalizeProposalDuration, proposalDurationFromOption, proposalDurationOption, ProposalDurationUnit } from '../../lib/mediakitDuration';
 import { calculateSupportTotal, formatSupportCurrency } from '../../lib/supportPricing';
 import {
+  createMediaKitPdf,
+  createMediaKitPpt,
   downloadMediaKitPdf,
   downloadMediaKitPpt,
+  sendMediaKitToLead,
   ExportSupport,
 } from '../../lib/adminMediaKitExport';
 
 type WorkflowStatus = 'request' | 'in_progress' | 'done';
+type ProposalCurrency = 'ARS' | 'USD' | 'Por definir';
+type ProposalPeriod = { fechaInicio: string; fechaFin: string; duracionValor: string; duracionUnidad: ProposalDurationUnit };
 
 type Pricing = {
   exhibition_price?: number | string | null;
@@ -42,16 +54,41 @@ type LeadRequest = {
   status: WorkflowStatus;
   supportIds: string[];
   supportNames: string[];
+  requestScope?: string | null;
+  tenantIds?: string[];
+  pendingOwnershipCount?: number;
   createdAt: string;
 };
 
 type SupportForKit = ExportSupport & { pricing?: Pricing | null };
+type RelatedMediaKit = {
+  kitId: string;
+  sourceRequestId?: string | null;
+  status: 'draft' | 'ready' | 'sent' | 'archived';
+  totalAmount?: number | string | null;
+  currency?: string | null;
+  supportIds?: string[];
+  pdfUrl?: string | null;
+  pptUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: {
+    deliveryEvents?: Array<{ type: string; actor: string; channel: string; confirmedAt: string }>;
+    exports?: Record<string, { contentType?: string; size?: number; sha256?: string; uploadedAt?: string }>;
+  };
+};
 
 const labels: Record<WorkflowStatus, string> = {
-  request: 'REQUEST',
-  in_progress: 'IN PROGRESS',
-  done: 'DONE',
+  request: 'Pendiente',
+  in_progress: 'En proceso',
+  done: 'Entregada',
 };
+
+function formatRequestDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Fecha pendiente';
+  return date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 function toWorkflowStatus(status: string): WorkflowStatus {
   if (status === 'contactado' || status === 'in_progress') return 'in_progress';
@@ -65,20 +102,63 @@ export default function DashboardMediaKitWorkflow() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | WorkflowStatus>('all');
   const [selected, setSelected] = useState<LeadRequest | null>(null);
+  const [relatedMediaKit, setRelatedMediaKit] = useState<RelatedMediaKit | null>(null);
+  const [relatedMediaKitLoading, setRelatedMediaKitLoading] = useState(false);
   const [supports, setSupports] = useState<SupportForKit[]>([]);
   const [approvedPrices, setApprovedPrices] = useState<Record<string, string>>({});
+  const [period, setPeriod] = useState<ProposalPeriod>({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
+  const [proposalAmount, setProposalAmount] = useState('');
+  const [proposalCurrency, setProposalCurrency] = useState<ProposalCurrency>('ARS');
   const [loading, setLoading] = useState(false);
   const [isFetchingLeads, setIsFetchingLeads] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [deliveryPrepared, setDeliveryPrepared] = useState<'share_sheet' | 'mailto_draft' | null>(null);
   const [toast, setToast] = useState('');
+  const initialLoadStarted = useRef(false);
 
   const notify = (m: string) => {
     setToast(m);
     window.setTimeout(() => setToast(''), 3000);
   };
 
+  useEffect(() => {
+    if (!selected) {
+      setRelatedMediaKit(null);
+      setRelatedMediaKitLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRelatedMediaKit(null);
+    setRelatedMediaKitLoading(true);
+    apiFetch(`/api/admin/mediakits/by-request/${encodeURIComponent(selected.requestId)}`)
+      .then(async (response) => {
+        const json = await response.json().catch(() => null);
+        if (response.status === 404) {
+          if (!cancelled) setRelatedMediaKit(null);
+          return;
+        }
+        if (!response.ok || json?.status !== 'success' || !json.data) {
+          throw new Error(json?.message || 'No se pudo consultar el Media Kit asociado.');
+        }
+        // Validate the persisted relation; the generated ID alone is not proof of association.
+        if (!cancelled) {
+          setRelatedMediaKit(json.data.sourceRequestId === selected.requestId ? json.data : null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRelatedMediaKit(null);
+          notify(error instanceof Error ? error.message : 'No se pudo consultar el Media Kit asociado.');
+        }
+      })
+      .finally(() => { if (!cancelled) setRelatedMediaKitLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected?.requestId]);
+
   const load = async () => {
     setIsFetchingLeads(true);
+    setLoadError('');
     try {
       const r = await apiFetch('/api/admin/requests');
       const j = await r.json();
@@ -95,18 +175,25 @@ export default function DashboardMediaKitWorkflow() {
           status: toWorkflowStatus(x.status),
           supportIds: x.supportIds || [],
           supportNames: x.supportNames || x.supportIds || [],
+          requestScope: x.requestScope ?? null,
+          tenantIds: Array.isArray(x.tenantIds) ? x.tenantIds : [],
+          pendingOwnershipCount: Number(x.pendingOwnershipCount || 0),
           createdAt: x.createdAt || new Date().toISOString(),
         }))
       );
     } catch (e: any) {
-      notify(e.message || 'Error al cargar solicitudes.');
+      const message = e.message || 'Error al cargar solicitudes.';
+      setLoadError(message);
+      notify(message);
     } finally {
       setIsFetchingLeads(false);
     }
   };
 
   useEffect(() => {
-    load();
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    void load();
   }, [navigate]);
 
   useEffect(() => {
@@ -154,12 +241,27 @@ export default function DashboardMediaKitWorkflow() {
     });
 
   const totalApprovedQuote = supports.reduce((sum, s) => sum + (Number(approvedPrices[s.canonical_id]) || 0), 0);
+  const periodInvalid = Boolean(period.fechaInicio && period.fechaFin && period.fechaFin < period.fechaInicio);
+  const durationInvalid = !isProposalDurationValid(period);
+  const proposalAmountInvalid = proposalCurrency !== 'Por definir' && Boolean(proposalAmount.trim()) &&
+    (!Number.isFinite(Number(proposalAmount)) || Number(proposalAmount) < 0);
+  const proposalPeriodLabel = [
+    period.fechaInicio || period.fechaFin ? [period.fechaInicio, period.fechaFin].filter(Boolean).join(' – ') : '',
+    formatProposalDuration(period),
+  ].filter(Boolean).join(' · ') || undefined;
 
   const persistMediaKit = async (status: 'draft' | 'ready' = 'draft') => {
+    if (selected?.pendingOwnershipCount) {
+      notify('La solicitud contiene soportes pendientes de ownership. No se puede cotizar ni entregar hasta conciliarlos.');
+      return false;
+    }
     if (!selected || !supports.length || !approvalsReady) {
       notify('Complete el precio de todos los soportes antes de guardar.');
       return false;
     }
+    if (periodInvalid) throw new Error('La fecha de finalización no puede ser anterior al inicio.');
+    if (durationInvalid && status === 'ready') throw new Error('Seleccioná una duración comercial estándar: 7, 15, 21 días o mensual.');
+    if (proposalAmountInvalid) throw new Error('El monto global debe ser un número válido igual o mayor que cero.');
     const kitId = `KIT-${selected.requestId}`;
     const r = await apiFetch('/api/admin/mediakits', {
       method: 'POST',
@@ -174,8 +276,20 @@ export default function DashboardMediaKitWorkflow() {
         clientPhone: selected.phone,
         supportIds: selected.supportIds,
         approvedPrices,
-        totalAmount: totalApprovedQuote,
-        currency: 'ARS',
+        totalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
+        currency: proposalCurrency,
+        metadata: {
+          proposalPeriod: {
+            fechaInicio: period.fechaInicio || null,
+            fechaFin: period.fechaFin || null,
+            duracionValor: period.duracionValor ? Number(period.duracionValor) : null,
+            duracionUnidad: period.duracionUnidad,
+          },
+          proposalAmount: {
+            amount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? null : Number(proposalAmount),
+            currency: proposalCurrency,
+          },
+        },
       }),
     });
     const j = await r.json().catch(() => null);
@@ -185,20 +299,44 @@ export default function DashboardMediaKitWorkflow() {
   };
 
   const changeStatus = async (lead: LeadRequest, next: WorkflowStatus) => {
+    if (lead.pendingOwnershipCount) {
+      notify('No se puede avanzar: la solicitud contiene soportes pendientes de ownership.');
+      return;
+    }
+    if (next === 'done' && !deliveryPrepared) {
+      notify('Prepará y persistí el PDF y el PPTX antes de confirmar la entrega.');
+      return;
+    }
     setBusy(true);
     try {
-      const persisted = next === 'request' ? 'pending' : next === 'in_progress' ? 'contactado' : 'enviado';
       if (next === 'done') {
         const saved = await persistMediaKit('ready');
         if (!saved) throw new Error('No pudimos guardar el Media Kit.');
+
+        const kitStatusResponse = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(`KIT-${lead.requestId}`)}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'sent', deliveryChannel: deliveryPrepared }),
+        });
+        const kitStatusResult = await kitStatusResponse.json().catch(() => null);
+        if (!kitStatusResponse.ok || kitStatusResult?.status !== 'success') {
+          throw new Error(kitStatusResult?.message || 'No pudimos registrar la entrega y actualizar la solicitud.');
+        }
+        setRelatedMediaKit(kitStatusResult.data);
+        setDeliveryPrepared(null);
+      } else {
+        const persisted = next === 'request' ? 'pending' : 'contactado';
+        const r = await apiFetch(`/api/admin/requests/${encodeURIComponent(lead.requestId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: persisted }),
+        });
+        const j = await r.json().catch(() => null);
+        if (!r.ok || j?.status !== 'success') {
+          throw new Error(j?.message || 'No pudimos actualizar el estado de la solicitud.');
+        }
       }
-      const r = await apiFetch(`/api/admin/requests/${encodeURIComponent(lead.requestId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: persisted }),
-      });
-      const j = await r.json().catch(() => null);
-      if (!r.ok || j?.status !== 'success') throw new Error(j?.message || 'No pudimos actualizar el estado.');
+
       await load();
       setSelected((x) => (x ? { ...x, status: next } : null));
       notify(`Solicitud ${labels[next]}`);
@@ -211,15 +349,25 @@ export default function DashboardMediaKitWorkflow() {
 
   const open = async (lead: LeadRequest) => {
     setSelected(lead);
+    setDeliveryPrepared(null);
     setSupports([]);
     setApprovedPrices({});
+    setPeriod({ fechaInicio: '', fechaFin: '', duracionValor: '', duracionUnidad: 'días' });
+    setProposalAmount('');
+    setProposalCurrency('ARS');
     setLoading(true);
     try {
-      const r = await apiFetch('/api/supports');
-      const j = await r.json();
-      if (!r.ok || j.status !== 'success') throw new Error('No pudimos cargar los datos del inventario.');
+      if (lead.pendingOwnershipCount) return;
+      const [inventoryResponse, pricingResponse] = await Promise.all([
+        apiFetch('/api/supports'),
+        apiFetch('/api/admin/support-pricing'),
+      ]);
+      const [inventoryJson, pricingJson] = await Promise.all([inventoryResponse.json(), pricingResponse.json()]);
+      if (!inventoryResponse.ok || inventoryJson.status !== 'success') throw new Error('No pudimos cargar los datos del inventario.');
+      if (!pricingResponse.ok || pricingJson.status !== 'success') throw new Error('No pudimos cargar las tarifas internas.');
       const ids = new Set(lead.supportIds);
-      const filtered = (j.data || [])
+      const pricingById = pricingJson.data || {};
+      const filtered = (inventoryJson.data || [])
         .filter((x: any) => ids.has(x.canonical_id))
         .map((x: any) => ({
           canonical_id: x.canonical_id,
@@ -229,7 +377,7 @@ export default function DashboardMediaKitWorkflow() {
           address: x.address,
           description: x.description,
           characteristics: x.characteristics,
-          pricing: x.pricing || null,
+          pricing: pricingById[x.canonical_id] || null,
         }));
       if (filtered.length !== lead.supportIds.length) {
         const loadedIds = new Set(filtered.map((support: SupportForKit) => support.canonical_id));
@@ -242,9 +390,25 @@ export default function DashboardMediaKitWorkflow() {
       });
       if (kitResponse.ok) {
         const kitJson = await kitResponse.json().catch(() => null);
+        const savedAmount = kitJson?.data?.metadata?.proposalAmount;
+        if (savedAmount && typeof savedAmount === 'object') {
+          setProposalAmount(savedAmount.amount == null ? '' : String(savedAmount.amount));
+          setProposalCurrency(savedAmount.currency === 'USD' || savedAmount.currency === 'Por definir' ? savedAmount.currency : 'ARS');
+        } else if (kitJson?.data) {
+          setProposalAmount(kitJson.data.totalAmount == null ? '' : String(kitJson.data.totalAmount));
+          setProposalCurrency(kitJson.data.currency === 'USD' || kitJson.data.currency === 'Por definir' ? kitJson.data.currency : 'ARS');
+        }
         const savedPrices = kitJson?.data?.approvedPrices;
         if (savedPrices && typeof savedPrices === 'object') {
           setApprovedPrices(Object.fromEntries(Object.entries(savedPrices).map(([key, value]) => [key, String(value)])));
+        }
+        const savedPeriod = kitJson?.data?.metadata?.proposalPeriod;
+        if (savedPeriod && typeof savedPeriod === 'object') {
+          setPeriod({
+            fechaInicio: typeof savedPeriod.fechaInicio === 'string' ? savedPeriod.fechaInicio : '',
+            fechaFin: typeof savedPeriod.fechaFin === 'string' ? savedPeriod.fechaFin : '',
+            ...normalizeProposalDuration(savedPeriod.duracionValor, savedPeriod.duracionUnidad),
+          });
         }
       }
     } catch (e: any) {
@@ -265,7 +429,7 @@ export default function DashboardMediaKitWorkflow() {
   };
 
   const lead = selected
-    ? { name: selected.clientName, email: selected.email, company: selected.company, phone: selected.phone }
+    ? { name: selected.clientName, email: selected.email, company: selected.company, phone: selected.phone, proposalPeriod: proposalPeriodLabel, proposalAmount: proposalCurrency === 'Por definir' || !proposalAmount.trim() ? '' : `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR', { maximumFractionDigits: 2 })}` }
     : null;
 
   const approvedCount = supports.filter((s) => {
@@ -273,15 +437,73 @@ export default function DashboardMediaKitWorkflow() {
     return Number.isFinite(v) && v > 0;
   }).length;
 
-  const exportSupports: ExportSupport[] = supports.map(
-    (s) => ({ ...s, approvedPriceWithTax: Number(approvedPrices[s.canonical_id] || 0) } as ExportSupport)
-  );
+  // Client-facing exports carry only the global commercial amount, never
+  // per-support values that could originate from the confidential base catalog.
+  const exportSupports: ExportSupport[] = supports.map((s) => ({
+    canonical_id: s.canonical_id,
+    name: s.name,
+    ciudad: s.ciudad,
+    tipo_soporte: s.tipo_soporte,
+    address: s.address,
+    description: s.description,
+    characteristics: s.characteristics,
+    imageUrl: s.imageUrl,
+    image_url: s.image_url,
+    imageUrls: s.imageUrls,
+    media: s.media,
+  } as ExportSupport));
+
+  const prepareDelivery = async () => {
+    if (!lead || !selected || !approvalsReady || selected.pendingOwnershipCount) return;
+    setBusy(true);
+    try {
+      const saved = await persistMediaKit('ready');
+      if (!saved) return;
+      const kitId = `KIT-${selected.requestId}`;
+      const pdf = await createMediaKitPdf(lead, exportSupports, selected.requestId);
+      const pptx = await createMediaKitPpt(lead, exportSupports, selected.requestId);
+      const upload = async (format: 'pdf' | 'pptx', blob: Blob) => {
+        const contentType = format === 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        const response = await apiFetch(`/api/admin/mediakits/${encodeURIComponent(kitId)}/exports/${format}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': contentType },
+          body: blob,
+        });
+        const result = await response.json().catch(() => null);
+        if (!response.ok || result?.status !== 'success') {
+          throw new Error(result?.message || `No pudimos guardar el archivo ${format.toUpperCase()}.`);
+        }
+      };
+      await upload('pdf', pdf);
+      await upload('pptx', pptx);
+
+      const relatedResponse = await apiFetch(`/api/admin/mediakits/by-request/${encodeURIComponent(selected.requestId)}`);
+      const relatedResult = await relatedResponse.json().catch(() => null);
+      if (relatedResponse.ok && relatedResult?.status === 'success') {
+        setRelatedMediaKit(relatedResult.data);
+      }
+
+      const result = await sendMediaKitToLead(lead, exportSupports, selected.requestId);
+      const channel = result === 'shared' ? 'share_sheet' : 'mailto_draft';
+      setDeliveryPrepared(channel);
+      notify(result === 'shared'
+        ? 'PDF y PPTX guardados en el Media Kit y preparados para compartir. Confirmá la entrega después de completar el envío.'
+        : 'PDF y PPTX guardados en el Media Kit y descargados; revisá el borrador de correo, adjuntá ambos archivos y envialo. Luego confirmá la entrega.');
+    } catch (e: any) {
+      notify(e.message || 'No pudimos preparar los materiales para la entrega.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   return (
     <DashboardShell>
       <div className="mx-auto max-w-7xl space-y-6 px-4 pb-12 sm:px-6 lg:px-8">
         {toast && (
-          <div role="status" aria-live="polite" className="fixed right-6 top-20 z-[4500] rounded-xl border border-white/10 bg-gray-950 px-4 py-3 text-xs font-semibold text-white shadow-xl">
+          <div role="status" aria-live="polite" className="fixed right-6 top-20 z-[4500] rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-xs font-semibold text-white shadow-xl">
             {toast}
           </div>
         )}
@@ -291,10 +513,10 @@ export default function DashboardMediaKitWorkflow() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Gestión Comercial
             </span>
-            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-gray-950 sm:text-3xl">Solicitudes de Media Kit</h1>
-            <p className="mt-1 text-xs text-gray-500 sm:text-sm">Flujo comercial: REQUEST → IN PROGRESS → DONE con cotización personalizada.</p>
+            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Solicitudes de Media Kit</h1>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">Flujo comercial: REQUEST → IN PROGRESS → DONE con cotización personalizada.</p>
           </div>
-          <button type="button" onClick={() => load().catch(() => notify('No pudimos actualizar la bandeja.'))} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 shadow-2xs transition hover:border-gray-300 hover:bg-gray-50">
+          <button type="button" onClick={() => load().catch(() => notify('No pudimos actualizar la bandeja.'))} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-800 shadow-2xs transition hover:border-slate-300 hover:bg-slate-50">
             <RefreshCw className={`h-3.5 w-3.5 ${isFetchingLeads ? 'animate-spin' : ''}`} /> Actualizar bandeja
           </button>
         </header>
@@ -313,13 +535,13 @@ export default function DashboardMediaKitWorkflow() {
               className={`rounded-2xl border p-4 text-left transition sm:p-5 ${
                 filter === key
                   ? color === 'gray'
-                    ? 'border-gray-950 bg-gray-950 text-white'
+                    ? 'border-slate-900 bg-slate-900 text-white'
                     : color === 'blue'
                       ? 'border-blue-700 bg-blue-700 text-white'
                       : color === 'amber'
-                        ? 'border-amber-600 bg-amber-600 text-white'
+                        ? 'border-amber-700 bg-amber-700 text-white'
                         : 'border-emerald-700 bg-emerald-700 text-white'
-                  : 'border-gray-200 bg-white text-gray-800 hover:border-gray-300'
+                  : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
               }`}
             >
               <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>
@@ -328,13 +550,13 @@ export default function DashboardMediaKitWorkflow() {
           ))}
         </div>
 
-        <section className="space-y-3 rounded-2xl border border-gray-200/90 bg-white p-4 shadow-2xs">
+        <section className="space-y-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-10 rounded-xl border-gray-200 pl-10 text-xs sm:text-sm" placeholder="Buscar por cliente, empresa, correo o código…" aria-label="Buscar solicitudes" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-10 rounded-xl border-slate-200 pl-10 text-xs sm:text-sm" placeholder="Buscar por cliente, empresa, correo o código…" aria-label="Buscar solicitudes" />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-            <span>Mostrando <strong className="font-bold text-gray-950">{visible.length}</strong> de <strong className="font-bold text-gray-950">{leads.length}</strong></span>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+            <span>Mostrando <strong className="font-bold text-slate-900">{visible.length}</strong> de <strong className="font-bold text-slate-900">{leads.length}</strong></span>
             {(searchQuery || filter !== 'all') && (
               <button type="button" onClick={() => { setSearchQuery(''); setFilter('all'); }} className="inline-flex items-center gap-1.5 font-bold text-red-600 hover:underline">
                 <FilterX className="h-3.5 w-3.5" /> Limpiar
@@ -343,97 +565,203 @@ export default function DashboardMediaKitWorkflow() {
           </div>
         </section>
 
-        <div className="space-y-3">
-          {isFetchingLeads && leads.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin" /> Cargando solicitudes…
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Tabla de solicitudes de Media Kit">
+          {isFetchingLeads && leads.length === 0 ? (
+            <div className="flex items-center gap-2 p-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando solicitudes…</div>
+          ) : loadError ? (
+            <div role="alert" className="flex flex-col items-center gap-3 p-10 text-center">
+              <p className="text-sm font-semibold text-slate-800">No pudimos cargar las solicitudes</p>
+              <p className="max-w-md text-xs text-slate-500">{loadError}</p>
+              <button type="button" onClick={() => void load()} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+              </button>
             </div>
-          )}
-          {!isFetchingLeads && visible.length === 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-              <Inbox className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-              No hay solicitudes para este filtro.
+          ) : !visible.length ? (
+            <div className="p-10 text-center text-sm text-slate-500"><Inbox className="mx-auto mb-2 h-8 w-8 text-slate-300" />{leads.length ? 'No hay solicitudes para este filtro.' : 'Todavía no hay solicitudes registradas.'}</div>
+          ) : (
+            <>
+            <div className="space-y-2 p-3 md:hidden" aria-label="Solicitudes en tarjetas">
+              {visible.map((lead) => (
+                <article key={lead.requestId} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-slate-500">{lead.requestId}</p>
+                      <h3 className="mt-0.5 truncate text-sm font-semibold text-slate-900">{lead.clientName}</h3>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">{lead.company}</p>
+                    </div>
+                    <StatusBadge status={labels[lead.status]} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs">
+                    <div><p className="text-slate-500">Soportes</p><p className="mt-0.5 font-medium text-slate-800">{lead.supportNames.length}</p></div>
+                    <div><p className="text-slate-500">Ingreso</p><p className="mt-0.5 font-medium text-slate-800">{formatRequestDate(lead.createdAt)}</p></div>
+                  </div>
+                  {lead.pendingOwnershipCount ? <p className="mt-2 text-[11px] font-medium text-amber-800">Ownership pendiente</p> : null}
+                  <button type="button" onClick={() => open(lead)} className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-600">Ver solicitud</button>
+                </article>
+              ))}
             </div>
+            <div className="hidden overflow-x-auto md:block">
+              <table aria-label="Tabla de solicitudes de Media Kit" className="w-full min-w-[760px] border-collapse text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-4 py-3">ID</th>
+                    <th scope="col" className="px-4 py-3">Cliente</th>
+                    <th scope="col" className="px-4 py-3">Campaña / empresa</th>
+                    <th scope="col" className="px-4 py-3">Media Kit</th>
+                    <th scope="col" className="px-4 py-3">Fecha solicitud</th>
+                    <th scope="col" className="px-4 py-3">Estado</th>
+                    <th scope="col" className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visible.map((lead) => (
+                    <tr key={lead.requestId} className="transition-colors hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-700">{lead.requestId}</td>
+                      <td className="px-4 py-3.5"><p className="max-w-[150px] truncate font-semibold text-slate-900">{lead.clientName}</p><p className="mt-0.5 max-w-[150px] truncate text-[10px] text-slate-500">{lead.email || 'Sin correo'}</p></td>
+                      <td className="px-4 py-3.5"><p className="max-w-[170px] truncate font-medium text-slate-800">{lead.company}</p><p className="mt-0.5 text-[10px] text-slate-500">{lead.supportNames.length} {lead.supportNames.length === 1 ? 'soporte' : 'soportes'}</p></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-slate-700">{lead.pendingOwnershipCount ? 'Ownership pendiente' : lead.supportNames.length ? 'Kit personalizado' : 'Pendiente'}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{formatRequestDate(lead.createdAt)}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5"><StatusBadge status={labels[lead.status]} /></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-right"><button type="button" onClick={() => open(lead)} className="inline-flex min-h-9 items-center rounded-md border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-600">Ver solicitud</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            </>
           )}
-          {visible.map((lead) => (
-            <button
-              key={lead.requestId}
-              type="button"
-              onClick={() => open(lead)}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-gray-300 hover:shadow-sm"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-950">{lead.clientName}</p>
-                <p className="truncate text-xs text-gray-500">{lead.company} · {lead.requestId}</p>
-              </div>
-              <StatusBadge status={labels[lead.status]} />
-            </button>
-          ))}
-        </div>
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500"><span>{visible.length} solicitudes visibles</span><span>Grupo Comunicarte · Gestión comercial</span></div>
+        </section>
 
         {selected && (
-          <div className="fixed inset-0 z-[4000] flex items-end justify-center bg-gray-950/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
-            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-gray-200 bg-white shadow-2xl sm:rounded-2xl">
-              <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+          <div className="fixed inset-0 z-[4000] flex justify-end bg-slate-900/35" role="dialog" aria-modal="true" aria-labelledby="mediakit-request-title">
+            <div className="h-full max-h-screen w-full max-w-[560px] overflow-y-auto border-l border-slate-200 bg-[#f8fafc] shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{labels[selected.status]}</p>
-                  <h2 className="text-base font-semibold text-gray-950">{selected.clientName}</h2>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{labels[selected.status]}</p>
+                  <h2 id="mediakit-request-title" className="text-base font-semibold text-slate-900">{selected.clientName}</h2>
                 </div>
-                <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Cerrar">
+                <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Cerrar">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="space-y-4 p-4">
-                <div className="grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
-                  <p><span className="font-semibold text-gray-800">Email:</span> {selected.email || '—'}</p>
-                  <p><span className="font-semibold text-gray-800">Tel:</span> {selected.phone || '—'}</p>
-                  <p className="sm:col-span-2"><span className="font-semibold text-gray-800">Empresa:</span> {selected.company}</p>
-                  {selected.message && <p className="sm:col-span-2"><span className="font-semibold text-gray-800">Mensaje:</span> {selected.message}</p>}
-                </div>
+              <div className="space-y-4 p-4 sm:p-5">
+                {Boolean(selected.pendingOwnershipCount) && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="font-semibold">Solicitud en cuarentena comercial</p>
+                  <p className="mt-1">{selected.pendingOwnershipCount} soporte(s) no tienen ownership conciliado. La solicitud se conserva para revisión, pero no se puede cotizar, exportar ni marcar como entregada hasta resolverlo.</p>
+                </div>}
+                <section aria-labelledby="commercial-client-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2"><Building2 className="h-4 w-4 text-slate-500"/><h3 id="commercial-client-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Cliente</h3></div>
+                  <p className="text-base font-semibold text-slate-900">{selected.clientName}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{selected.company || 'Empresa no informada'}</p>
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                    <a href={selected.email ? `mailto:${selected.email}` : undefined} className={`flex min-h-10 items-center gap-2 rounded-lg bg-slate-50 px-3 text-slate-700 ${selected.email ? 'hover:bg-slate-100' : 'pointer-events-none opacity-60'}`}><Mail className="h-3.5 w-3.5 shrink-0 text-slate-500"/><span className="min-w-0 truncate">{selected.email || 'Email no informado'}</span></a>
+                    <a href={selected.phone ? `tel:${selected.phone.replace(/[^+\d]/g, '')}` : undefined} className={`flex min-h-10 items-center gap-2 rounded-lg bg-slate-50 px-3 text-slate-700 ${selected.phone ? 'hover:bg-slate-100' : 'pointer-events-none opacity-60'}`}><Phone className="h-3.5 w-3.5 shrink-0 text-slate-500"/><span>{selected.phone || 'Teléfono no informado'}</span></a>
+                  </div>
+                  {selected.message && <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-600"><span className="font-semibold text-slate-800">Necesidad / mensaje:</span> {selected.message}</p>}
+                </section>
+
+                <section aria-labelledby="commercial-opportunity-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><BriefcaseBusiness className="h-4 w-4 text-slate-500"/><h3 id="commercial-opportunity-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Oportunidad comercial</h3></div><StatusBadge status={labels[selected.status]}/></div>
+                  <p className="font-semibold text-slate-900">Solicitud {selected.requestId}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                    <div><p className="text-slate-500">Ingreso</p><p className="mt-0.5 font-medium text-slate-800">{formatRequestDate(selected.createdAt)}</p></div>
+                    <div><p className="text-slate-500">Soportes solicitados</p><p className="mt-0.5 font-medium text-slate-800">{selected.supportIds.length}</p></div>
+                  </div>
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900">Esta solicitud funciona como registro de seguimiento. No hay un negocio/pipeline de CRM vinculado en los datos disponibles; no se inventa una etapa ni un importe de oportunidad.</p>
+                </section>
+
+                <section aria-labelledby="commercial-activity-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2"><CalendarClock className="h-4 w-4 text-slate-500"/><h3 id="commercial-activity-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Actividad registrada</h3></div>
+                  <ol className="space-y-3">
+                    <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700"><Inbox className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Solicitud recibida</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(selected.createdAt)} · {selected.requestId}</p></div></li>
+                    {relatedMediaKit && <li className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><FileText className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Media Kit actualizado</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(relatedMediaKit.updatedAt)} · {relatedMediaKit.kitId}</p></div></li>}
+                    {relatedMediaKit?.metadata?.deliveryEvents?.map((event, index) => <li key={`${event.confirmedAt}-${index}`} className="flex gap-3"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Mail className="h-3.5 w-3.5"/></span><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Entrega confirmada · Administrador global</p><p className="mt-0.5 text-[11px] text-slate-500">{formatRequestDate(event.confirmedAt)} · {event.channel === 'share_sheet' ? 'Compartir' : event.channel === 'mailto_draft' ? 'Correo manual' : 'Registro manual'}</p></div></li>)}
+                  </ol>
+                  <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] leading-4 text-slate-500">Se registran la solicitud, el Media Kit, las exportaciones persistidas y la confirmación de entrega. No se registran llamadas, reuniones o tareas.</p>
+                </section>
+
+                <section aria-labelledby="commercial-mediakit-heading" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-slate-500"/><h3 id="commercial-mediakit-heading" className="text-xs font-bold uppercase tracking-wide text-slate-600">Media Kit asociado</h3></div>{relatedMediaKit && <StatusBadge status={{draft:'DRAFT',ready:'DONE',sent:'ENVIADO',archived:'ARCHIVED'}[relatedMediaKit.status]} label={{draft:'Borrador',ready:'Listo',sent:'Enviado',archived:'Archivado'}[relatedMediaKit.status]}/>}</div>
+                  {relatedMediaKitLoading ? <p className="text-xs text-slate-500">Consultando documentos asociados…</p> : relatedMediaKit ? <>
+                    <p className="font-semibold text-slate-900">{relatedMediaKit.kitId}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-xs"><div><p className="text-slate-500">Soportes</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.supportIds?.length ?? 0}</p></div><div><p className="text-slate-500">Importe global</p><p className="mt-0.5 font-medium text-slate-800">{relatedMediaKit.totalAmount == null ? 'Sin definir' : `${relatedMediaKit.currency || 'ARS'} ${Number(relatedMediaKit.totalAmount).toLocaleString('es-AR')}`}</p></div></div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {relatedMediaKit.pdfUrl && /^(https?:\/\/|\/api\/admin\/mediakits\/)/i.test(relatedMediaKit.pdfUrl) && <a href={relatedMediaKit.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">PDF <ExternalLink className="h-3 w-3"/></a>}
+                      {relatedMediaKit.pptUrl && /^(https?:\/\/|\/api\/admin\/mediakits\/)/i.test(relatedMediaKit.pptUrl) && <a href={relatedMediaKit.pptUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">Presentación <ExternalLink className="h-3 w-3"/></a>}
+                    </div>
+                  </> : <p className="text-xs leading-5 text-slate-500">No hay un Media Kit vinculado mediante sourceRequestId. Podés preparar una cotización desde esta solicitud; no se asociarán documentos por coincidencia de nombres o códigos.</p>}
+                </section>
+
+                <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Monto global acordado</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs font-medium text-slate-600">Monto total<input type="number" min={0} step="0.01" value={proposalAmount} disabled={proposalCurrency === 'Por definir'} onChange={(e) => setProposalAmount(e.target.value)} placeholder={proposalCurrency === 'Por definir' ? 'Por definir' : 'Ingresá el monto acordado'} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:bg-slate-100" /></label>
+                    <label className="block text-xs font-medium text-slate-600">Moneda<select value={proposalCurrency} onChange={(e) => { const value = e.target.value as ProposalCurrency; setProposalCurrency(value); if (value === 'Por definir') setProposalAmount(''); }} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs"><option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option><option value="Por definir">Por definir</option></select></label>
+                  </div>
+                  {proposalAmountInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">El monto global debe ser un número válido igual o mayor que cero.</p>}
+                  <p className="mt-2 text-[10px] text-slate-500">El monto global es el acordado con el cliente; las tarifas base quedan como referencia interna.</p>
+                </section>
+                <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Tiempo de la propuesta</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs font-medium text-slate-600">Fecha de inicio<input type="date" value={period.fechaInicio} onChange={(e) => setPeriod((p) => ({ ...p, fechaInicio: e.target.value }))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs" /></label>
+                    <label className="block text-xs font-medium text-slate-600">Fecha de finalización<input type="date" min={period.fechaInicio || undefined} value={period.fechaFin} onChange={(e) => setPeriod((p) => ({ ...p, fechaFin: e.target.value }))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs" /></label>
+                    <label className="block text-xs font-medium text-slate-600 sm:col-span-2">Duración contratada<select value={proposalDurationOption(period)} onChange={(e) => setPeriod((p) => ({ ...p, ...proposalDurationFromOption(e.target.value) }))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs"><option value="">Seleccionar duración</option><option value="7:días">7 días</option><option value="15:días">15 días</option><option value="21:días">21 días</option><option value="1:meses">Mensual</option></select></label>
+                  </div>
+                  {periodInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">La fecha final no puede ser anterior a la inicial.</p>}
+                  {durationInvalid && <p role="alert" className="mt-2 text-xs font-medium text-red-700">Seleccioná 7, 15, 21 días o mensual. Los períodos históricos no estándar requieren revisión.</p>}
+                  <p className="mt-2 text-[10px] text-slate-500">Se guarda como metadato del Media Kit; no cambia la disponibilidad de los soportes.</p>
+                </section>
 
                 {loading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando soportes…</div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando soportes…</div>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Soportes ({supports.length})</p>
-                      <button type="button" onClick={applyBaseCatalogPrices} className="text-[11px] font-semibold text-gray-600 hover:text-gray-950">Aplicar tarifas base</button>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Soportes ({supports.length})</p>
+                      <button type="button" onClick={applyBaseCatalogPrices} className="text-[11px] font-semibold text-slate-600 hover:text-slate-900">Aplicar tarifas base</button>
                     </div>
                     {supports.map((s) => (
-                      <div key={s.canonical_id} className="rounded-lg border border-gray-100 bg-gray-50/60 p-3">
-                        <p className="text-xs font-semibold text-gray-950">{s.name}</p>
-                        <p className="text-[11px] text-gray-500">{s.ciudad} · {s.tipo_soporte}</p>
-                        <label className="mt-2 block text-[10px] font-medium text-gray-500">Precio aprobado</label>
+                      <div key={s.canonical_id} className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                        <p className="text-xs font-semibold text-slate-900">{s.name}</p>
+                        <p className="text-[11px] text-slate-500">{s.ciudad} · {s.tipo_soporte}</p>
+                        <label htmlFor={`approved-quote-${s.canonical_id}`} className="mt-2 block text-[10px] font-medium text-slate-700">Monto acordado con el cliente</label>
+                        <p className="text-[10px] leading-4 text-slate-500">Este importe se incluye en el Media Kit que se entrega.</p>
                         <input
+                          id={`approved-quote-${s.canonical_id}`}
                           type="number"
                           min={0}
                           value={approvedPrices[s.canonical_id] || ''}
                           onChange={(e) => setApprovedPrices((p) => ({ ...p, [s.canonical_id]: e.target.value }))}
-                          className="mt-1 h-8 w-full rounded-md border border-gray-200 px-2 text-xs outline-none focus:border-gray-900"
+                          className="mt-1 h-8 w-full rounded-md border border-slate-200 px-2 text-xs outline-none focus:border-slate-800"
                         />
-                        <p className="mt-1 text-[10px] text-gray-500">Base: {formatSupportCurrency(calculateSupportTotal(s.pricing))}</p>
+                        <p className="mt-1 text-[10px] text-slate-500">Tarifa base interna (solo referencia; no se exporta): {formatSupportCurrency(calculateSupportTotal(s.pricing))}</p>
                       </div>
                     ))}
-                    <p className="text-sm font-semibold text-gray-950">Total: {formatSupportCurrency(totalApprovedQuote)} · {approvedCount}/{supports.length} con precio</p>
+                    <p className="text-sm font-semibold text-slate-900">Total: {formatSupportCurrency(totalApprovedQuote)} · {approvedCount}/{supports.length} con precio</p>
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
                   {selected.status === 'request' && (
-                    <button type="button" disabled={busy} onClick={() => changeStatus(selected, 'in_progress')} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Marcar en proceso</button>
+                    <button type="button" disabled={busy || Boolean(selected.pendingOwnershipCount)} onClick={() => changeStatus(selected, 'in_progress')} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Marcar en proceso</button>
                   )}
-                  {selected.status === 'in_progress' && (
-                    <button type="button" disabled={busy || !approvalsReady} onClick={() => changeStatus(selected, 'done')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Completar y enviar</button>
+                  {selected.status === 'in_progress' && !deliveryPrepared && (
+                    <button type="button" disabled={busy || !approvalsReady || Boolean(selected.pendingOwnershipCount)} onClick={() => prepareDelivery()} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Preparar entrega</button>
                   )}
-                  <button type="button" disabled={busy || !approvalsReady} onClick={() => persistMediaKit('draft').catch((e) => notify(e.message))} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-50">
+                  {selected.status === 'in_progress' && deliveryPrepared && (
+                    <button type="button" disabled={busy} onClick={() => changeStatus(selected, 'done')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Confirmar entrega realizada</button>
+                  )}
+                  <button type="button" disabled={busy || !approvalsReady || Boolean(selected.pendingOwnershipCount)} onClick={() => persistMediaKit('draft').catch((e) => notify(e.message))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
                     <Save className="h-3.5 w-3.5" /> Guardar cotización
                   </button>
-                  {lead && approvalsReady && (
+                  {lead && approvalsReady && !selected.pendingOwnershipCount && (
                     <>
-                      <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await persistMediaKit('ready'); await downloadMediaKitPdf(lead, exportSupports, selected.requestId); notify('PDF listo'); } catch (e: any) { notify(e.message); } finally { setBusy(false); } }} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-50">
+                      <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await persistMediaKit('ready'); await downloadMediaKitPdf(lead, exportSupports, selected.requestId); notify('PDF listo'); } catch (e: any) { notify(e.message); } finally { setBusy(false); } }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
                         <Download className="h-3.5 w-3.5" /> PDF
                       </button>
-                      <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await persistMediaKit('ready'); await downloadMediaKitPpt(lead, exportSupports, selected.requestId); notify('PPT listo'); } catch (e: any) { notify(e.message); } finally { setBusy(false); } }} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-50">
+                      <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await persistMediaKit('ready'); await downloadMediaKitPpt(lead, exportSupports, selected.requestId); notify('PPT listo'); } catch (e: any) { notify(e.message); } finally { setBusy(false); } }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
                         <FileText className="h-3.5 w-3.5" /> PPT
                       </button>
                     </>

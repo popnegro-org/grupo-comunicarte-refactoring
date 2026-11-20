@@ -67,6 +67,8 @@ export interface SupportRouteData {
 
 export interface LocationRecord {
   canonical_id: string;
+  tenant_id?: string | null;
+  tenant_ownership_evidence?: string | null;
   name: string;
   ciudad: Plaza;
   tipo_soporte: TipoSoporte;
@@ -91,6 +93,8 @@ export interface LocationRecord {
 
 export interface MobileRoute {
   canonical_id: string;
+  tenant_id?: string | null;
+  tenant_ownership_evidence?: string | null;
   name: string;
   ciudad: Plaza;
   tipo_soporte: TipoSoporte;

@@ -50,7 +50,7 @@ export function LocationTab({
           <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <div className="flex items-center justify-between">
               <div className={labelClass}>Asistente de Coordenadas</div>
-              <span className="text-[10px] font-bold text-gray-400">Google Maps / Coords</span>
+              <span className="text-[10px] font-bold text-gray-600">Google Maps / Coords</span>
             </div>
             <p className="mt-1 text-xs text-gray-500">
               Pegá un enlace de Google Maps (que contenga{' '}

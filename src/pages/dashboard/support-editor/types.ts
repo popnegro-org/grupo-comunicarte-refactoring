@@ -5,6 +5,8 @@ export type EditorTab = 'general' | 'location' | 'content' | 'commercial';
 export type NumericFieldValue = number | '';
 
 export type FormState = {
+  tenant_id: string;
+  tenant_ownership_evidence: string;
   publicName: string;
   ciudad: Plaza;
   tipo_soporte: SupportType;
@@ -58,6 +60,8 @@ export type FormState = {
 };
 
 export const emptyForm: FormState = {
+  tenant_id: '',
+  tenant_ownership_evidence: '',
   publicName: '',
   ciudad: 'mendoza',
   tipo_soporte: 'tradicional',

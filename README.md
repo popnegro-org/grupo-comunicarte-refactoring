@@ -68,3 +68,7 @@ El endpoint `/api/health` informa `database: connected` cuando Neon responde cor
 El proyecto está configurado para generar el frontend estático y exponer el backend Express mediante `api/[...path].ts`. La rama de trabajo debe validarse en Preview antes de cualquier promoción a `main`.
 
 No se realizan merges ni publicaciones sobre `main` desde esta fase de refinamiento.
+
+## Preparación de nuevas integraciones
+
+Antes de conectar proveedores externos, seguir el contrato de seguridad, tenant, idempotencia, migraciones y QA documentado en [Guía de integraciones](docs/integrations/README.md). El archivo [.env.example](.env.example) enumera los nombres de variables requeridos; nunca debe contener credenciales reales.

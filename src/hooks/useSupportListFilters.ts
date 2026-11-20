@@ -24,6 +24,54 @@ export type SortOrder = 'asc' | 'desc';
  * Filter + sort state for the admin support catalog.
  * Keeps presentation components free of filter pipeline logic.
  */
+export type SupportListFilterCriteria = {
+  query: string;
+  plaza: string;
+  type: string;
+  availability: string;
+  active: string;
+  sortField: SortField;
+  sortOrder: SortOrder;
+};
+
+/** Pure filtering pipeline shared by the hook and deterministic unit tests. */
+export function filterAndSortSupports(
+  supports: SupportListItem[],
+  criteria: SupportListFilterCriteria,
+): SupportListItem[] {
+  const { query, plaza, type, availability, active, sortField, sortOrder } = criteria;
+  const q = query.trim().toLowerCase();
+  const filtered = supports.filter((item) => {
+    const matchQ =
+      !q ||
+      [item.name, item.canonical_id, item.ciudad, item.address].some((v) =>
+        String(v || '').toLowerCase().includes(q),
+      );
+    const matchPlaza = plaza === 'todas' || item.ciudad === plaza;
+    const matchType = type === 'todos' || item.tipo_soporte === type;
+    const matchAvailability = availability === 'todos' || item.disponibilidad === availability;
+    const matchActive =
+      active === 'todos' || (active === 'activos' ? item.active !== false : item.active === false);
+    return matchQ && matchPlaza && matchType && matchAvailability && matchActive;
+  });
+
+  return filtered.sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'name') {
+      comparison = (a.name || '').localeCompare(b.name || '');
+    } else if (sortField === 'ciudad') {
+      comparison = (a.ciudad || '').localeCompare(b.ciudad || '');
+    } else if (sortField === 'tipo_soporte') {
+      comparison = (a.tipo_soporte || '').localeCompare(b.tipo_soporte || '');
+    } else if (sortField === 'disponibilidad') {
+      comparison = (a.disponibilidad || '').localeCompare(b.disponibilidad || '');
+    } else if (sortField === 'price') {
+      comparison = calculateSupportTotal(a.pricing) - calculateSupportTotal(b.pricing);
+    }
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+}
+
 export function useSupportListFilters(supports: SupportListItem[]) {
   const [query, setQuery] = useState('');
   const [plaza, setPlaza] = useState('todas');
@@ -57,40 +105,19 @@ export function useSupportListFilters(supports: SupportListItem[]) {
     query || plaza !== 'todas' || type !== 'todos' || availability !== 'todos' || active !== 'todos',
   );
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = supports.filter((item) => {
-      const matchQ =
-        !q ||
-        [item.name, item.canonical_id, item.ciudad, item.address].some((v) =>
-          String(v || '')
-            .toLowerCase()
-            .includes(q),
-        );
-      const matchPlaza = plaza === 'todas' || item.ciudad === plaza;
-      const matchType = type === 'todos' || item.tipo_soporte === type;
-      const matchAvailability = availability === 'todos' || item.disponibilidad === availability;
-      const matchActive =
-        active === 'todos' || (active === 'activos' ? item.active !== false : item.active === false);
-      return matchQ && matchPlaza && matchType && matchAvailability && matchActive;
-    });
-
-    return filtered.sort((a, b) => {
-      let comparison = 0;
-      if (sortField === 'name') {
-        comparison = (a.name || '').localeCompare(b.name || '');
-      } else if (sortField === 'ciudad') {
-        comparison = (a.ciudad || '').localeCompare(b.ciudad || '');
-      } else if (sortField === 'tipo_soporte') {
-        comparison = (a.tipo_soporte || '').localeCompare(b.tipo_soporte || '');
-      } else if (sortField === 'disponibilidad') {
-        comparison = (a.disponibilidad || '').localeCompare(b.disponibilidad || '');
-      } else if (sortField === 'price') {
-        comparison = calculateSupportTotal(a.pricing) - calculateSupportTotal(b.pricing);
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  }, [supports, query, plaza, type, availability, active, sortField, sortOrder]);
+  const visible = useMemo(
+    () =>
+      filterAndSortSupports(supports, {
+        query,
+        plaza,
+        type,
+        availability,
+        active,
+        sortField,
+        sortOrder,
+      }),
+    [supports, query, plaza, type, availability, active, sortField, sortOrder],
+  );
 
   return {
     query,

@@ -84,7 +84,7 @@ body { font-family: var(--font-sans); color: var(--foreground); background-color
 }
 
 @utility text-eyebrow {
-  @apply text-[10px] font-semibold uppercase tracking-[0.16em] leading-[1.4] text-gray-500;
+  @apply text-[10px] font-semibold uppercase tracking-[0.16em] leading-[1.4] text-gray-700;
 }
 
 @utility text-field-label {
@@ -92,7 +92,7 @@ body { font-family: var(--font-sans); color: var(--foreground); background-color
 }
 
 @utility text-body {
-  @apply text-sm md:text-base text-gray-600 leading-[1.6];
+  @apply text-sm md:text-base text-gray-700 leading-[1.6];
 }
 
 @utility surface-card {

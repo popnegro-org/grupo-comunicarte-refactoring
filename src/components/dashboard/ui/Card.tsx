@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { cn } from './cn';
 
 export const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function Card({ className, ...props }, ref) {
-  return <div ref={ref} className={cn('rounded-xl border border-gray-200 bg-white shadow-none', className)} {...props} />;
+  return <div ref={ref} className={cn('rounded-xl border border-slate-200 bg-white shadow-none', className)} {...props} />;
 });
 
 export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -10,11 +10,11 @@ export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
 );
 
 export const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h2 className={cn('text-sm font-semibold leading-5 text-gray-950', className)} {...props} />
+  <h2 className={cn('text-sm font-semibold leading-5 text-slate-900', className)} {...props} />
 );
 
 export const CardDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn('text-sm leading-5 text-gray-500', className)} {...props} />
+  <p className={cn('text-sm leading-5 text-slate-500', className)} {...props} />
 );
 
 export const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

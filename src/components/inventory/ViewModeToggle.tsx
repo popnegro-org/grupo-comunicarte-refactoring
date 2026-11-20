@@ -12,7 +12,7 @@ interface ViewModeToggleProps {
 
 export const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onViewModeChange, className }) => (
   <div
-    role="radiogroup"
+    role="group"
     aria-label="Modo de visualización del inventario"
     className={cn('inline-flex items-center rounded-lg border border-gray-200 bg-white p-1 select-none', className)}
   >
@@ -23,11 +23,10 @@ export const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onView
       <button
         key={mode}
         type="button"
-        role="radio"
-        aria-checked={viewMode === mode}
+        aria-pressed={viewMode === mode}
         onClick={() => onViewModeChange(mode)}
         className={cn(
-          'flex min-h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20',
+          'flex min-h-11 items-center justify-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20',
           viewMode === mode ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-950'
         )}
       >
