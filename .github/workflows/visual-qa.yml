@@ -58,6 +58,9 @@ jobs:
 
       - name: Bootstrap missing baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == ''
+        # Playwright writes new snapshots but intentionally marks their first
+        # assertions as failed. The next full validation run must pass.
+        continue-on-error: true
         run: npx playwright test --update-snapshots=missing
 
       - name: Ensure committed visual snapshots were not overwritten
