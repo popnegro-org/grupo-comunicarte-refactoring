@@ -193,3 +193,41 @@ Proyecto `mute-math-07036388`, branch `br-muddy-cell-au64infb`:
 - No se modificaron `main`, Neon Production, Vercel Production, roles, grants, políticas ni datos de Production.
 
 **Decisión:** APTO PARA DEMO COMERCIAL CONTROLADA EN PREVIEW. **Merge y release siguen NO-GO** y requieren revisión humana y `HUMAN GATE: APRUEBO PR #90`.
+
+
+---
+
+## Cierre CI Candidate + Visual QA — 2026-11-20
+
+**Commit validado:** `0db2b7c07d3a60b4436d2e2be7b2a864ede1365b`  
+**Rama:** `pmv-validation-candidate`
+
+### Resultado final
+
+- [CI Candidate #44778488126](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44778488126): **PASS**.
+  - `validate`: PASS — `npm audit --omit=dev --audit-level=high`, lint/typecheck, unit tests, build y bundle budget.
+  - Authenticated Preview Smoke · Render Preview: PASS.
+  - QA Deployment E2E · Neon QA: PASS.
+  - Preview Deployment E2E · Neon Preview: PASS.
+  - Vercel Preview E2E · Neon Preview: PASS — preflight de branch/revisión, cuarentena, privacidad de precios y suite E2E autenticada.
+- [Visual QA #44778488141](https://github.com/popnegro-org/grupo-comunicarte-refactoring/actions/runs/44778488141): **PASS**.
+  - Build y servidor local: PASS.
+  - Bootstrap de snapshots faltantes: PASS.
+  - Snapshots comprometidos no sobrescritos: PASS.
+  - Playwright completo contra el baseline inicializado: PASS.
+  - Reporte Playwright cargado como artefacto.
+
+### Artefactos de evidencia
+
+- `visual-qa-report` — 2,995,438 bytes.
+- `qa-deployment-e2e-evidence` — 595,637 bytes.
+- `preview-deployment-e2e-evidence` — 581,994 bytes.
+- `vercel-preview-e2e-evidence` — 589,498 bytes.
+
+Los cuatro artefactos están cargados en GitHub Actions y no figuran expirados al cierre de la validación.
+
+### Incidencias
+
+No hubo fallos en CI Candidate ni Visual QA sobre este SHA. La ejecución push de CI Candidate fue cancelada por la concurrencia compartida entre eventos push y pull_request; la ejecución pull_request #44778488126 completó todos sus jobs y terminó PASS. La Visual QA de pull_request #44778488141 terminó PASS.
+
+**Estado:** validación automatizada del commit `0db2b7c` completa. No se modificaron snapshots, código de runtime, Neon Production ni Vercel Production. PR #90 continúa abierto y sin merge; la aceptación para integración permanece bajo HUMAN GATE.
