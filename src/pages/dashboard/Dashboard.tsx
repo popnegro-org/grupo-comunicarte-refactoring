@@ -65,7 +65,7 @@ function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: st
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">{eyebrow}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-600">{eyebrow}</p>
         <h2 className="mt-1 text-base font-semibold tracking-tight text-slate-900">{title}</h2>
       </div>
       {action}
@@ -127,7 +127,7 @@ export default function Dashboard() {
       <div className="mx-auto max-w-[1440px] space-y-8 pb-10">
         <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
               <span>Administración</span><span aria-hidden="true">/</span><span className="text-slate-600">Resumen</span>
             </div>
             <h1 className="mt-3 text-[28px] font-semibold tracking-[-.04em] text-slate-950">Panel de control</h1>
@@ -176,8 +176,8 @@ export default function Dashboard() {
                 })}
               </div>
               <div className="mt-7 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
-                <div><p className="text-[11px] text-slate-400">Tasa de disponibilidad</p><p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{availableRate}%</p></div>
-                <div><p className="text-[11px] text-slate-400">Tasa de ocupación</p><p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{reservedRate}%</p></div>
+                <div><p className="text-[11px] text-slate-600">Tasa de disponibilidad</p><p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{availableRate}%</p></div>
+                <div><p className="text-[11px] text-slate-600">Tasa de ocupación</p><p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{reservedRate}%</p></div>
               </div>
             </div>
 
@@ -186,18 +186,18 @@ export default function Dashboard() {
               <div className="mt-5 space-y-2">
                 <Link to="/dashboard/soportes/new" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-blue-50 text-blue-700"><Plus size={19}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Agregar soporte</span><span className="mt-0.5 block text-xs text-slate-500">Incorporar una nueva ubicación</span></span><ArrowUpRight size={16} className="text-slate-400 transition group-hover:text-blue-700"/>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Agregar soporte</span><span className="mt-0.5 block text-xs text-slate-500">Incorporar una nueva ubicación</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
                 </Link>
                 <Link to="/dashboard/solicitudes" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 text-slate-700"><FileText size={18}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Revisar solicitudes</span><span className="mt-0.5 block text-xs text-slate-500">Gestionar consultas de Media Kit</span></span><ArrowUpRight size={16} className="text-slate-400 transition group-hover:text-blue-700"/>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Revisar solicitudes</span><span className="mt-0.5 block text-xs text-slate-500">Gestionar consultas de Media Kit</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
                 </Link>
                 <Link to="/dashboard/mediakits/nuevo" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700"><FilePlus2 size={18}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Crear Media Kit</span><span className="mt-0.5 block text-xs text-slate-500">Preparar una propuesta comercial</span></span><ArrowUpRight size={16} className="text-slate-400 transition group-hover:text-blue-700"/>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Crear Media Kit</span><span className="mt-0.5 block text-xs text-slate-500">Preparar una propuesta comercial</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
                 </Link>
               </div>
-              <div className="mt-5 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-500"><Activity size={15} className="text-slate-400"/>Datos del sistema en tiempo de consulta</div>
+              <div className="mt-5 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-500"><Activity size={15} className="text-slate-600"/>Datos del sistema en tiempo de consulta</div>
             </div>
           </section>
 
@@ -222,12 +222,12 @@ export default function Dashboard() {
                 {recent.map((request, index) => <Link key={request.id || request.requestId || index} to="/dashboard/solicitudes" className="flex min-h-[62px] items-center gap-3 px-5 py-3 transition hover:bg-slate-50 sm:px-6">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600"><FileText size={16}/></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-slate-800">{request.requesterName || request.name || 'Solicitud'}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{request.requestId || request.email || 'Sin identificador'}</span></span>
-                  <span className="shrink-0 text-[11px] text-slate-400">{formatDate(request.createdAt || request.created_at || request.date)}</span>
+                  <span className="shrink-0 text-[11px] text-slate-600">{formatDate(request.createdAt || request.created_at || request.date)}</span>
                 </Link>)}
               </div> : <div className="px-5 pb-5 sm:px-6"><EmptyState title="No hay solicitudes recientes" description="Las nuevas solicitudes aparecerán aquí." action={<Link to="/dashboard/solicitudes" className="font-semibold text-slate-800 underline underline-offset-2">Ver solicitudes</Link>}/></div>}
             </div>
           </section>
-          <p className="flex items-center gap-2 text-[11px] text-slate-400"><TrendingUp size={13}/>Resumen operativo · Grupo Comunicarte OOH</p>
+          <p className="flex items-center gap-2 text-[11px] text-slate-600"><TrendingUp size={13}/>Resumen operativo · Grupo Comunicarte OOH</p>
         </>}
       </div>
     </DashboardShell>
