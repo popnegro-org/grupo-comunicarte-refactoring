@@ -52,21 +52,15 @@ export default function ComingSoon() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#061f3b]/95 via-[#062747]/75 to-[#062747]/25" />
         <div className="mx-auto grid min-h-[760px] max-w-[1440px] items-center gap-10 px-5 py-12 sm:px-8 lg:min-h-[720px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:gap-14 lg:px-12 lg:py-10">
           <div className="max-w-[660px] py-5 text-white lg:py-12">
-            <p className="mb-7 inline-flex items-center gap-2 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
-              Publicidad en vía pública
-            </p>
-            <h1 id="coming-soon-title" className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
-              Tu marca,
+            <h1 id="coming-soon-title" className="max-w-[650px] text-[clamp(2.7rem,5.8vw,5.4rem)] font-bold leading-[0.98] tracking-[-0.045em]">
+              Grupo Comunicarte
               <br />
-              en el lugar
-              <br />
-              <span className="text-[#12d49a]">indicado.</span>
+              <span className="text-[#12d49a]">OOH, DOOH y LED MÓVIL</span>
             </h1>
-            <p className="mt-7 max-w-[540px] text-lg leading-8 text-white/90 sm:text-xl sm:leading-9">
-              Estamos renovando nuestra plataforma para conectar marcas con espacios que generan impacto.
-            </p>
-            <div className="mt-8 h-1 w-24 bg-[#00b77c]" />
-            <p className="mt-7 max-w-[540px] text-base leading-7 text-white/85 sm:text-lg">
+            <h2 className="mt-7 max-w-[580px] text-xl font-semibold leading-snug text-white sm:text-2xl">
+              Publicidad exterior en Mendoza y Buenos Aires
+            </h2>
+            <p className="mt-6 max-w-[540px] text-base leading-7 text-white/85 sm:text-lg">
               Muy pronto vas a poder explorar nuestro inventario y planificar tu próxima campaña.
             </p>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#08294c] transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
