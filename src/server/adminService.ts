@@ -35,10 +35,10 @@ const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 const ADMIN_SECRET = process.env.JWT_SECRET || process.env.ADMIN_SECRET;
 const MAX_FEATURED_SUPPORTS = 9;
 
-const adminUser = ADMIN_USER;
+const adminUser = ADMIN_USER ?? '';
 const adminPassword = ADMIN_PASSWORD;
 const adminPasswordHash = ADMIN_PASSWORD_HASH;
-const adminSecret = ADMIN_SECRET;
+const adminSecret = ADMIN_SECRET ?? '';
 export const isAdminAuthConfigured = hasAdminAuthConfiguration({
   ADMIN_USER,
   ADMIN_PASSWORD,
