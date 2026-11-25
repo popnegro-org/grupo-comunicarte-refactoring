@@ -21,8 +21,8 @@ export default function Soportes() {
       index: '02',
       name: 'Pantallas LED',
       label: 'DOOH',
-      description: 'Soportes digitales de alta resolución en los puntos neurálgicos de mayor concentración comercial.',
-      features: ['Tecnología LED P4 y P6 de alta definición', 'Formatos dinámicos y rotativos', 'Contenidos flexibles y actualización en tiempo real', 'Ubicaciones premium en nudos viales y centros comerciales'],
+      description: 'Pantallas digitales ubicadas en puntos estratégicos de circulación y actividad comercial.',
+      features: ['Pantallas LED para comunicación digital', 'Formatos audiovisuales para campañas', 'Frecuencia y horarios según cada ficha técnica', 'Ubicaciones en Mendoza y su área metropolitana'],
       image: '/images/pantallas-led-mendoza.webp',
       imageAlt: 'Pantallas LED publicitarias en Mendoza',
       link: '/inventario?tipo=led',
@@ -32,8 +32,8 @@ export default function Soportes() {
       index: '03',
       name: 'Camión LED Móvil',
       label: 'LED Móvil',
-      description: 'Impacto en movimiento. Llevamos tu mensaje directamente a donde está tu audiencia.',
-      features: ['Pantallas LED laterales de 4×2 m', 'Rutas estratégicas programables', 'Activaciones de marca y eventos', 'Alta visibilidad a nivel peatonal y vehicular'],
+      description: 'Un recorrido por Gran Mendoza con tres pantallas digitales que reproducen un mismo contenido: dos laterales y una posterior.',
+      features: ['2 pantallas laterales de 4 × 2 m y 1 posterior de 2 × 2 m', 'Un único video proyectado en las tres pantallas', 'Spots de 10 segundos', 'Mínimo de 180 salidas diarias según ficha técnica'],
       image: '/images/led-movil-feature.webp',
       imageAlt: 'Camión con pantalla LED móvil',
       link: '/inventario?tipo=led_movil',
@@ -51,9 +51,9 @@ export default function Soportes() {
         actions={<Link to="/inventario" className={buttonStyles({ size: 'default' })}>Ver inventario <ArrowRight className="h-4 w-4" /></Link>}
       />
 
-      <section className="section-space bg-white">
+      <section className="bg-white py-12 md:py-16">
         <div className="page-container">
-          <div className="mb-10 max-w-2xl border-b border-gray-200 pb-6">
+          <div className="mb-6 max-w-2xl border-b border-gray-200 pb-5">
             <p className="text-eyebrow">Formatos disponibles</p>
             <h2 className="text-section-title mt-3">Una arquitectura simple de medios.</h2>
             <p className="text-body mt-3">Explorá cada formato y encontrá el soporte que mejor responde al alcance y contexto de tu campaña.</p>
@@ -62,7 +62,7 @@ export default function Soportes() {
           <div className="divide-y divide-gray-200 border-y border-gray-200">
             {soportes.map((soporte) => {
               return (
-                <article key={soporte.id} className="grid gap-5 py-8 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-8">
+                <article key={soporte.id} className="grid gap-4 py-6 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-7">
                   <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
                     <img src={soporte.image} alt={soporte.imageAlt} className="aspect-[16/9] w-full object-cover" loading="lazy" />
                     <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-800">{soporte.label}</span>
@@ -89,10 +89,6 @@ export default function Soportes() {
                 </article>
               );
             })}
-          </div>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link to="/inventario" className={buttonStyles({ size: "default" })}>Explorar inventario <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/contacto" className={buttonStyles({ variant: "outline", size: "default" })}>Hablar con ventas</Link>
           </div>
         </div>
       </section>
