@@ -49,6 +49,9 @@ test.describe('public header redesign', () => {
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: 'Menú de navegación' });
     await expect(dialog).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Grupo Comunicarte, inicio' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cerrar menú' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cerrar menú' })).toHaveAttribute('aria-expanded', 'true');
     const navigation = dialog.getByRole('navigation', { name: 'Navegación principal' });
     await expect(navigation.getByRole('link', { name: 'Inicio' })).toHaveCount(0);
     await expect(navigation.getByRole('link', { name: 'Contacto' })).toHaveCount(0);
