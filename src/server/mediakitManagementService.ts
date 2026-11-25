@@ -1,4 +1,5 @@
 import { pool, isDatabaseConfigured } from '../db/index.ts';
+import { validateMediaKitFinancials } from './mediakitValidation';
 
 
 export type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
@@ -124,12 +125,19 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     }
   }
 
-  const approvedPrices = Object.fromEntries(
-    Object.entries(input.approvedPrices || {}).map(([key, value]) => [key, String(value)])
-  );
   const status = normalizeStatus(input.status);
+  if (input.status === 'sent') {
+    throw new Error('La entrega de un Media Kit solo puede confirmarse después de persistir sus archivos PDF y PPTX.');
+  }
+  const financials = validateMediaKitFinancials({
+    supportIds,
+    approvedPrices: input.approvedPrices,
+    totalAmount: input.totalAmount,
+    currency: input.currency,
+    status,
+  });
+  const { approvedPrices, totalAmount, currency } = financials;
   const kitId = input.kitId?.trim() || makeKitId();
-  const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
 
   await ensureSchemaReady();
   const client = await pool.connect();
@@ -171,7 +179,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         JSON.stringify(supportIds),
         JSON.stringify(approvedPrices),
         Number.isFinite(totalAmount as number) ? totalAmount : null,
-        input.currency || 'ARS',
+        currency,
         input.notes || null,
         JSON.stringify(input.metadata || {}),
         input.pdfUrl || null,
@@ -287,6 +295,17 @@ export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
     throw new Error('Estado de Media Kit inválido.');
   }
+  if (status === 'sent') {
+    const files = await pool.query(
+      'SELECT pdf_url, ppt_url FROM mediakits WHERE kit_id = $1 LIMIT 1',
+      [kitId],
+    );
+    if (!files.rows[0]) return null;
+    if (!files.rows[0].pdf_url || !files.rows[0].ppt_url) {
+      throw new Error('No se puede confirmar la entrega sin los archivos PDF y PPTX persistidos.');
+    }
+  }
+
   const result = await pool.query(
     `UPDATE mediakits SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
      RETURNING kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
