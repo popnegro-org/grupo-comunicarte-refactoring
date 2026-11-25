@@ -1,17 +1,51 @@
-import { useEffect } from 'react';
-import { ArrowUpRight, CheckCircle2, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { ArrowUpRight, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/542615830208';
 const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
 
-const inquiryFields = [
-  { label: 'Nombre y apellido', placeholder: 'Tu nombre y apellido', type: 'text' },
-  { label: 'Empresa', placeholder: 'Nombre de tu empresa', type: 'text' },
-  { label: 'Email', placeholder: 'tu@email.com', type: 'email' },
-  { label: 'Teléfono', placeholder: 'Tu teléfono', type: 'tel' },
-];
-
 export default function ComingSoon() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    setIsSubmitting(true);
+    setFormMessage(null);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          company: formData.get('company'),
+          email: formData.get('email'),
+          phone: formData.get('phone'),
+          message: formData.get('message'),
+          website: formData.get('website'),
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'No pudimos enviar tu consulta. Probá nuevamente.');
+      }
+
+      form.reset();
+      setFormMessage({ type: 'success', text: result.message || 'Tu consulta fue enviada.' });
+    } catch (error) {
+      setFormMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Ocurrió un error al enviar tu consulta.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const previousTitle = document.title;
     const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
@@ -70,25 +104,40 @@ export default function ComingSoon() {
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
             </div>
 
-            <div className="space-y-3.5" aria-label="Vista previa del formulario de consulta">
-              {inquiryFields.map((field) => (
-                <label key={field.label} className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">{field.label}</span>
-                  <input type={field.type} placeholder={field.placeholder} disabled aria-label={field.label} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
-                </label>
-              ))}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Contanos sobre tu proyecto</span>
-                <textarea disabled rows={2} placeholder="Escribí un breve mensaje..." aria-label="Descripción del proyecto" className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Nombre y apellido <span aria-hidden="true">*</span></span>
+                <input name="name" type="text" autoComplete="name" required minLength={2} maxLength={120} placeholder="Tu nombre y apellido" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
-              <p className="flex items-start gap-2 text-[11px] leading-5 text-slate-500">
-                <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#009966]" />
-                Este formulario es una vista previa. No recopila ni envía datos.
-              </p>
-              <button type="button" disabled className="min-h-11 w-full cursor-not-allowed rounded-lg bg-[#009966]/55 px-4 py-3 text-sm font-bold text-white">
-                Formulario próximamente disponible
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Empresa</span>
+                <input name="company" type="text" autoComplete="organization" maxLength={160} placeholder="Nombre de tu empresa" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Email <span aria-hidden="true">*</span></span>
+                <input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="tu@email.com" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Teléfono</span>
+                <input name="phone" type="tel" autoComplete="tel" maxLength={50} placeholder="Tu teléfono" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Contanos sobre tu proyecto <span aria-hidden="true">*</span></span>
+                <textarea name="message" required minLength={10} maxLength={3000} rows={3} placeholder="Escribí un breve mensaje..." className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+              </label>
+              <div className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                <label htmlFor="contact-website">No completar este campo</label>
+                <input id="contact-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+              </div>
+              {formMessage && (
+                <p role={formMessage.type === 'error' ? 'alert' : 'status'} aria-live="polite" className={`text-xs leading-5 ${formMessage.type === 'success' ? 'text-[#007d57]' : 'text-red-600'}`}>
+                  {formMessage.text}
+                </p>
+              )}
+              <button type="submit" disabled={isSubmitting} className="min-h-11 w-full rounded-lg bg-[#009966] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#007d57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#009966] disabled:cursor-wait disabled:opacity-60">
+                {isSubmitting ? 'Enviando consulta…' : 'Enviar consulta'}
               </button>
-            </div>
+            </form>
             <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-600">
               ¿Necesitás contactarnos ahora? <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-[#007d57] underline underline-offset-2 hover:text-[#005f42]">{CONTACT_EMAIL}</a>
             </div>
