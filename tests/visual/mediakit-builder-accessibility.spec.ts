@@ -50,6 +50,19 @@ test('Media Kit builder: accessible controls, keyboard flow and mobile touch tar
   await expect(phone).toHaveAttribute('type', 'tel');
   await expect(search).toBeVisible();
 
+  const proposalPreview = page.getByRole('region', { name: 'Resumen para el cliente' });
+  await expect(proposalPreview).toBeVisible();
+  await expect(page.getByTestId('mediakit-preview-client')).toHaveText('Cliente sin definir');
+  await clientName.fill('Agencia Demo');
+  await company.fill('Marca Demo');
+  await page.getByLabel('Monto total').fill('125000');
+  await expect(page.getByTestId('mediakit-preview-client')).toHaveText('Agencia Demo');
+  await expect(proposalPreview).toContainText('Marca Demo');
+  await expect(page.getByTestId('mediakit-preview-investment')).toContainText('125.000');
+  await page.getByLabel('Fecha de inicio').fill('2026-12-01');
+  await page.getByLabel('Fecha de finalización').fill('2026-12-31');
+  await expect(page.getByTestId('mediakit-preview-period')).toContainText('dic');
+
   await search.fill('sin-coincidencias');
   await expect(page.getByRole('status').filter({ hasText: 'No encontramos soportes que coincidan con la búsqueda.' })).toBeVisible();
   await search.clear();
@@ -61,6 +74,7 @@ test('Media Kit builder: accessible controls, keyboard flow and mobile touch tar
   await expect(supportToggle).toHaveAttribute('aria-pressed', 'false');
   await supportToggle.click();
   await expect(supportToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('mediakit-preview-support-count')).toHaveText('1');
 
   const remove = page.getByRole('button', { name: 'Quitar Soporte Demo Accesible del Media Kit' });
   const removeBox = await remove.boundingBox();
