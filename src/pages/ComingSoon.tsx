@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { ArrowUpRight, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/542615830208';
@@ -46,22 +46,6 @@ export default function ComingSoon() {
     }
   };
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const previousDescription = description?.content;
-
-    document.title = 'Grupo Comunicarte | Próximamente';
-    if (description) {
-      description.content = 'Estamos renovando nuestro sitio para conectar marcas con espacios de publicidad exterior que generan impacto.';
-    }
-
-    return () => {
-      document.title = previousTitle;
-      if (description && previousDescription !== undefined) description.content = previousDescription;
-    };
-  }, []);
-
   return (
     <main className="min-h-screen bg-white text-[#09284b]" aria-labelledby="coming-soon-title">
       <header className="relative z-10 border-b border-slate-100 bg-white">
@@ -85,14 +69,16 @@ export default function ComingSoon() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#061f3b]/95 via-[#062747]/75 to-[#062747]/25" />
         <div className="mx-auto grid min-h-[760px] max-w-[1440px] items-center gap-10 px-5 py-12 sm:px-8 lg:min-h-[720px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:gap-14 lg:px-12 lg:py-10">
           <div className="max-w-[660px] py-5 text-white lg:py-12">
-            <h1 id="coming-soon-title" className="mb-7 inline-flex items-center gap-2 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
-              Grupo Comunicarte
-              <br />
+            <p className="mb-7 inline-flex flex-col gap-1 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
+              <span>Grupo Comunicarte</span>
               <span className="text-[#12d49a]">OOH, DOOH y LED MÓVIL</span>
-            </h1>
-            <h2 className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
+            </p>
+            <h1 id="coming-soon-title" className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
               Publicidad exterior en Mendoza y Buenos Aires
-            </h2>
+            </h1>
+            <p className="mt-6 max-w-[590px] text-base leading-7 text-white/85 sm:text-lg">
+              Conectamos marcas con audiencias a través de soportes urbanos tradicionales, pantallas digitales y formatos LED móviles. Consultá por alternativas para tu campaña.
+            </p>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#08294c] transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
               Hablemos de tu campaña <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </a>
@@ -144,19 +130,33 @@ export default function ComingSoon() {
         </div>
       </section>
 
-      <section aria-label="Nuestros diferenciales" className="mx-auto grid max-w-[1440px] gap-6 px-5 py-8 sm:grid-cols-3 sm:px-8 lg:px-12 lg:py-9">
-        <div className="flex items-center gap-4 border-b border-slate-200 pb-5 sm:border-b-0 sm:border-r sm:pb-0">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><MapPin aria-hidden="true" className="h-6 w-6" /></span>
-          <div><h3 className="font-bold">Cobertura estratégica</h3><p className="mt-1 text-xs text-slate-500">Ubicaciones con impacto</p></div>
+      <section aria-labelledby="solutions-title" className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
+        <div className="max-w-3xl">
+          <h2 id="solutions-title" className="text-2xl font-bold tracking-tight text-[#09284b] sm:text-3xl">Soluciones de publicidad exterior para marcas</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+            Desarrollamos propuestas de comunicación OOH y DOOH con cobertura comercial en Mendoza y Buenos Aires, Argentina.
+          </p>
         </div>
-        <div className="flex items-center gap-4 border-b border-slate-200 pb-5 sm:border-b-0 sm:border-r sm:pl-5 sm:pb-0">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><Monitor aria-hidden="true" className="h-6 w-6" /></span>
-          <div><h3 className="font-bold">Soportes urbanos</h3><p className="mt-1 text-xs text-slate-500">Tradicionales y digitales</p></div>
+        <div className="mt-8 grid gap-6 sm:grid-cols-3">
+          <article className="rounded-xl border border-slate-200 p-5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-[#007d57]"><MapPin aria-hidden="true" className="h-5 w-5" /></span>
+            <h3 className="mt-4 font-bold text-[#09284b]">Publicidad OOH</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Soportes urbanos y cartelería tradicional para comunicar marcas en espacios de circulación.</p>
+          </article>
+          <article className="rounded-xl border border-slate-200 p-5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-[#007d57]"><Monitor aria-hidden="true" className="h-5 w-5" /></span>
+            <h3 className="mt-4 font-bold text-[#09284b]">Publicidad DOOH</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Pantallas digitales y formatos LED para campañas de comunicación exterior.</p>
+          </article>
+          <article className="rounded-xl border border-slate-200 p-5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-[#007d57]"><Users aria-hidden="true" className="h-5 w-5" /></span>
+            <h3 className="mt-4 font-bold text-[#09284b]">LED móvil</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Formatos móviles para ampliar las posibilidades de presencia de una campaña.</p>
+          </article>
         </div>
-        <div className="flex items-center gap-4 sm:pl-5">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><Users aria-hidden="true" className="h-6 w-6" /></span>
-          <div><h3 className="font-bold">Acompañamiento comercial</h3><p className="mt-1 text-xs text-slate-500">De la idea a la campaña</p></div>
-        </div>
+        <p className="mt-8 text-sm leading-6 text-slate-600">
+          ¿Buscás publicidad exterior en Mendoza o Buenos Aires? Contactá al equipo comercial para conversar sobre objetivos, formatos y disponibilidad.
+        </p>
       </section>
 
       <footer className="bg-[#062747] px-5 py-6 text-white sm:px-8 lg:px-12">
