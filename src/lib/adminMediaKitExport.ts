@@ -1,4 +1,3 @@
-import pptxgen from 'pptxgenjs';
 export interface ExportSupport {
   canonical_id: string;
   name: string;
@@ -57,7 +56,9 @@ async function makePdf(lead:ExportLead,supports:ExportSupport[],_requestId:strin
   const chunks:Uint8Array[]=[];let total=0;const offsets=[0];const push=(v:string|Uint8Array)=>{const b=typeof v==='string'?enc.encode(v):v;chunks.push(b);total+=b.length;};push('%PDF-1.4\n');objs.forEach((o,i)=>{offsets[i+1]=total;push((i+1)+' 0 obj\n'+o.body+'\n');if(o.stream){push('stream\n');push(o.stream);push('\nendstream\n');}push('endobj\n');});const xref=total;push('xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n');for(let i=1;i<=objs.length;i++)push(String(offsets[i]).padStart(10,'0')+' 00000 n \n');push('trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');const out=new Uint8Array(total);let pos=0;chunks.forEach(c=>{out.set(c,pos);pos+=c.length;});return new Blob([out],{type:'application/pdf'});
 }
 async function makePpt(lead:ExportLead,supports:ExportSupport[],requestId:string):Promise<Blob>{
-  const {resolved,supportRasters}=await loadAssets(supports);const p=new pptxgen();p.layout='LAYOUT_WIDE';p.author='Grupo Comunicarte';p.company='Grupo Comunicarte';p.title='Media Kit '+requestId;p.theme={headFontFace:'Aptos Display',bodyFontFace:'Aptos'};
+  const {resolved,supportRasters}=await loadAssets(supports);
+  const { default: PptxGenJS } = await import('pptxgenjs');
+  const p=new PptxGenJS();p.layout='LAYOUT_WIDE';p.author='Grupo Comunicarte';p.company='Grupo Comunicarte';p.title='Media Kit '+requestId;p.theme={headFontFace:'Aptos Display',bodyFontFace:'Aptos'};
   const txt=(s:any,v:string,x:number,y:number,w:number,h:number,o:any={})=>s.addText(v,{x,y,w,h,fontFace:'Aptos',fontSize:o.size||9,bold:!!o.bold,color:o.color||'17243A',margin:0,fit:'shrink',valign:'mid',align:o.align||'left'});
   const box=(s:any,x:number,y:number,w:number,h:number,c:string,line?:string,round=false)=>s.addShape(round?p.ShapeType.roundRect:p.ShapeType.rect,{x,y,w,h,rectRadius:.1,fill:{color:c},line:{color:line||c,width:line?1:0}});
   const foot=(s:any,n:number,d=false)=>{txt(s,'GRUPO COMUNICARTE  /  MEDIA KIT',.58,7.12,4,.16,{size:5.5,bold:true,color:d?'AEB9C8':'8A96A5'});txt(s,String(n).padStart(2,'0'),12.35,7.08,.4,.2,{size:6,bold:true,color:'F46A24',align:'right'});};
