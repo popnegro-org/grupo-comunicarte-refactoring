@@ -1,8 +1,15 @@
 import { useEffect } from 'react';
-import { ArrowUpRight, Mail, MapPin } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Mail, MapPin, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/5492616706710';
 const CONTACT_EMAIL = 'ventas@grupocomunicarte.com.ar';
+
+const inquiryFields = [
+  { label: 'Nombre y apellido', placeholder: 'Tu nombre y apellido', type: 'text' },
+  { label: 'Empresa', placeholder: 'Nombre de tu empresa', type: 'text' },
+  { label: 'Email', placeholder: 'tu@email.com', type: 'email' },
+  { label: 'Teléfono', placeholder: 'Tu teléfono', type: 'tel' },
+];
 
 export default function ComingSoon() {
   useEffect(() => {
@@ -12,103 +19,125 @@ export default function ComingSoon() {
 
     document.title = 'Grupo Comunicarte | Próximamente';
     if (description) {
-      description.content =
-        'Estamos renovando nuestro sitio para mostrar nuevas formas de conectar marcas con personas en Mendoza, Buenos Aires y más allá.';
+      description.content = 'Estamos renovando nuestro sitio para conectar marcas con espacios de publicidad exterior que generan impacto.';
     }
 
     return () => {
       document.title = previousTitle;
-      if (description && previousDescription !== undefined) {
-        description.content = previousDescription;
-      }
+      if (description && previousDescription !== undefined) description.content = previousDescription;
     };
   }, []);
 
   return (
-    <main
-      className="relative flex min-h-screen flex-col overflow-hidden bg-neutral-950 text-white"
-      aria-labelledby="coming-soon-title"
-    >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-32 -top-40 h-[32rem] w-[32rem] rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="absolute -bottom-48 -left-32 h-[30rem] w-[30rem] rounded-full bg-white/[0.04] blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:64px_64px]" />
-      </div>
-
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-7 sm:px-10 lg:px-12">
-        <a href="/" aria-label="Grupo Comunicarte, inicio" className="inline-flex items-center">
-          <img
-            src="/brand/brand-light.svg"
-            alt="Grupo Comunicarte"
-            className="h-auto w-44 sm:w-52"
-          />
-        </a>
-        <span className="hidden items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white/55 sm:inline-flex">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          Estamos preparando algo nuevo
-        </span>
-      </header>
-
-      <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 pb-20 pt-12 sm:px-10 lg:px-12">
-        <div className="max-w-4xl">
-          <p className="mb-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300 sm:text-sm">
-            <span className="h-px w-10 bg-emerald-300" />
-            Grupo Comunicarte · Publicidad exterior
-          </p>
-
-          <h1
-            id="coming-soon-title"
-            className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl lg:text-8xl"
-          >
-            Tu marca,
-            <br />
-            <span className="text-white/60">en movimiento.</span>
-          </h1>
-
-          <p className="mt-8 max-w-xl text-lg leading-8 text-white/65 sm:text-xl">
-            Estamos renovando nuestro sitio para mostrarte nuevas formas de conectar
-            marcas con personas en Mendoza, Buenos Aires y más allá.
-          </p>
-
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-white px-7 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
-            >
-              Hablemos de tu campaña
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-            </a>
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-white/20 px-7 text-sm font-semibold text-white transition hover:border-white/50 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
-            >
-              <Mail aria-hidden="true" className="h-4 w-4" />
-              Escribinos por email
-            </a>
+    <main className="min-h-screen bg-white text-[#09284b]" aria-labelledby="coming-soon-title">
+      <header className="relative z-10 border-b border-slate-100 bg-white">
+        <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:px-12">
+          <a href="/" aria-label="Grupo Comunicarte, inicio" className="inline-flex items-center">
+            <img src="/brand/brand-dark.svg" alt="Grupo Comunicarte" className="h-auto w-48 sm:w-56" />
+          </a>
+          <div className="flex items-center gap-3">
+            <span className="hidden border-l border-slate-300 pl-5 text-sm font-medium tracking-[0.16em] text-[#009966] sm:inline-flex">OOH</span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#009966] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white sm:px-6 sm:text-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              Próximamente
+            </span>
           </div>
         </div>
+      </header>
 
-        <div className="mt-20 grid gap-6 border-t border-white/15 pt-7 sm:grid-cols-2 sm:items-end">
-          <div className="flex items-start gap-3 text-sm leading-6 text-white/55">
-            <MapPin aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
-            <span>9 de Julio 891 · Godoy Cruz, Mendoza, Argentina</span>
+      <section className="relative isolate overflow-hidden bg-[#08294c]">
+        <div className="absolute inset-0 -z-20">
+          <img src="/images/home.webp" alt="" className="h-full w-full object-cover object-center" />
+        </div>
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#061f3b]/95 via-[#062747]/75 to-[#062747]/25" />
+        <div className="mx-auto grid min-h-[760px] max-w-[1440px] items-center gap-10 px-5 py-12 sm:px-8 lg:min-h-[720px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:gap-14 lg:px-12 lg:py-10">
+          <div className="max-w-[660px] py-5 text-white lg:py-12">
+            <p className="mb-7 inline-flex items-center gap-2 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
+              Publicidad en vía pública
+            </p>
+            <h1 id="coming-soon-title" className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
+              Tu marca,
+              <br />
+              en el lugar
+              <br />
+              <span className="text-[#12d49a]">indicado.</span>
+            </h1>
+            <p className="mt-7 max-w-[540px] text-lg leading-8 text-white/90 sm:text-xl sm:leading-9">
+              Estamos renovando nuestra plataforma para conectar marcas con espacios que generan impacto.
+            </p>
+            <div className="mt-8 h-1 w-24 bg-[#00b77c]" />
+            <p className="mt-7 max-w-[540px] text-base leading-7 text-white/85 sm:text-lg">
+              Muy pronto vas a poder explorar nuestro inventario y planificar tu próxima campaña.
+            </p>
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#08294c] transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              Hablemos de tu campaña <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            </a>
           </div>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="inline-flex items-center gap-2 text-sm text-white/65 transition hover:text-white sm:justify-self-end"
-          >
-            {CONTACT_EMAIL}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-          </a>
+
+          <aside className="w-full rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7" aria-labelledby="inquiry-title">
+            <div className="mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
+              <h2 id="inquiry-title" className="mt-2 text-3xl font-bold leading-[1.05] tracking-[-0.035em] sm:text-[2.15rem]">
+                Hablemos de tu próxima campaña
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">Dejanos tus datos. Estamos preparando este canal para recibir consultas.</p>
+            </div>
+
+            <div className="space-y-3.5" aria-label="Vista previa del formulario de consulta">
+              {inquiryFields.map((field) => (
+                <label key={field.label} className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">{field.label}</span>
+                  <input type={field.type} placeholder={field.placeholder} disabled aria-label={field.label} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
+                </label>
+              ))}
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">¿Qué estás buscando?</span>
+                <select disabled defaultValue="" aria-label="Tipo de consulta" className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 disabled:cursor-not-allowed">
+                  <option value="">Seleccioná una opción</option>
+                  <option>Publicidad tradicional</option>
+                  <option>Pantallas LED</option>
+                  <option>Planificación de campaña</option>
+                  <option>Otro proyecto</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Contanos sobre tu proyecto</span>
+                <textarea disabled rows={2} placeholder="Escribí un breve mensaje..." aria-label="Descripción del proyecto" className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
+              </label>
+              <p className="flex items-start gap-2 text-[11px] leading-5 text-slate-500">
+                <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#009966]" />
+                Este formulario es una vista previa. No recopila ni envía datos.
+              </p>
+              <button type="button" disabled className="min-h-11 w-full cursor-not-allowed rounded-lg bg-[#009966]/55 px-4 py-3 text-sm font-bold text-white">
+                Formulario próximamente disponible
+              </button>
+            </div>
+            <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-600">
+              ¿Necesitás contactarnos ahora? <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-[#007d57] underline underline-offset-2 hover:text-[#005f42]">{CONTACT_EMAIL}</a>
+            </div>
+          </aside>
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-white/10 px-6 py-5 sm:px-10 lg:px-12">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} Grupo Comunicarte</span>
-          <span>Publicidad en vía pública · Soportes tradicionales y digitales</span>
+      <section aria-label="Nuestros diferenciales" className="mx-auto grid max-w-[1440px] gap-6 px-5 py-8 sm:grid-cols-3 sm:px-8 lg:px-12 lg:py-9">
+        <div className="flex items-center gap-4 border-b border-slate-200 pb-5 sm:border-b-0 sm:border-r sm:pb-0">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><MapPin aria-hidden="true" className="h-6 w-6" /></span>
+          <div><h3 className="font-bold">Cobertura estratégica</h3><p className="mt-1 text-xs text-slate-500">Ubicaciones con impacto</p></div>
+        </div>
+        <div className="flex items-center gap-4 border-b border-slate-200 pb-5 sm:border-b-0 sm:border-r sm:pl-5 sm:pb-0">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><Monitor aria-hidden="true" className="h-6 w-6" /></span>
+          <div><h3 className="font-bold">Soportes urbanos</h3><p className="mt-1 text-xs text-slate-500">Tradicionales y digitales</p></div>
+        </div>
+        <div className="flex items-center gap-4 sm:pl-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#007d57]"><Users aria-hidden="true" className="h-6 w-6" /></span>
+          <div><h3 className="font-bold">Acompañamiento comercial</h3><p className="mt-1 text-xs text-slate-500">De la idea a la campaña</p></div>
+        </div>
+      </section>
+
+      <footer className="bg-[#062747] px-5 py-6 text-white sm:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-3 text-xs text-white/75 sm:flex-row sm:items-center sm:justify-between">
+          <span>© {new Date().getFullYear()} Grupo Comunicarte · Mendoza, Argentina</span>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-white"><Mail aria-hidden="true" className="h-3.5 w-3.5" />{CONTACT_EMAIL}</a>
         </div>
       </footer>
     </main>
