@@ -60,7 +60,7 @@ CONTACT_FROM="Grupo Comunicarte <contacto@grupocomunicarte.com.ar>"
 - Las respuestas del correo se dirigen al email ingresado por el visitante (`Reply-To`).
 - El formulario usa `POST /api/contact`, validación server-side y honeypot. El límite de 5 envíos por IP cada 15 minutos es una protección best-effort por instancia serverless, no un rate limit distribuido.
 - No se almacenan consultas en Neon.
-- Publicar en Cloudflare los registros exactos que Resend genere para el dominio raíz y su return-path (`send.grupocomunicarte.com.ar`). No reemplazar ni borrar los MX actuales del dominio raíz: el correo entrante existente debe continuar funcionando.
+- La zona Cloudflare auditada ya contiene el TXT `resend._domainkey.grupocomunicarte.com.ar` y el CNAME `send.grupocomunicarte.com.ar` → `send.forge.rmta.net` (DNS only), compatibles con DKIM y Resend Forge. No reemplazar esos registros ni los MX actuales del dominio raíz (`marduk.mx.amelu.org` / `ishtar.mx.amelu.org`). Confirmar en Resend Dashboard que el dominio figure como verificado antes de enviar.
 
 No publicar las claves en el repositorio ni en el frontend. Verificar el dominio y configurar el remitente en Resend antes de realizar pruebas de envío.
 
