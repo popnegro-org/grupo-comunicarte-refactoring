@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { ArrowUpRight, Mail, MapPin, Monitor, Users } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { ArrowUpRight, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/542615830208';
 const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
@@ -7,6 +7,14 @@ const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
 export default function ComingSoon() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showFloatingWhatsApp, setShowFloatingWhatsApp] = useState(false);
+
+  useEffect(() => {
+    const updateVisibility = () => setShowFloatingWhatsApp(window.scrollY > window.innerHeight * 0.6);
+    updateVisibility();
+    window.addEventListener('scroll', updateVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateVisibility);
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -185,6 +193,19 @@ export default function ComingSoon() {
           </div>
         </div>
       </footer>
+
+      {showFloatingWhatsApp && (
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Contactar a Grupo Comunicarte por WhatsApp"
+          title="Contactanos por WhatsApp"
+          className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition duration-200 hover:scale-105 hover:bg-[#1fbd5b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#009966] sm:bottom-7 sm:right-7 sm:h-16 sm:w-16"
+        >
+          <MessageCircle aria-hidden="true" className="h-7 w-7 sm:h-8 sm:w-8" />
+        </a>
+      )}
     </main>
   );
 }
