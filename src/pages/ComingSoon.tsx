@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { ArrowUpRight, CheckCircle2, Mail, MapPin, Monitor, Users } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
 
-const WHATSAPP_URL = 'https://wa.me/5492616706710';
+const WHATSAPP_URL = 'https://wa.me/542615830208';
 const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
 
 const inquiryFields = [
@@ -126,6 +126,17 @@ export default function ComingSoon() {
           <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-white"><Mail aria-hidden="true" className="h-3.5 w-3.5" />{CONTACT_EMAIL}</a>
         </div>
       </footer>
+
+      <a
+        href={WHATSAPP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Contactar a Grupo Comunicarte por WhatsApp"
+        title="Contactanos por WhatsApp"
+        className="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition hover:scale-105 hover:bg-[#1fbd5b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#009966] sm:bottom-7 sm:right-7 sm:h-16 sm:w-16"
+      >
+        <MessageCircle aria-hidden="true" className="h-7 w-7 sm:h-8 sm:w-8" />
+      </a>
     </main>
   );
 }
