@@ -1,7 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import { pool, isDatabaseConfigured } from '../db/index.ts';
+import { resolveMediaKitTenantId } from './tenantAccess.ts';
+import { validateMediaKitSourceRequestItems } from './mediakitSourceRequest.ts';
+import { MediaKitDomainError } from './mediakitErrors.ts';
+import { isProposalDurationValid, toLegacyMediaKitState } from '../lib/mediakitDuration.ts';
 
 
 export type MediaKitStatus = 'draft' | 'ready' | 'sent' | 'archived';
+export type MediaKitExportFormat = 'pdf' | 'pptx';
+export type MediaKitDeliveryChannel = 'share_sheet' | 'mailto_draft' | 'manual';
 
 export interface SaveMediaKitInput {
   kitId?: string;
@@ -23,6 +30,7 @@ export interface SaveMediaKitInput {
 
 export interface MediaKitRecord extends SaveMediaKitInput {
   kitId: string;
+  tenantId?: string | null;
   status: MediaKitStatus;
   createdAt: string;
   updatedAt: string;
@@ -33,75 +41,31 @@ let tableReady = false;
 async function ensureTables(): Promise<void> {
   if (!isDatabaseConfigured || tableReady) return;
 
-  // P1 persistence is initialized lazily on first management operation.
-  // This deliberately avoids adding DDL to the application cold-start path.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS mediakits (
-      id SERIAL PRIMARY KEY,
-      kit_id TEXT UNIQUE NOT NULL,
-      source_request_id TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      client_name TEXT NOT NULL,
-      client_email TEXT,
-      client_company TEXT,
-      client_phone TEXT,
-      support_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-      approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb,
-      total_amount NUMERIC,
-      currency TEXT NOT NULL DEFAULT 'ARS',
-      notes TEXT,
-      metadata JSONB,
-      pdf_url TEXT,
-      ppt_url TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS mediakit_items (
-      id SERIAL PRIMARY KEY,
-      kit_id TEXT NOT NULL,
-      support_id TEXT NOT NULL,
-      approved_price NUMERIC,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      metadata JSONB,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Existing databases may contain an older mediakits table created before
-    -- the management schema was introduced. Keep the runtime bootstrap
-    -- additive/idempotent so those databases are upgraded without dropping
-    -- existing data.
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS source_request_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_name TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_email TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_company TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_phone TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS support_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS total_amount NUMERIC;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'ARS';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS notes TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS pdf_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS ppt_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS support_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS approved_price NUMERIC;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_mediakits_kit_id ON mediakits(kit_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_status ON mediakits(status);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_source_request ON mediakits(source_request_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakit_items_kit_id ON mediakit_items(kit_id);
-  `);
+  // Schema changes belong to reviewed SQL migrations, never to HTTP requests.
+  const requiredColumns: Record<string, string[]> = {
+    mediakits: [
+      'id', 'kit_id', 'tenant_id', 'source_request_id', 'status', 'client_name', 'client_email',
+      'client_company', 'client_phone', 'support_ids', 'approved_prices', 'total_amount',
+      'currency', 'notes', 'metadata', 'pdf_url', 'ppt_url', 'created_at', 'updated_at',
+      'nombre', 'cliente_id', 'cliente_nombre', 'ciudad', 'screen_ids', 'estado', 'fecha',
+    ],
+    clientes: ['id', 'tenant_id', 'nombre', 'empresa', 'email', 'telefono', 'categoria', 'created_at'],
+    mediakit_items: ['id', 'kit_id', 'support_id', 'tenant_id', 'approved_price', 'sort_order', 'metadata', 'created_at', 'updated_at'],
+  };
+  const result = await pool.query(
+    `SELECT table_name, column_name
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = ANY($1::text[])`,
+    [Object.keys(requiredColumns)],
+  );
+  const available = new Set(result.rows.map((row) => `${row.table_name}.${row.column_name}`));
+  const missing = Object.entries(requiredColumns).flatMap(([table, columns]) =>
+    columns.filter((column) => !available.has(`${table}.${column}`)).map((column) => `${table}.${column}`),
+  );
+  if (missing.length > 0) {
+    throw new Error(`Falta aplicar la migración de Media Kits en esta base: ${missing.join(', ')}`);
+  }
   tableReady = true;
 }
 
@@ -116,6 +80,22 @@ function normalizeStatus(value: unknown): MediaKitStatus {
   return value === 'ready' || value === 'sent' || value === 'archived' ? value : 'draft';
 }
 
+function sanitizeMediaKitMetadata(value: unknown): Record<string, unknown> {
+  const metadata = value && typeof value === 'object' && !Array.isArray(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {};
+  const exports = metadata.exports;
+  if (exports && typeof exports === 'object' && !Array.isArray(exports)) {
+    metadata.exports = Object.fromEntries(Object.entries(exports as Record<string, unknown>).map(([format, asset]) => {
+      if (!asset || typeof asset !== 'object' || Array.isArray(asset)) return [format, asset];
+      const safeAsset = { ...(asset as Record<string, unknown>) };
+      delete safeAsset.storageKey;
+      return [format, safeAsset];
+    }));
+  }
+  return metadata;
+}
+
 function normalizeSupportIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return Array.from(new Set(value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
@@ -123,26 +103,54 @@ function normalizeSupportIds(value: unknown): string[] {
 
 export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRecord> {
   const clientName = String(input.clientName || '').trim();
-  if (clientName.length < 2) throw new Error('El nombre del cliente es obligatorio.');
+  if (clientName.length < 2) throw new MediaKitDomainError('El nombre del cliente es obligatorio.', 400);
 
   const supportIds = normalizeSupportIds(input.supportIds);
+  const status = normalizeStatus(input.status);
+  if (status === 'sent') {
+    throw new MediaKitDomainError(
+      'La entrega solo puede confirmarse después de persistir PDF y PPTX mediante el flujo de entrega.',
+      409,
+    );
+  }
+  const metadata = { ...(input.metadata || {}) };
+  delete metadata.exports;
+  delete metadata.deliveryEvents;
+  const proposalPeriod = input.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
+  if (status === 'ready' && !isProposalDurationValid({
+    duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
+    duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
+  })) {
+    throw new MediaKitDomainError('El Media Kit no puede marcarse como listo sin una duración estándar válida.', 409);
+  }
+  let tenantId: string | null = null;
+  const tenantBySupportId = new Map<string, string>();
+  const rowsForKitCity = new Map<string, string>();
 
   if (!isDatabaseConfigured) {
-    throw new Error('La persistencia de Media Kits requiere base de datos configurada.');
+    throw new MediaKitDomainError('La persistencia de Media Kits requiere base de datos configurada.', 503);
   }
 
   if (supportIds.length > 0) {
     const availability = await pool.query(
-      `SELECT canonical_id, disponibilidad, active
+      `SELECT canonical_id, tenant_id, disponibilidad, active, ciudad
        FROM supports
        WHERE canonical_id = ANY($1::text[])`,
       [supportIds],
     );
-    const rows = new Map<string, { disponibilidad: string | null; active: boolean | null }>(
-      availability.rows.map((row: any) => [String(row.canonical_id), { disponibilidad: row.disponibilidad, active: row.active }]),
+    const rows = new Map<string, { tenant_id: string | null; disponibilidad: string | null; active: boolean | null; ciudad: string | null }>(
+      availability.rows.map((row: any) => [String(row.canonical_id), { tenant_id: row.tenant_id, disponibilidad: row.disponibilidad, active: row.active, ciudad: row.ciudad ?? null }]),
     );
     const missing = supportIds.find((id) => !rows.has(id));
-    if (missing) throw new Error(`El soporte '${missing}' no existe en el catálogo.`);
+    if (missing) throw new MediaKitDomainError(`El soporte '${missing}' no existe en el catálogo.`, 404);
+    const unassigned = supportIds.find((id) => !rows.get(id)?.tenant_id);
+    if (unassigned) throw new MediaKitDomainError(`El soporte '${unassigned}' está pendiente de conciliación de ownership y no puede incluirse en un Media Kit.`, 409);
+    const tenantIds = supportIds.map((id) => String(rows.get(id)!.tenant_id));
+    for (const id of supportIds) {
+      tenantBySupportId.set(id, String(rows.get(id)!.tenant_id));
+      if (rows.get(id)?.ciudad) rowsForKitCity.set(id, String(rows.get(id)!.ciudad));
+    }
+    tenantId = resolveMediaKitTenantId(tenantIds);
     const unavailable = supportIds.find((id) => {
       const row = rows.get(id)!;
       return row.active === false || row.disponibilidad !== 'disponible';
@@ -150,28 +158,133 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     if (unavailable) {
       const row = rows.get(unavailable)!;
       const state = row.active === false ? 'inactivo' : String(row.disponibilidad || 'sin disponibilidad');
-      throw new Error(`El soporte '${unavailable}' no está disponible (estado: ${state}) y no puede incluirse en el Media Kit.`);
+      throw new MediaKitDomainError(`El soporte '${unavailable}' no está disponible (estado: ${state}) y no puede incluirse en el Media Kit.`, 409);
     }
   }
 
-  const approvedPrices = Object.fromEntries(
-    Object.entries(input.approvedPrices || {}).map(([key, value]) => [key, String(value)])
-  );
-  const status = normalizeStatus(input.status);
+  const rawApprovedPrices = input.approvedPrices ?? {};
+  if (!rawApprovedPrices || typeof rawApprovedPrices !== 'object' || Array.isArray(rawApprovedPrices)) {
+    throw new MediaKitDomainError('Los precios aprobados deben tener un formato válido.', 400);
+  }
+  const approvedPrices: Record<string, string> = {};
+  for (const [supportId, rawPrice] of Object.entries(rawApprovedPrices)) {
+    if (rawPrice === '') continue;
+    if (!supportIds.includes(supportId)) {
+      throw new MediaKitDomainError(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`, 400);
+    }
+    const price = Number(rawPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      throw new MediaKitDomainError(`El precio aprobado para '${supportId}' debe ser un número válido mayor o igual a cero.`, 400);
+    }
+    approvedPrices[supportId] = String(price);
+  }
+
+  const currency = String(input.currency || 'ARS').trim().toUpperCase();
+  if (!['ARS', 'USD', 'POR DEFINIR'].includes(currency)) {
+    throw new MediaKitDomainError('La moneda del Media Kit no está permitida.', 400);
+  }
+
+  if (status === 'ready' && supportIds.length === 0) {
+    throw new MediaKitDomainError('Un Media Kit listo debe incluir al menos un soporte conciliado.', 400);
+  }
   const kitId = input.kitId?.trim() || makeKitId();
   const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
+  if (totalAmount !== null && (!Number.isFinite(totalAmount) || totalAmount < 0)) {
+    throw new MediaKitDomainError('El monto comercial global debe ser un número válido mayor o igual a cero.', 400);
+  }
+  if (currency === 'POR DEFINIR' && totalAmount !== null) {
+    throw new MediaKitDomainError('No se puede asignar un monto global cuando la moneda está definida como Por definir.', 400);
+  }
 
   await ensureTables();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
+    if (supportIds.length > 0) {
+      const locked = await client.query(
+        `SELECT canonical_id, tenant_id, disponibilidad, active, ciudad
+           FROM supports
+          WHERE canonical_id = ANY($1::text[])
+          FOR UPDATE`,
+        [supportIds],
+      );
+      if (locked.rows.length !== supportIds.length) {
+        throw new MediaKitDomainError('El inventario cambió mientras se guardaba el Media Kit. Actualizá e intentá nuevamente.', 409);
+      }
+      const pending = locked.rows.find((row) => !row.tenant_id);
+      if (pending) throw new MediaKitDomainError(`El soporte '${pending.canonical_id}' quedó sin ownership y no puede incluirse en un Media Kit.`, 409);
+      const unavailable = locked.rows.find((row) => row.active !== true || row.disponibilidad !== 'disponible');
+      if (unavailable) throw new MediaKitDomainError(`El soporte '${unavailable.canonical_id}' dejó de estar disponible.`, 409);
+      const lockedTenantIds = locked.rows.map((row) => String(row.tenant_id));
+      tenantBySupportId.clear();
+      for (const row of locked.rows) {
+        tenantBySupportId.set(String(row.canonical_id), String(row.tenant_id));
+        if (row.ciudad) rowsForKitCity.set(String(row.canonical_id), String(row.ciudad));
+      }
+      tenantId = resolveMediaKitTenantId(lockedTenantIds);
+    }
+    if (input.sourceRequestId) {
+      const sourceItems = await client.query(
+        `SELECT ri.support_id, ri.tenant_id AS item_tenant_id, s.tenant_id AS support_tenant_id
+           FROM mediakit_requests r
+           LEFT JOIN mediakit_request_items ri ON ri.request_id = r.request_id
+           LEFT JOIN supports s ON s.canonical_id = ri.support_id
+          WHERE r.request_id = $1
+          ORDER BY ri.support_id`,
+        [input.sourceRequestId],
+      );
+      validateMediaKitSourceRequestItems(sourceItems.rows, supportIds);
+    }
+
+    const clientEmail = String(input.clientEmail || '').trim();
+    const clientCompany = String(input.clientCompany || '').trim() || clientName;
+    const clientPhone = String(input.clientPhone || '').trim();
+    const existingKit = await client.query(
+      `SELECT m.cliente_id
+         FROM mediakits m
+         JOIN clientes c ON c.id = m.cliente_id
+        WHERE m.kit_id = $1
+          AND c.tenant_id IS NOT DISTINCT FROM $2
+        FOR UPDATE OF m, c`,
+      [kitId, tenantId],
+    );
+    const existingClientId = existingKit.rows[0]?.cliente_id as string | undefined;
+    const customer = existingClientId
+      ? { rows: [{ id: existingClientId }] }
+      : clientEmail
+        ? await client.query(
+            `SELECT id
+               FROM clientes
+              WHERE LOWER(email) = LOWER($1)
+                AND tenant_id IS NOT DISTINCT FROM $2
+              ORDER BY created_at ASC
+              LIMIT 1
+              FOR UPDATE`,
+            [clientEmail, tenantId],
+          )
+        : { rows: [] as Array<{ id: string }> };
+    let clientId = customer.rows[0]?.id as string | undefined;
+    if (!clientId) {
+      clientId = 'cl-' + randomUUID();
+      await client.query(
+        'INSERT INTO clientes (id, tenant_id, nombre, empresa, email, telefono, categoria) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [clientId, tenantId, clientName, clientCompany, clientEmail, clientPhone, 'Media Kit'],
+      );
+    }
+    const cityValues = [...new Set(
+      supportIds.map((id) => rowsForKitCity.get(id)).filter((value): value is string => Boolean(value)),
+    )];
+    const legacyCity = cityValues.length === 0 ? 'Sin especificar' : cityValues.length === 1 ? cityValues[0] : 'Varias ciudades';
+    const proposalStart = (input.metadata?.proposalPeriod as { fechaInicio?: unknown } | undefined)?.fechaInicio;
+    const legacyDate = typeof proposalStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(proposalStart) ? proposalStart : new Date().toISOString().slice(0, 10);
     const result = await client.query(
       `INSERT INTO mediakits
-        (kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
-         support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11,$12,$13::jsonb,$14,$15,CURRENT_TIMESTAMP)
+        (id, kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+         support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url, updated_at, nombre, cliente_id, cliente_nombre, ciudad, screen_ids, estado, fecha)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16,$17,CURRENT_TIMESTAMP,$18,$19,$20,$21,$22,$23,$24)
        ON CONFLICT (kit_id) DO UPDATE SET
+         tenant_id = EXCLUDED.tenant_id,
          source_request_id = EXCLUDED.source_request_id,
          status = EXCLUDED.status,
          client_name = EXCLUDED.client_name,
@@ -183,15 +296,24 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
          total_amount = EXCLUDED.total_amount,
          currency = EXCLUDED.currency,
          notes = EXCLUDED.notes,
-         metadata = EXCLUDED.metadata,
-         pdf_url = EXCLUDED.pdf_url,
-         ppt_url = EXCLUDED.ppt_url,
+         metadata = COALESCE(mediakits.metadata, '{}'::jsonb) || COALESCE(EXCLUDED.metadata, '{}'::jsonb),
+         pdf_url = COALESCE(EXCLUDED.pdf_url, mediakits.pdf_url),
+         ppt_url = COALESCE(EXCLUDED.ppt_url, mediakits.ppt_url),
+         nombre = EXCLUDED.nombre,
+         cliente_id = EXCLUDED.cliente_id,
+         cliente_nombre = EXCLUDED.cliente_nombre,
+         ciudad = EXCLUDED.ciudad,
+         screen_ids = EXCLUDED.screen_ids,
+         estado = EXCLUDED.estado,
+         fecha = EXCLUDED.fecha,
          updated_at = CURRENT_TIMESTAMP
-       RETURNING kit_id, status, client_name, client_email, client_company, client_phone,
+       RETURNING kit_id, tenant_id, status, client_name, client_email, client_company, client_phone,
                  support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
                  created_at, updated_at`,
       [
         kitId,
+        kitId,
+        tenantId,
         input.sourceRequestId || null,
         status,
         clientName,
@@ -201,11 +323,13 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
         JSON.stringify(supportIds),
         JSON.stringify(approvedPrices),
         Number.isFinite(totalAmount as number) ? totalAmount : null,
-        input.currency || 'ARS',
+        currency === 'POR DEFINIR' ? 'Por definir' : currency,
         input.notes || null,
-        JSON.stringify(input.metadata || {}),
+        JSON.stringify(metadata),
         input.pdfUrl || null,
         input.pptUrl || null,
+        'Media Kit ' + kitId, clientId, clientCompany, legacyCity,
+        JSON.stringify(supportIds), toLegacyMediaKitState(status), legacyDate,
       ]
     );
 
@@ -213,9 +337,9 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     for (const [index, supportId] of supportIds.entries()) {
       const price = approvedPrices[supportId] == null ? null : Number(approvedPrices[supportId]);
       await client.query(
-        `INSERT INTO mediakit_items (kit_id, support_id, approved_price, sort_order)
-         VALUES ($1,$2,$3,$4)`,
-        [kitId, supportId, Number.isFinite(price as number) ? price : null, index]
+        `INSERT INTO mediakit_items (kit_id, support_id, tenant_id, approved_price, sort_order)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [kitId, supportId, tenantBySupportId.get(supportId) ?? null, Number.isFinite(price as number) ? price : null, index]
       );
     }
 
@@ -223,6 +347,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
     const row = result.rows[0];
     return {
       kitId: row.kit_id,
+      tenantId: row.tenant_id ?? null,
       sourceRequestId: input.sourceRequestId || null,
       status: normalizeStatus(row.status),
       clientName: row.client_name,
@@ -234,7 +359,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
       totalAmount: row.total_amount,
       currency: row.currency,
       notes: row.notes,
-      metadata: row.metadata || {},
+      metadata: sanitizeMediaKitMetadata(row.metadata),
       pdfUrl: row.pdf_url,
       pptUrl: row.ppt_url,
       createdAt: new Date(row.created_at).toISOString(),
@@ -252,7 +377,7 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
   if (!isDatabaseConfigured) return null;
   await ensureTables();
   const result = await pool.query(
-    `SELECT kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+    `SELECT kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
             support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
             created_at, updated_at
      FROM mediakits WHERE kit_id = $1 LIMIT 1`,
@@ -262,6 +387,7 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
   const row = result.rows[0];
   return {
     kitId: row.kit_id,
+    tenantId: row.tenant_id ?? null,
     sourceRequestId: row.source_request_id,
     status: normalizeStatus(row.status),
     clientName: row.client_name,
@@ -273,7 +399,45 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
     totalAmount: row.total_amount,
     currency: row.currency,
     notes: row.notes,
-    metadata: row.metadata || {},
+    metadata: sanitizeMediaKitMetadata(row.metadata),
+    pdfUrl: row.pdf_url,
+    pptUrl: row.ppt_url,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+}
+
+/** Resolve the persisted Media Kit relation for one onboarding request. */
+export async function getMediaKitBySourceRequestId(sourceRequestId: string): Promise<MediaKitRecord | null> {
+  if (!isDatabaseConfigured) return null;
+  const normalizedRequestId = sourceRequestId.trim();
+  if (!normalizedRequestId) return null;
+  await ensureTables();
+  const result = await pool.query(
+    `SELECT kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+            support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
+            created_at, updated_at
+     FROM mediakits WHERE source_request_id = $1
+     ORDER BY updated_at DESC LIMIT 1`,
+    [normalizedRequestId]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    kitId: row.kit_id,
+    tenantId: row.tenant_id ?? null,
+    sourceRequestId: row.source_request_id,
+    status: normalizeStatus(row.status),
+    clientName: row.client_name,
+    clientEmail: row.client_email,
+    clientCompany: row.client_company,
+    clientPhone: row.client_phone,
+    supportIds: row.support_ids || [],
+    approvedPrices: row.approved_prices || {},
+    totalAmount: row.total_amount,
+    currency: row.currency,
+    notes: row.notes,
+    metadata: sanitizeMediaKitMetadata(row.metadata),
     pdfUrl: row.pdf_url,
     pptUrl: row.ppt_url,
     createdAt: new Date(row.created_at).toISOString(),
@@ -285,13 +449,14 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
   if (!isDatabaseConfigured) return [];
   await ensureTables();
   const result = await pool.query(
-    `SELECT kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+    `SELECT kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
             support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
             created_at, updated_at
      FROM mediakits ORDER BY updated_at DESC`
   );
   return result.rows.map((row) => ({
     kitId: row.kit_id,
+    tenantId: row.tenant_id ?? null,
     sourceRequestId: row.source_request_id,
     status: normalizeStatus(row.status),
     clientName: row.client_name,
@@ -303,7 +468,7 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
     totalAmount: row.total_amount,
     currency: row.currency,
     notes: row.notes,
-    metadata: row.metadata || {},
+    metadata: sanitizeMediaKitMetadata(row.metadata),
     pdfUrl: row.pdf_url,
     pptUrl: row.ppt_url,
     createdAt: new Date(row.created_at).toISOString(),
@@ -311,38 +476,267 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
   }));
 }
 
-export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus): Promise<MediaKitRecord | null> {
+export async function attachMediaKitExport(
+  kitId: string,
+  format: MediaKitExportFormat,
+  storageKey: string,
+  contentType: string,
+  size: number,
+  sha256: string,
+): Promise<{ url: string; previousStorageKey: string | null } | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const column = format === 'pdf' ? 'pdf_url' : 'ppt_url';
+  const url = `/api/admin/mediakits/${encodeURIComponent(kitId)}/exports/${format}`;
+  const result = await pool.query(
+    `WITH previous AS (
+       SELECT metadata->'exports'-> $3 ->> 'storageKey' AS previous_storage_key
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE
+     )
+     UPDATE mediakits
+        SET ${column} = $2,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{exports}',
+              (CASE
+                 WHEN jsonb_typeof(metadata->'exports') = 'object' THEN metadata->'exports'
+                 ELSE '{}'::jsonb
+               END) || jsonb_build_object(
+                 $3,
+                 jsonb_build_object(
+                   'storageKey', $4::text,
+                   'contentType', $5::text,
+                   'size', $6::integer,
+                   'sha256', $7::text,
+                   'uploadedAt', CURRENT_TIMESTAMP,
+                   'actor', 'global_admin'
+                 )
+               ),
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+      WHERE kit_id = $1
+      RETURNING (SELECT previous_storage_key FROM previous) AS previous_storage_key`,
+    [kitId, url, format, storageKey, contentType, size, sha256],
+  );
+  if (!result.rows[0]) return null;
+  return { url, previousStorageKey: result.rows[0].previous_storage_key || null };
+}
+
+export async function getMediaKitExportStorageKey(
+  kitId: string,
+  format: MediaKitExportFormat,
+): Promise<string | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const result = await pool.query(
+    `SELECT metadata->'exports'-> $2 ->> 'storageKey' AS storage_key
+       FROM mediakits
+      WHERE kit_id = $1
+      LIMIT 1`,
+    [kitId, format],
+  );
+  return result.rows[0]?.storage_key || null;
+}
+
+export async function removeMediaKitExport(
+  kitId: string,
+  format: MediaKitExportFormat,
+): Promise<string | null> {
+  if (!isDatabaseConfigured) return null;
+  await ensureTables();
+  const column = format === 'pdf' ? 'pdf_url' : 'ppt_url';
+  const result = await pool.query(
+    `WITH previous AS (
+       SELECT metadata->'exports'-> $2 ->> 'storageKey' AS storage_key
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE
+     )
+     UPDATE mediakits
+        SET ${column} = NULL,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{exports}',
+              (CASE
+                 WHEN jsonb_typeof(metadata->'exports') = 'object' THEN metadata->'exports'
+                 ELSE '{}'::jsonb
+               END) - $2,
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+      WHERE kit_id = $1
+      RETURNING (SELECT storage_key FROM previous) AS storage_key`,
+    [kitId, format],
+  );
+  return result.rows[0]?.storage_key || null;
+}
+
+export async function updateMediaKitStatus(
+  kitId: string,
+  status: MediaKitStatus,
+  deliveryChannel: MediaKitDeliveryChannel = 'manual',
+): Promise<MediaKitRecord | null> {
   if (!isDatabaseConfigured) return null;
   await ensureTables();
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
-    throw new Error('Estado de Media Kit inválido.');
+    throw new MediaKitDomainError('Estado de Media Kit inválido.', 400);
   }
-  const result = await pool.query(
-    `UPDATE mediakits SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE kit_id = $1
-     RETURNING kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
-               support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
-               created_at, updated_at`,
-    [kitId, status]
-  );
-  if (!result.rows[0]) return null;
-  const row = result.rows[0];
-  return {
-    kitId: row.kit_id,
-    sourceRequestId: row.source_request_id,
-    status: normalizeStatus(row.status),
-    clientName: row.client_name,
-    clientEmail: row.client_email,
-    clientCompany: row.client_company,
-    clientPhone: row.client_phone,
-    supportIds: row.support_ids || [],
-    approvedPrices: row.approved_prices || {},
-    totalAmount: row.total_amount,
-    currency: row.currency,
-    notes: row.notes,
-    metadata: row.metadata || {},
-    pdfUrl: row.pdf_url,
-    pptUrl: row.ppt_url,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
-  };
+  if (status === 'sent' && !['share_sheet', 'mailto_draft', 'manual'].includes(deliveryChannel)) {
+    throw new MediaKitDomainError('Canal de entrega inválido.', 400);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Keep the same lock order as saveMediaKit (supports, then kit) to avoid
+    // deadlocks when a save races with approval or delivery.
+    const snapshot = await client.query(
+      'SELECT support_ids FROM mediakits WHERE kit_id = $1 LIMIT 1',
+      [kitId],
+    );
+    if (!snapshot.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    const snapshotSupportIds = normalizeSupportIds(snapshot.rows[0].support_ids);
+    let lockedSupports: any[] = [];
+    if ((status === 'ready' || status === 'sent') && snapshotSupportIds.length > 0) {
+      const supportsResult = await client.query(
+        `SELECT canonical_id, tenant_id, active, disponibilidad
+           FROM supports
+          WHERE canonical_id = ANY($1::text[])
+          FOR UPDATE`,
+        [snapshotSupportIds],
+      );
+      lockedSupports = supportsResult.rows;
+    }
+
+    const existing = await client.query(
+      `SELECT kit_id, tenant_id, source_request_id, status, metadata, support_ids, pdf_url, ppt_url
+         FROM mediakits
+        WHERE kit_id = $1
+        FOR UPDATE`,
+      [kitId],
+    );
+    if (!existing.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const current = existing.rows[0];
+    if (status === 'sent') {
+      const exportMetadata = current.metadata?.exports || {};
+      if (!current.pdf_url || !current.ppt_url || !exportMetadata.pdf?.storageKey || !exportMetadata.pptx?.storageKey) {
+        throw new MediaKitDomainError('No se puede confirmar la entrega sin PDF y PPTX persistidos para recuperación.', 409);
+      }
+      if (current.source_request_id) {
+        const requestUpdate = await client.query(
+          `UPDATE mediakit_requests SET status = 'enviado', updated_at = CURRENT_TIMESTAMP
+           WHERE request_id = $1 RETURNING request_id`,
+          [current.source_request_id],
+        );
+        if (!requestUpdate.rows[0]) {
+          throw new MediaKitDomainError('No se encontró la solicitud de origen para registrar la entrega.', 409);
+        }
+      }
+    }
+    if (status === 'ready' || status === 'sent') {
+      const proposalPeriod = current.metadata?.proposalPeriod as { duracionValor?: unknown; duracionUnidad?: unknown } | undefined;
+      if (!isProposalDurationValid({
+        duracionValor: proposalPeriod?.duracionValor == null ? '' : String(proposalPeriod.duracionValor),
+        duracionUnidad: proposalPeriod?.duracionUnidad === 'meses' ? 'meses' : 'días',
+      })) {
+        throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado sin una duración estándar válida.', 409);
+      }
+
+      const supportIds = normalizeSupportIds(current.support_ids);
+      if (supportIds.length === 0) {
+        throw new MediaKitDomainError('El Media Kit no puede marcarse como listo o enviado: requiere al menos un soporte conciliado.', 409);
+      }
+      if (supportIds.length !== snapshotSupportIds.length || supportIds.some((id, index) => id !== snapshotSupportIds[index])) {
+        throw new MediaKitDomainError('El Media Kit cambió mientras se validaba. Actualizá e intentá nuevamente.', 409);
+      }
+      if (lockedSupports.length !== supportIds.length) {
+        throw new MediaKitDomainError('El Media Kit contiene soportes que ya no existen en el inventario.', 409);
+      }
+      const invalid = lockedSupports.find((support) =>
+        !support.tenant_id || support.active !== true || support.disponibilidad !== 'disponible'
+      );
+      if (invalid) {
+        throw new MediaKitDomainError(`El soporte '${invalid.canonical_id}' está pendiente de ownership o dejó de estar disponible.`, 409);
+      }
+
+      const itemRows = await client.query(
+        `SELECT support_id, tenant_id
+           FROM mediakit_items
+          WHERE kit_id = $1`,
+        [kitId],
+      );
+      const itemTenantBySupport = new Map(itemRows.rows.map((item) => [String(item.support_id), item.tenant_id as string | null]));
+      if (itemRows.rows.length !== supportIds.length || lockedSupports.some((support) =>
+        itemTenantBySupport.get(String(support.canonical_id)) !== support.tenant_id
+      )) {
+        throw new MediaKitDomainError('El ownership de las líneas del Media Kit no coincide con el inventario actual. Guardá nuevamente el Media Kit antes de aprobarlo.', 409);
+      }
+
+      const derivedTenantId = resolveMediaKitTenantId(lockedSupports.map((support) => String(support.tenant_id)));
+      if ((current.tenant_id ?? null) !== derivedTenantId) {
+        throw new MediaKitDomainError('El ownership de la cabecera del Media Kit no coincide con sus soportes. Guardá nuevamente el Media Kit antes de aprobarlo.', 409);
+      }
+    }
+
+    const result = await client.query(
+      `UPDATE mediakits
+          SET status = $2,
+              estado = $3,
+              updated_at = CURRENT_TIMESTAMP,
+              metadata = CASE
+                WHEN $2 = 'sent' AND status IS DISTINCT FROM 'sent' THEN
+                  jsonb_set(
+                    COALESCE(metadata, '{}'::jsonb),
+                    '{deliveryEvents}',
+                    COALESCE(metadata->'deliveryEvents', '[]'::jsonb) || jsonb_build_array(
+                      jsonb_build_object('type', 'delivery_confirmed', 'actor', 'global_admin', 'channel', $4::text, 'confirmedAt', CURRENT_TIMESTAMP)
+                    ),
+                    true
+                  )
+                ELSE COALESCE(metadata, '{}'::jsonb)
+              END
+        WHERE kit_id = $1
+       RETURNING kit_id, tenant_id, source_request_id, status, client_name, client_email, client_company, client_phone,
+                 support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
+                 created_at, updated_at`,
+      [kitId, status, toLegacyMediaKitState(status), deliveryChannel],
+    );
+    await client.query('COMMIT');
+    const row = result.rows[0];
+    return {
+      kitId: row.kit_id,
+      tenantId: row.tenant_id ?? null,
+      sourceRequestId: row.source_request_id,
+      status: normalizeStatus(row.status),
+      clientName: row.client_name,
+      clientEmail: row.client_email,
+      clientCompany: row.client_company,
+      clientPhone: row.client_phone,
+      supportIds: row.support_ids || [],
+      approvedPrices: row.approved_prices || {},
+      totalAmount: row.total_amount,
+      currency: row.currency,
+      notes: row.notes,
+      metadata: sanitizeMediaKitMetadata(row.metadata),
+      pdfUrl: row.pdf_url,
+      pptUrl: row.ppt_url,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }

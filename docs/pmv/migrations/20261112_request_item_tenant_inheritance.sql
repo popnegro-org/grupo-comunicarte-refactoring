@@ -1,0 +1,220 @@
+-- Enforce ownership inheritance for nullable request-item tenant_id.
+--
+-- Context:
+-- mediakit_request_items.tenant_id intentionally remains NULL for legacy items
+-- whose referenced support is still quarantined (supports.tenant_id IS NULL).
+-- PostgreSQL composite FKs use MATCH SIMPLE by default, so a NULL child
+-- tenant_id bypasses the composite FK even when the support is assigned.
+--
+-- This trigger closes that gap without assigning ownership to pending supports:
+--   * assigned support + omitted tenant_id -> inherit exact support tenant;
+--   * assigned support + matching tenant_id -> accept;
+--   * assigned support + mismatching tenant_id -> reject;
+--   * new item + pending support -> reject, even when tenant_id is NULL;
+--   * historical item UPDATE + pending support + NULL tenant_id -> preserve;
+--   * historical request item + NULL tenant_id -> remain pending even if its
+--     support is assigned later; no automatic historical reclassification;
+--   * missing support -> reject.
+--
+-- Apply to an isolated Neon QA/Preview branch only after verifying branch ID.
+-- This migration is additive and transactional. It does not alter existing rows,
+-- roles, grants, RLS, or Production. Production requires a separate HUMAN GATE.
+
+BEGIN;
+
+DO $preflight$
+DECLARE
+  v_missing_tenants TEXT[];
+  v_bad_rows BIGINT;
+  v_branch_id TEXT := current_setting('neon.branch_id', true);
+BEGIN
+  IF v_branch_id IS NULL
+     OR v_branch_id NOT IN ('br-muddy-cell-au64infb', 'br-bold-block-aua43ua0') THEN
+    RAISE EXCEPTION 'Ownership trigger migration refused on unexpected Neon branch: %', COALESCE(v_branch_id, 'unknown');
+  END IF;
+
+  IF current_database() <> 'neondb' THEN
+    RAISE EXCEPTION 'Ownership trigger migration refused on unexpected database: %', current_database();
+  END IF;
+
+  IF to_regclass('public.supports') IS NULL
+     OR to_regclass('public.mediakit_request_items') IS NULL
+     OR to_regclass('public.tenants') IS NULL THEN
+    RAISE EXCEPTION 'Ownership trigger preflight failed: required public tables are missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='supports'
+      AND column_name='tenant_id' AND data_type='text'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='mediakit_request_items'
+      AND column_name='tenant_id' AND data_type='text'
+  ) THEN
+    RAISE EXCEPTION 'Ownership trigger preflight failed: tenant_id columns must exist and be TEXT';
+  END IF;
+
+  SELECT array_agg(expected.id ORDER BY expected.id)
+    INTO v_missing_tenants
+  FROM (VALUES ('tenant-ba'::text), ('tenant-default'::text)) AS expected(id)
+  LEFT JOIN public.tenants tenant ON tenant.id=expected.id
+  WHERE tenant.id IS NULL;
+
+  IF COALESCE(array_length(v_missing_tenants, 1), 0) > 0 THEN
+    RAISE EXCEPTION 'Ownership trigger preflight failed: missing tenants %', v_missing_tenants;
+  END IF;
+
+  SELECT count(*) INTO v_bad_rows
+  FROM public.mediakit_request_items item
+  LEFT JOIN public.supports support ON support.canonical_id=item.support_id
+  WHERE support.canonical_id IS NULL
+     OR (support.tenant_id IS NULL AND item.tenant_id IS NOT NULL)
+     OR (support.tenant_id IS NOT NULL AND item.tenant_id IS NOT NULL
+         AND item.tenant_id IS DISTINCT FROM support.tenant_id);
+
+  IF v_bad_rows <> 0 THEN
+    RAISE EXCEPTION 'Ownership trigger preflight failed: % orphaned or mismatched request items', v_bad_rows;
+  END IF;
+END
+$preflight$;
+
+CREATE OR REPLACE FUNCTION public.enforce_mediakit_request_item_tenant()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public
+AS $function$
+DECLARE
+  v_support_tenant_id TEXT;
+BEGIN
+  -- Match status-transition lock order on INSERT: request header first, then
+  -- support. UPDATE already holds the request-item row lock, so it must not
+  -- acquire the request header here (that would invert the lock order).
+  IF TG_OP = 'INSERT' THEN
+    PERFORM 1
+    FROM public.mediakit_requests AS request
+    WHERE request.request_id = NEW.request_id
+    FOR KEY SHARE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Request item references an unknown request: %', NEW.request_id
+        USING ERRCODE = '23503',
+              CONSTRAINT = 'fk_mediakit_request_items_request';
+    END IF;
+  END IF;
+
+  -- SHARE prevents a concurrent ownership update while this line is checked.
+  SELECT support.tenant_id
+    INTO v_support_tenant_id
+  FROM public.supports AS support
+  WHERE support.canonical_id = NEW.support_id
+  FOR SHARE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Request item references an unknown support: %', NEW.support_id
+      USING ERRCODE = '23503',
+            CONSTRAINT = 'mediakit_request_items_support_tenant_fkey';
+  END IF;
+
+  IF v_support_tenant_id IS NULL THEN
+    IF TG_OP = 'INSERT' THEN
+      RAISE EXCEPTION 'A quarantined support cannot be added to a new request: %', NEW.support_id
+        USING ERRCODE = '23514',
+              CONSTRAINT = 'mediakit_request_items_tenant_inheritance_check';
+    END IF;
+    IF NEW.tenant_id IS NOT NULL THEN
+      RAISE EXCEPTION 'A quarantined support cannot receive a tenant-scoped request item: %', NEW.support_id
+        USING ERRCODE = '23514',
+              CONSTRAINT = 'mediakit_request_items_tenant_inheritance_check';
+    END IF;
+    -- Preserve NULL only for an existing historical item that remains pending.
+    RETURN NEW;
+  END IF;
+
+  -- Keep historical NULL ownership pending when its same support was assigned
+  -- later. Explicit reconciliation may set the exact tenant; routine updates
+  -- that leave tenant_id NULL must not silently classify the historical item.
+  IF TG_OP = 'UPDATE'
+     AND OLD.support_id = NEW.support_id
+     AND OLD.tenant_id IS NULL
+     AND NEW.tenant_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.tenant_id IS NULL THEN
+    NEW.tenant_id := v_support_tenant_id;
+  ELSIF NEW.tenant_id IS DISTINCT FROM v_support_tenant_id THEN
+    RAISE EXCEPTION 'Request item tenant does not match its support: %', NEW.support_id
+      USING ERRCODE = '23514',
+            CONSTRAINT = 'mediakit_request_items_tenant_inheritance_check';
+  END IF;
+
+  RETURN NEW;
+END
+$function$;
+
+DROP TRIGGER IF EXISTS mediakit_request_items_tenant_inheritance
+  ON public.mediakit_request_items;
+
+CREATE TRIGGER mediakit_request_items_tenant_inheritance
+BEFORE INSERT OR UPDATE OF support_id, tenant_id
+ON public.mediakit_request_items
+FOR EACH ROW
+EXECUTE FUNCTION public.enforce_mediakit_request_item_tenant();
+
+COMMENT ON FUNCTION public.enforce_mediakit_request_item_tenant() IS
+  'Locks request header before support on INSERT; inherits exact support tenant, rejects quarantined new items and spoofing, and preserves historical NULL items until explicit reconciliation.';
+
+
+-- Ownership is write-once: a documented assignment may move NULL -> tenant,
+-- but an assigned support cannot be silently reassigned or returned to quarantine.
+-- Historical request items that already have tenant_id NULL remain pending even
+-- if their support is assigned later; no historical request is reclassified.
+CREATE OR REPLACE FUNCTION public.prevent_support_tenant_reassignment()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF OLD.tenant_id IS NOT NULL AND NEW.tenant_id IS DISTINCT FROM OLD.tenant_id THEN
+    RAISE EXCEPTION 'Support tenant ownership is immutable once assigned: %', OLD.canonical_id
+      USING ERRCODE = '23514',
+            CONSTRAINT = 'supports_tenant_ownership_immutable';
+  END IF;
+  RETURN NEW;
+END
+$function$;
+
+DROP TRIGGER IF EXISTS supports_tenant_ownership_immutable
+  ON public.supports;
+
+CREATE TRIGGER supports_tenant_ownership_immutable
+BEFORE UPDATE OF tenant_id
+ON public.supports
+FOR EACH ROW
+WHEN (OLD.tenant_id IS DISTINCT FROM NEW.tenant_id)
+EXECUTE FUNCTION public.prevent_support_tenant_reassignment();
+
+
+COMMIT;
+
+-- POSTFLIGHT — execute separately on the same branch:
+-- SELECT to_regprocedure('public.enforce_mediakit_request_item_tenant()');
+-- SELECT tgrelid::regclass AS table_name, tgname, tgenabled
+-- FROM pg_trigger
+-- WHERE NOT tgisinternal AND tgname IN (
+--   'mediakit_request_items_tenant_inheritance',
+--   'supports_tenant_ownership_immutable'
+-- )
+-- ORDER BY table_name, tgname;
+-- Expected: one enabled trigger per name; both trigger functions exist.
+-- Existing rows remain unchanged; verify their NULL/match counts against the
+-- branch-specific preflight snapshot. Then run
+-- docs/pmv/tests/20261112_request_item_tenant_inheritance.rollback.sql:
+-- INSERT locks parent request before support; missing request/support => rejected;
+-- assigned + omitted/cleared tenant => inherited; assigned + mismatch => rejected;
+-- new pending support + NULL/tenant => rejected; historical pending UPDATE + NULL
+-- remains NULL even after support assignment; assigned support ownership
+-- change/clear => rejected.

@@ -34,9 +34,9 @@ La referencia conceptual es el lenguaje de dashboards operativos: jerarquía exp
 | `/dashboard/soportes/:id/edit` | 🟢 intervenida | Secciones cardificadas y tokens de campo con padding alto. | Tokens Field densos; tabs con menos aire; theme meta discreta; Guardar cambios como única CTA primaria. |
 | `/dashboard/soportes/:id/preview` | 🟢 intervenida | Acciones correctas pero con exceso de espacio y radios. | Header contextual y superficies compactas. |
 | `/dashboard/soportes/:id/reservation` | 🟢 intervenida | Acción de guardar correcta, pero composición demasiado cardificada. | Flujo compacto con Guardar período como acción primaria. |
-| `/dashboard/solicitudes` | 🟡 | Flujo comercial ya tiene acciones de estado; requiere revisión visual transversal. | Siguiente bloque: priorizar estado, cliente, fecha y acción siguiente. |
-| `/dashboard/mediakits` | 🟡 | Flujo existente; debe priorizar estado, cliente, soportes y acción siguiente. | Siguiente bloque: eliminar ornamentación secundaria y contextualizar acciones. |
-| `/dashboard/mediakits/nuevo` | 🟡 | Builder es funcional pero complejo. | Siguiente bloque: separar claramente configuración, preview y acción de generación/guardado. |
+| `/dashboard/solicitudes` | 🟢 revisada | Bandeja responsive con cliente, empresa, soportes, fecha, estado y acción contextual; panel lateral ordenado por cliente, oportunidad, actividad y Media Kit. | Mantener patrón actual; regresión visual/funcional aprobada en P1.3. |
+| `/dashboard/mediakits` | 🟢 revisada | Alias canónico hacia la bandeja comercial `/dashboard/solicitudes`; evita duplicar pantallas y estados. | Mantener redirección; sin crear un segundo inbox. |
+| `/dashboard/mediakits/nuevo` | 🟢 intervenida | Configuración por bloques a la izquierda, selección/resumen a la derecha y acciones de guardado/exportación en encabezado. | Añadido resumen vivo del cliente, inversión, período y soportes; validado con teclado, touch y Axe. |
 
 ## Implementación de acciones contextuales
 
@@ -85,3 +85,159 @@ La referencia conceptual es el lenguaje de dashboards operativos: jerarquía exp
 ## Criterio de release
 
 Este bloque no modifica `main` ni contratos backend. La validación final requiere build/typecheck/tests y revisión visual responsive en Preview antes de cerrar el HUMAN GATE visual.
+
+## Continuación UX/UI — bandeja comercial (2026-11-09)
+
+- `/dashboard/solicitudes`: la tabla desktop se mantiene; en mobile se presenta una lista de tarjetas con cliente, empresa, estado, cantidad de soportes, fecha y acción contextual `Ver solicitud`.
+- La acción móvil tiene un objetivo táctil de al menos 44 px y evita obligar al usuario a desplazarse horizontalmente por una tabla de ancho fijo.
+- La bandeja diferencia explícitamente error de carga, ausencia total de solicitudes y ausencia de resultados por filtros. El estado de error ofrece `Reintentar`.
+- No se alteran endpoints, estados comerciales, ownership, reglas de cotización, asociación de Media Kit ni persistencia.
+- QA automatizado añadido en `tests/visual/dashboard-requests-responsive.spec.ts` para desktop/mobile, overflow horizontal, reintento y estado vacío.
+
+## P2 — Constructor de Media Kit: accesibilidad y estados (2026-11-09)
+
+- Etiquetas visibles asociadas a nombre, empresa, email y teléfono; autocomplete y tipos semánticos de email/teléfono.
+- Búsqueda del inventario con nombre accesible y tipo `search`.
+- Selección de soportes con estado `aria-pressed` y nombre dinámico Agregar/Quitar.
+- Carga, notificaciones y búsqueda vacía anunciadas mediante regiones `status`/`aria-live`.
+- Acción de quitar soporte con área interactiva 44×44 px y nombre accesible específico.
+- Sin cambios en endpoints, payloads, reglas comerciales ni persistencia.
+- Validación local sobre el árbol de trabajo: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
+- La comprobación manual autenticada en Preview sigue pendiente de una sesión QA autorizada; navegación por teclado y axe se verificaron localmente en desktop y móvil.
+
+## P2 — endurecimiento de accesibilidad móvil y carga diferida de exportación (2026-11-09)
+
+- Se ampliaron a 44 px los objetivos táctiles del constructor: navegación de retorno, acciones de guardado/exportación, campos de cliente, monto, período, búsqueda, selección de inventario y precios por soporte.
+- Se añadieron indicadores de foco visibles para navegación por teclado en las acciones y controles del constructor.
+- El módulo de generación PDF/PPT (`adminMediaKitExport`) ahora se importa al solicitar la exportación, no al abrir el constructor. El chunk de exportación permanece separado y se descarga bajo demanda.
+- Se añadió `tests/visual/mediakit-builder-accessibility.spec.ts`: labels, tipos semánticos, estado `aria-pressed`, estado de búsqueda vacía, recorrido de foco, áreas táctiles, ausencia de overflow y errores de consola.
+- Build de referencia: constructor 18.48 kB (5.19 kB gzip); módulo de exportación 404.45 kB (134.67 kB gzip), cargado dinámicamente al exportar. No se declara reducción del tamaño total descargable, sino de la carga inicial al entrar al constructor.
+- Validación local: TypeScript/lint PASS; unit tests 81/81 PASS; build PASS; audit de dependencias de producción 0 vulnerabilidades; `git diff --check` PASS.
+- Se incorporó `@axe-core/playwright` como dependencia de desarrollo y el constructor pasó axe sin violaciones en reglas WCAG 2.0 A/AA, WCAG 2.1 A/AA y WCAG 2.2 AA en desktop y móvil.
+
+
+### Evidencia P2 — validación funcional y de accesibilidad
+
+- `npm run lint`: PASS.
+- `npm run test:unit`: 81/81 PASS.
+- `npm run build`: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+- Playwright desktop + mobile: 22/22 PASS entre `mediakit-builder-accessibility`, `mediakit-delivery`, `inventory-selection-bar` y `dashboard-requests-responsive`.
+- Axe: 0 violaciones en el constructor para WCAG 2.0 A/AA, 2.1 A/AA y 2.2 AA.
+- La suite verifica recorrido de foco, selección reversible, nombres accesibles basados en texto visible, labels, touch targets ≥44 px, ausencia de overflow, búsqueda vacía y ausencia de errores JavaScript/consola.
+- El chunk del constructor mide 18.46 kB (5.18 kB gzip). `adminMediaKitExport` mide 404.45 kB (134.67 kB gzip) y se descarga únicamente al solicitar PDF/PPT; el test confirma que no se solicita al abrir el constructor. El tamaño total del artefacto no se presenta como reducido.
+- Pendiente únicamente la comprobación autenticada en el Preview Vercel con una sesión QA autorizada; no se usaron ni inventaron credenciales.
+
+
+## Iteración estética PMV — fases A–F (2026-11-10)
+
+### A — navegación y responsive
+- El header público conserva su altura de 80 px, enlaces sin salto de línea y navegación desktop desde 1024 px.
+- El menú móvil se conserva hasta 1023 px, incluido tablet landscape; se retiró el enlace Inicio redundante porque el logotipo ya navega a Home.
+- El acceso de login permanece como icono en escritorio amplio para evitar saturar el header en anchos intermedios.
+
+### B — Home
+- Se conserva la fotografía hero existente, los CTA y el buscador; no se reemplazaron activos sin evidencia.
+- Se prioriza la continuidad visual con las fotografías reales ya presentes en public/images.
+
+### C — Soportes y Soluciones
+- Las tres familias de soporte incorporan fotografía local existente: tradicional, pantallas LED y LED móvil.
+- Soportes conserva especificaciones técnicas y enlaces de inventario por formato; la imagen aporta reconocimiento sin sustituir información.
+- Soluciones adopta una composición editorial con imagen y descripción por objetivo, con acceso contextual al inventario.
+
+### D — Nosotros y Contacto
+- Nosotros incorpora fotografía de inventario existente y sustituye el rótulo ambiguo “Puntos clave” por “OOH + DOOH”, categorías presentes en la oferta descrita.
+- Contacto reduce el espacio del hero y acerca el formulario al inicio de la página; no se modifican campos, validación ni envío.
+
+### E — Inventario
+- En escritorio amplio, el mapa incorpora una lista compacta superpuesta de soportes filtrados. Seleccionar un registro abre el detalle correspondiente y resalta el punto en el mapa.
+- En móvil y tablet, la lista superpuesta se oculta para preservar superficie cartográfica y no duplicar el catálogo; se conserva el selector Mapa/Catálogo existente.
+
+### F — consistencia visual
+- Las tarjetas públicas usan elevación y borde sutiles al interactuar; se preservan estados semánticos y paleta operativa del Dashboard.
+- No se unifican los colores de estado con la marca: los colores funcionales mantienen su significado.
+- No se modifican contratos API, modelo comercial, datos, autenticación ni persistencia.
+
+### QA añadida
+- tests/visual/aesthetic-phases.spec.ts: navbar 1024–1440 px, menú en 900 px, imágenes y overflow en páginas comerciales desktop/mobile, listado sincronizado del mapa en desktop y oculto en móvil.
+- Preview del SHA candidato validado: 46/46 pruebas Playwright desktop/mobile PASS; rutas públicas sin overflow horizontal ni errores JavaScript y activos gráficos cargados.\n- El workflow remoto Visual QA aún figura pendiente y sin jobs reportados; no se regeneraron snapshots ausentes del checkout local.\n- HUMAN GATE final pendiente: revisión visual y aprobación humana del Preview.
+
+
+## Revalidación autónoma de fases A–F — 2026-11-10
+
+**Código desplegado en Preview:** `5d5e95f5b08e780f594499d120d078f9a9674066`  
+**HEAD documental de la rama:** `e4893202f98d1fa61fdd475b7023986ebb0a82e5`  
+**Preview:** https://grupo-comunicarte-refactoring-qj88kmas5-popnegros-projects.vercel.app
+
+### Validación reproducida
+
+- `npm ci --no-audit --no-fund`: PASS.
+- `npm run lint` (TypeScript): PASS.
+- `npm run test:unit`: 83/83 PASS.
+- `npm run build`: PASS.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+- `git diff --check`: PASS.
+- `aesthetic-phases.spec.ts`: 8/8 PASS local y 8/8 PASS contra Preview (desktop y mobile).
+- `home-navigation.spec.ts`, `inventory-selection-bar.spec.ts` y `inventory-map-lazy.spec.ts`: 14/14 PASS contra Preview (desktop y mobile).
+- `dashboard-layout.spec.ts`: 2/2 PASS contra Preview (desktop y mobile).
+- Inspección de rutas públicas a 390, 900, 1050 y 1440 px: sin overflow horizontal ni errores JavaScript observados; imágenes hero y familias de soporte cargan con dimensiones naturales válidas.
+- El inventario Preview muestra 28 registros; los soportes con multimedia asignada cargan thumbnails WebP. No se interpretan espacios de medios sin asignación como errores de carga.
+- Deployment Vercel `dpl_B4HMDQirEZHut8Ymhnr7BzNfYQvb`: READY, SHA `5d5e95f5b08e780f594499d120d078f9a9674066`.
+- CI y CI Candidate del SHA: PASS. Visual QA remoto del SHA: CANCELLED; no se atribuye como aprobado.
+
+### Restricciones y HUMAN GATE
+
+- La prueba `mediakit-builder-accessibility.spec.ts` no puede validar el constructor completo en Preview sin una sesión autenticada: el proyecto redirige a Login. No se usaron credenciales inventadas ni se modificó autenticación para eludir el control.
+- Dashboard shell responsive validado; la revisión manual autenticada de flujos administrativos continúa pendiente de sesión QA autorizada.
+- No se ejecutó merge a `main`, deploy Production, ni comunicación real.
+- **Estado:** fases estéticas A–F implementadas y QA visual público reproducido. Queda pendiente únicamente la revisión humana final del Preview y la comprobación autenticada del Dashboard/Media Kit antes de solicitar el HUMAN GATE de release.
+
+
+## Ajuste de inventario público y tipologías Neon — 2026-11-10
+
+### Cambios de interfaz
+- Se retiró el bloque de encabezado redundante `Grupo Comunicarte · OOH / Inventario de soportes / Explorá ubicaciones...`; el inventario comienza directamente en la barra de filtros.
+- Se eliminaron los contadores duplicados de resultados en toolbar y panel lateral del mapa. El contador de selección solo aparece cuando existe una selección o se activa “Cerca de mí”.
+- El filtro comercial expone únicamente `Tradicionales`, `Pantallas LED` y `LED móvil`; `Pendiente de mapeo` queda fuera de las opciones públicas.
+- Los enlaces antiguos con `tipo=led` se normalizan a `pantallas_led`.
+
+### Auditoría de Neon
+- Proyecto: `grupocomunicarte-serverless`; branch consultado: `preview/pmv-validation-candidate` (`br-muddy-cell-au64infb`). Consultas exclusivamente de lectura; no se modificaron datos.
+- Tabla `supports`: 46 registros, 29 activos y 17 inactivos en la branch consultada.
+- Tipologías activas: 26 `tradicional` / `traditional`, 2 `led` / `led` y 1 `led_movil` / `led_mobile`.
+- Los dos registros `led` activos se llaman “Pantalla LED Acceso Este y Dorrego” y “Pantalla LED Panamericana y Pueyrredón”; ambos tienen media activa. La interfaz ahora los presenta y filtra como `Pantallas LED`, sin alterar los valores persistidos.
+- El registro `led_movil` activo (“Camión LED Móvil”) tiene familia `led_mobile`, media activa, datos técnicos y ruta activa con waypoints. Se presenta como `LED móvil`.
+- Los 26 registros tradicionales activos se presentan como `Tradicionales`.
+- Hallazgos de datos que no se modificaron: 14 de los 26 tradicionales activos no tienen lat/lng; las dos pantallas LED tampoco tienen coordenadas ni fila de `support_technical`; la ruta móvil no tiene lat/lng propio, pero sí geometría y waypoints en `support_routes`. Los 29 activos tienen tipología/familia reconocibles y multimedia asignada (incluida la ruta móvil vía `support_media`). En el inventario completo hay registros inactivos históricos con tipo/familia vacíos; no se exponen en el catálogo público.
+
+### QA
+- Se añadió prueba unitaria de mapeo `led` + `family=led` a `Pantallas LED`.
+- Playwright `tests/visual/inventory.spec.ts`: 21 PASS y 3 omitidos por ser específicos de otro viewport (24 casos totales), en desktop/mobile. Se regeneraron snapshots afectados por la eliminación del encabezado y los contadores.
+- `npm run lint`: PASS; `npm run test:unit`: 84/84 PASS; `npm run build`: PASS.
+- La comprobación funcional de filtro verifica que `Pantallas LED` devuelve el registro LED tipificado y que `Pendiente de mapeo` ya no existe como opción pública.
+
+
+## P1.3 — Revalidación UX/UI y contenido (2026-11-25)
+
+### Interfaz pública
+- `/soportes` conserva el patrón editorial existente, con menor altura vertical en la lista de formatos y acciones próximas a cada tipo de soporte.
+- Se eliminaron CTA de cierre duplicados: el hero mantiene acceso al inventario y cada formato conserva su acción contextual.
+- Las afirmaciones técnicas genéricas de LED se sustituyeron por texto verificable; no se publican P4/P6 como atributo de todos los soportes ni actualización en tiempo real sin respaldo.
+- LED móvil presenta la configuración documentada de tres pantallas y sus especificaciones confirmadas.
+
+### Datos y presentación de fichas
+- La API utiliza `support_locations` para dirección y coordenadas y `support_technical` para especificaciones. Se sincronizaron los 18 registros de Mendoza para eliminar direcciones y coordenadas históricas que contradecían el inventario fuente.
+- Las especificaciones técnicas se alinearon con las características documentadas de los 28 soportes activos.
+- Las coordenadas ambiguas se dejan nulas: posiciones 06, 07, 11, 14 y 15 de Mendoza, y las dos pantallas LED. La ficha conserva dirección textual cuando está confirmada.
+- Se retiraron valores placeholder no respaldados en LED móvil (impactos mensuales 0 y máximo de anunciantes 8).
+
+### QA automatizada
+- Se agregó `tests/visual/support-content-accuracy.spec.ts` para verificar claims comerciales y responsive de Soportes.
+- La suite focalizada de estética pública, dashboard, bandeja comercial, entrega Media Kit y accesibilidad del constructor: 32/32 PASS (dos proyectos Playwright: desktop y mobile; sin skipped, flaky ni fallos).
+- `npm run lint`, `npm run test:unit`, `npm run build` y `npm audit --omit=dev --audit-level=high` finalizaron correctamente en el árbol candidato.
+- Preview API comprobada sobre deployment READY del código candidato: 28 soportes; 10 tradicionales de Mendoza con coordenadas y 5 sin punto individual; 2 LED sin coordenadas; LED móvil con 10 waypoints y especificaciones alineadas. Los 28 permanecen en catálogo y `mza-trad-16` sigue excluido.
+
+### Límites
+- Los datos fueron actualizados únicamente en Neon Preview. No se tocó Production, ownership, tenant, disponibilidad ni precios.
+- La resolución de `mza-led-02`, el año de disponibilidad de `bue-trad-04` y la descripción ampliada de `mza-trad-15` continúan pendientes de confirmación documental/comercial.
+- La inspección visual manual autenticada del dashboard no se declara aprobada; las pruebas de dashboard con APIs simuladas no sustituyen una sesión QA autenticada.

@@ -1,0 +1,45 @@
+# Línea única de integración — Grupo Comunicarte OOH
+
+**Repositorio:** popnegro-org/grupo-comunicarte-refactoring
+**Rama de integración:** pmv-validation-candidate
+**PR de release:** #90 → main
+**HEAD auditado:** consultar el SHA actual del PR #90; evitar hashes estáticos en este documento.
+**Estado:** integración activa; release NO-GO.
+
+## Reglas
+
+1. pmv-validation-candidate es la única línea de integración del PMV.
+2. No crear ramas paralelas, no force-push, reset ni rebase destructivo.
+3. No integrar ramas históricas completas (#85–#89, canonical-refinement ni ramas UX/UI paralelas). Recuperar solo cambios puntuales tras revisar diff y tests.
+4. PR #90 es el único PR abierto y permanece como gate de release, no como autorización de merge.
+5. main, Neon Production, Vercel Production, DNS/WAF y secretos productivos no se modifican.
+6. Cada commit requiere CI, typecheck, unit, build y CI Candidate. Cambios runtime requieren QA y Preview en el SHA exacto.
+7. HUMAN GATE para merge, promoción, acciones destructivas/irreversibles y comunicaciones reales.
+
+## Arquitectura mínima
+
+- Un proyecto Neon: mute-math-07036388.
+- Tres ramas: main (Production), preview/pmv-validation-candidate (Preview), qa/pr96-ownership-20261105 (QA).
+- Render QA conecta a Neon QA; Render Preview conecta a Neon Preview.
+- No crear una base por plaza. Los dos tenants representan ownership comercial de Buenos Aires y Mendoza.
+- Administrador global único; sin RLS ni tenant context SQL en este PMV.
+
+## Inventario
+
+28 soportes: Buenos Aires 10 tradicionales; Mendoza 15 tradicionales, 2 pantallas LED y 1 LED móvil. Las 18 filas sin tenant de Neon son cuarentena histórica/QA, no catálogo.
+
+## Estado al 2026-11-12
+
+- Candidata: más de 500 commits ahead, 0 behind; snapshot en HEAD 5920862: 153 archivos, +11.961 / -1.837 líneas; el contador cambia con cada commit.
+- Un único PR abierto (#90), sin merge.
+- Visual QA local: 96/96 PASS, 0 FAIL, 0 SKIPPED, 0 flaky.
+- Lint/typecheck, 102 unit tests, build y npm audit --omit=dev --audit-level=high PASS.
+- Los E2E/C1–C6 remotos deben ejecutarse de nuevo sobre el SHA nuevo; los resultados de 5920862 son evidencia histórica.
+- El tamaño del diff requiere revisión integral antes de release; tests verdes no equivalen a autorización de merge.
+
+## Secuencia
+
+1. Confirmar CI Candidate, QA/Preview E2E y Visual QA en el SHA nuevo.
+2. Adjuntar evidencias del SHA exacto y revisar cualquier hallazgo del workflow.
+3. Mantener PR #90 NO-GO hasta la revisión humana del alcance y de la migración histórica de Production.
+4. Actualizar evidencias y solicitar HUMAN GATE.

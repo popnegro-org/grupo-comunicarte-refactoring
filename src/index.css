@@ -6,8 +6,11 @@
   --font-sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --color-background: #F9F9F9;
   --color-foreground: #1A1A1A;
-  --color-primary: #000000;
+  --color-primary: #007D54;
   --color-primary-foreground: #FFFFFF;
+  --color-brand-green: #01993F;
+  --color-brand-interaction: #009966;
+  --color-brand-green-light: #EAF7EF;
   --color-secondary: #F3F4F6;
   --color-secondary-foreground: #111827;
   --color-muted: #F9FAFB;
@@ -15,7 +18,7 @@
   --color-border: #E5E7EB;
   --color-surface: #FFFFFF;
   --color-surface-elevated: #FFFFFF;
-  --color-brand-emerald: #059669;
+  --color-brand-emerald: #007D54;
   --color-brand-emerald-light: #ECFDF5;
   --color-brand-amber: #D97706;
   --color-brand-amber-light: #FFFBEB;
@@ -28,7 +31,7 @@
 :root {
   --background: #F9F9F9;
   --foreground: #1A1A1A;
-  --primary: #000000;
+  --primary: #007D54;
   --primary-foreground: #FFFFFF;
   --secondary: #F3F4F6;
   --secondary-foreground: #111827;
@@ -37,6 +40,9 @@
   --border: #E5E7EB;
   --surface: #FFFFFF;
   --surface-elevated: #FFFFFF;
+  --brand-green: #01993F;
+  --brand-interaction: #009966;
+  --brand-green-light: #EAF7EF;
   --border-subtle: #F3F4F6;
   --border-strong: #E5E7EB;
   --font-sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -56,6 +62,10 @@
 
 html { scroll-behavior: smooth; }
 body { font-family: var(--font-sans); color: var(--foreground); background-color: var(--background); }
+
+/* Brand accents: institutional green for identity, #009966 for interactive states. */
+::selection { color: #ffffff; background: #009966; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline-color: #009966; }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
@@ -84,7 +94,7 @@ body { font-family: var(--font-sans); color: var(--foreground); background-color
 }
 
 @utility text-eyebrow {
-  @apply text-[10px] font-semibold uppercase tracking-[0.16em] leading-[1.4] text-gray-500;
+  @apply text-[10px] font-semibold uppercase tracking-[0.16em] leading-[1.4] text-gray-700;
 }
 
 @utility text-field-label {
@@ -92,7 +102,7 @@ body { font-family: var(--font-sans); color: var(--foreground); background-color
 }
 
 @utility text-body {
-  @apply text-sm md:text-base text-gray-600 leading-[1.6];
+  @apply text-sm md:text-base text-gray-700 leading-[1.6];
 }
 
 @utility surface-card {

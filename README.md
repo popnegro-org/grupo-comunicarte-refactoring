@@ -38,32 +38,21 @@ Los indicadores del dashboard se calculan sobre los registros persistidos en Neo
 
 ```bash
 DATABASE_URL=
-ADMIN_USER=
-ADMIN_PASSWORD=
-JWT_SECRET=
 ```
+
+Las variables `ADMIN_USER`, `ADMIN_PASSWORD` (o `ADMIN_PASSWORD_HASH`) y `JWT_SECRET` (o `ADMIN_SECRET`) son necesarias únicamente para habilitar el acceso administrativo. Sin ellas, las rutas públicas pueden iniciar y el login administrativo permanece deshabilitado con HTTP 503.
 
 Para multimedia, completar las variables R2 definidas por el adaptador del proyecto.
 
-### Formulario de contacto (Resend)
+### Contacto comercial y analítica
 
-Configurar en Vercel, tanto en Preview como en Production cuando se autorice su habilitación:
+- `RESEND_API_KEY` y `CONTACT_FROM` habilitan el envío de consultas desde `/coming-soon` a `comercial@grupocomunicarte.com.ar`.
+- Verificar el dominio remitente en Resend antes de habilitar el envío. No utilizar credenciales reales en archivos versionados.
+- `VITE_GA_MEASUREMENT_ID` es opcional. Si no existe o no tiene formato GA4 (`G-...`), Analytics no se inicializa.
+- La limitación de frecuencia del formulario es best-effort por instancia serverless; no equivale a un rate limit distribuido.
+- `/coming-soon` permite validar la experiencia comercial en Preview. Los dominios canónicos mantienen esa experiencia; los hostnames de Preview/QA conservan el PMV funcional.
 
-```bash
-RESEND_API_KEY=
-CONTACT_FROM="Grupo Comunicarte <contacto@grupocomunicarte.com.ar>"
-```
-
-- `RESEND_API_KEY`: clave privada de Resend.
-- `CONTACT_FROM`: remitente perteneciente al dominio verificado en Resend (por ejemplo, `Grupo Comunicarte <contacto@grupocomunicarte.com.ar>`). Verificar `grupocomunicarte.com.ar` en Resend antes de enviar.
-- El destinatario está fijado en el servidor: `comercial@grupocomunicarte.com.ar`.
-- Las respuestas del correo se dirigen al email ingresado por el visitante (`Reply-To`).
-- El formulario usa `POST /api/contact`, validación server-side y honeypot. El límite de 5 envíos por IP cada 15 minutos es una protección best-effort por instancia serverless, no un rate limit distribuido.
-- No se almacenan consultas en Neon.
-- La zona Cloudflare auditada ya contiene el TXT `resend._domainkey.grupocomunicarte.com.ar` y el CNAME `send.grupocomunicarte.com.ar` → `send.forge.rmta.net` (DNS only), compatibles con DKIM y Resend Forge. No reemplazar esos registros ni los MX actuales del dominio raíz (`marduk.mx.amelu.org` / `ishtar.mx.amelu.org`). Confirmar en Resend Dashboard que el dominio figure como verificado antes de enviar.
-
-No publicar las claves en el repositorio ni en el frontend. Verificar el dominio y configurar el remitente en Resend antes de realizar pruebas de envío.
-
+El acceso administrativo requiere `ADMIN_USER`, una fuente de contraseña (`ADMIN_PASSWORD` o `ADMIN_PASSWORD_HASH`) y `JWT_SECRET` o `ADMIN_SECRET`. La API pública puede iniciar sin esas credenciales; el login administrativo responde HTTP 503 cuando el acceso no está configurado.
 
 **Importante:** `DATABASE_URL` es obligatoria para ejecutar el backend. Si Neon no está disponible, la aplicación falla de forma explícita en lugar de presentar datos estáticos como si fueran datos operativos.
 
@@ -88,3 +77,7 @@ El endpoint `/api/health` informa `database: connected` cuando Neon responde cor
 El proyecto está configurado para generar el frontend estático y exponer el backend Express mediante `api/[...path].ts`. La rama de trabajo debe validarse en Preview antes de cualquier promoción a `main`.
 
 No se realizan merges ni publicaciones sobre `main` desde esta fase de refinamiento.
+
+## Preparación de nuevas integraciones
+
+Antes de conectar proveedores externos, seguir el contrato de seguridad, tenant, idempotencia, migraciones y QA documentado en [Guía de integraciones](docs/integrations/README.md). El archivo [.env.example](.env.example) enumera los nombres de variables requeridos; nunca debe contener credenciales reales.
