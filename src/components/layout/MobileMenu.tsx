@@ -100,7 +100,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
                   to={path}
                   onClick={onClose}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex min-h-[68px] items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-900 ${active ? 'bg-zinc-50' : ''}`}
+                  className={`flex min-h-[68px] items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-900 ${active ? 'bg-[#EAF7EF]' : ''}`}
                 >
                   <Icon className="h-5 w-5 shrink-0 text-zinc-500" aria-hidden="true" />
                   <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-zinc-950">{name}</span><span className="block text-xs text-zinc-500">{sub}</span></span>
@@ -124,7 +124,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
             <Link
               to="/contacto"
               onClick={onClose}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#009966] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#007D54] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
             >
               Solicitar cotización <Send className="h-4 w-4" aria-hidden="true" />
             </Link>

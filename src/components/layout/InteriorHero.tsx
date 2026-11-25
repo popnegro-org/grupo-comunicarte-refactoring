@@ -21,8 +21,8 @@ export function InteriorHero({ eyebrow, title, description, align = 'left', acti
       <div className={'page-container grid items-center gap-7 ' + spacing + ' ' + columns}>
         <div className={centered ? 'max-w-3xl text-center lg:mx-auto' : 'max-w-3xl'}>
           <div className={'mb-1 flex items-center gap-3 ' + (centered ? 'justify-center' : '')}>
-            <span className="h-px w-8 bg-gray-900" />
-            <p className="text-eyebrow">{eyebrow}</p>
+            <span className="h-px w-8 bg-[#009966]" />
+            <p className="text-eyebrow text-[#006B49]">{eyebrow}</p>
           </div>
           <h1 className="text-page-title mt-3">{title}</h1>
           {description && <p className={'text-body mt-4 max-w-2xl ' + (centered ? 'mx-auto' : '')}>{description}</p>}

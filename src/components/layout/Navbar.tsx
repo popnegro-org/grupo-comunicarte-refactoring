@@ -59,7 +59,7 @@ export function Navbar() {
                 aria-current={isActive(path) ? 'page' : undefined}
                 className={cn(
                   'whitespace-nowrap rounded-lg px-3 py-2.5 text-[13px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2',
-                  isActive(path) && 'bg-zinc-100 font-semibold text-zinc-950'
+                  isActive(path) && 'bg-[#EAF7EF] font-semibold text-[#006B49]'
                 )}
               >
                 {name}
@@ -86,7 +86,7 @@ export function Navbar() {
               <Layers className="h-4 w-4" aria-hidden="true" />
               <span>Media Kit</span>
               {selectedCount > 0 && (
-                <span aria-live="polite" className="flex h-5 min-w-5 items-center justify-center rounded-full bg-zinc-950 px-1 text-[10px] font-bold text-white">
+                <span aria-live="polite" className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#009966] px-1 text-[10px] font-bold text-white">
                   {selectedCount}
                 </span>
               )}
@@ -94,7 +94,7 @@ export function Navbar() {
 
             <Link
               to="/contacto"
-              className="flex h-11 items-center whitespace-nowrap rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+              className="flex h-11 items-center whitespace-nowrap rounded-lg bg-[#009966] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#007D54] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
             >
               Solicitar cotización
             </Link>
