@@ -51,7 +51,7 @@ export default function ComingSoon() {
       <header className="relative z-10 border-b border-slate-100 bg-white">
         <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:px-12">
           <a href="/" aria-label="Grupo Comunicarte, inicio" className="inline-flex items-center">
-            <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-auto w-48 sm:w-56" />
+            <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-auto w-40 sm:w-56" />
           </a>
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full bg-[#009966] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white sm:px-6 sm:text-xs">
