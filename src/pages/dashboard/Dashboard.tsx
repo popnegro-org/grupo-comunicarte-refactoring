@@ -138,7 +138,7 @@ export default function Dashboard() {
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />Actualizar
             </button>
-            <Link to="/dashboard/soportes/new" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#1D4ED8] px-4 text-xs font-semibold text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+            <Link to="/dashboard/soportes/new" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#007D54] px-4 text-xs font-semibold text-white transition hover:bg-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009966] focus-visible:ring-offset-2">
               <Plus size={15} />Nuevo soporte
             </Link>
           </div>
@@ -156,7 +156,7 @@ export default function Dashboard() {
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,.85fr)]">
             <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <SectionHeading eyebrow="Distribución geográfica" title="Disponibilidad por plaza"
-                action={<Link to="/dashboard/soportes" className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900">Ver inventario <ArrowUpRight size={14}/></Link>} />
+                action={<Link to="/dashboard/soportes" className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-[#007D54] hover:text-[#005F40]">Ver inventario <ArrowUpRight size={14}/></Link>} />
               <div className="mt-6 space-y-6">
                 {cities.map((city) => {
                   const rate = percentage(city.available, city.total);
@@ -184,17 +184,17 @@ export default function Dashboard() {
             <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <SectionHeading eyebrow="Accesos directos" title="Operaciones frecuentes" />
               <div className="mt-5 space-y-2">
-                <Link to="/dashboard/soportes/new" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-blue-50 text-blue-700"><Plus size={19}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Agregar soporte</span><span className="mt-0.5 block text-xs text-slate-500">Incorporar una nueva ubicación</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
+                <Link to="/dashboard/soportes/new" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-[#B8DCC9] hover:bg-[#F5FBF7]">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#EAF7EF] text-[#007D54]"><Plus size={19}/></span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Agregar soporte</span><span className="mt-0.5 block text-xs text-slate-500">Incorporar una nueva ubicación</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-[#007D54]"/>
                 </Link>
-                <Link to="/dashboard/solicitudes" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
+                <Link to="/dashboard/solicitudes" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-[#B8DCC9] hover:bg-[#F5FBF7]">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 text-slate-700"><FileText size={18}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Revisar solicitudes</span><span className="mt-0.5 block text-xs text-slate-500">Gestionar consultas de Media Kit</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Revisar solicitudes</span><span className="mt-0.5 block text-xs text-slate-500">Gestionar consultas de Media Kit</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-[#007D54]"/>
                 </Link>
-                <Link to="/dashboard/mediakits/nuevo" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/50">
+                <Link to="/dashboard/mediakits/nuevo" className="group flex min-h-[66px] items-center gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-[#B8DCC9] hover:bg-[#F5FBF7]">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700"><FilePlus2 size={18}/></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Crear Media Kit</span><span className="mt-0.5 block text-xs text-slate-500">Preparar una propuesta comercial</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-blue-700"/>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">Crear Media Kit</span><span className="mt-0.5 block text-xs text-slate-500">Preparar una propuesta comercial</span></span><ArrowUpRight size={16} className="text-slate-600 transition group-hover:text-[#007D54]"/>
                 </Link>
               </div>
               <div className="mt-5 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-500"><Activity size={15} className="text-slate-600"/>Datos del sistema en tiempo de consulta</div>
@@ -216,7 +216,7 @@ export default function Dashboard() {
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
               <div className="flex items-end justify-between gap-3 px-5 py-5 sm:px-6">
                 <SectionHeading eyebrow="Actividad comercial" title="Solicitudes recientes" />
-                <Link to="/dashboard/solicitudes" className="inline-flex min-h-9 shrink-0 items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900">Ver todas <ArrowUpRight size={14}/></Link>
+                <Link to="/dashboard/solicitudes" className="inline-flex min-h-9 shrink-0 items-center gap-1 text-xs font-semibold text-[#007D54] hover:text-[#005F40]">Ver todas <ArrowUpRight size={14}/></Link>
               </div>
               {recent.length ? <div className="divide-y divide-slate-100">
                 {recent.map((request, index) => <Link key={request.id || request.requestId || index} to="/dashboard/solicitudes" className="flex min-h-[62px] items-center gap-3 px-5 py-3 transition hover:bg-slate-50 sm:px-6">
