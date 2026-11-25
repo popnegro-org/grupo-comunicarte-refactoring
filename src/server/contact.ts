@@ -38,13 +38,14 @@ function text(value: unknown, maxLength: number): string {
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
+  const entities: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;',
-  })[character] || character);
+  };
+  return value.replace(/[&<>"']/g, (character) => entities[character] || character);
 }
 
 export async function handleContactSubmission(req: Request, res: Response) {
@@ -107,21 +108,30 @@ export async function handleContactSubmission(req: Request, res: Response) {
     `<p><strong>${escapeHtml(label)}:</strong><br />${escapeHtml(value).replace(/\n/g, '<br />')}</p>`,
   ).join('');
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [CONTACT_TO],
-      reply_to: email,
-      subject: 'Nueva consulta comercial — Grupo Comunicarte',
-      html: `<h2>Nueva consulta desde el sitio web</h2>${html}`,
-      text: rows.map(([label, value]) => `${label}:\n${value}`).join('\n\n'),
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [CONTACT_TO],
+        reply_to: email,
+        subject: 'Nueva consulta comercial — Grupo Comunicarte',
+        html: `<h2>Nueva consulta desde el sitio web</h2>${html}`,
+        text: rows.map(([label, value]) => `${label}:\n${value}`).join('\n\n'),
+      }),
+    });
+  } catch (error) {
+    console.error('Resend request failed:', error instanceof Error ? error.message : 'Unknown network error');
+    return res.status(502).json({
+      status: 'error',
+      message: 'No pudimos conectar con el servicio de correo. Probá nuevamente o contactanos por email.',
+    });
+  }
 
   if (!response.ok) {
     const providerError = await response.text().catch(() => '');
