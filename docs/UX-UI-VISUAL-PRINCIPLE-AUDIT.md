@@ -34,9 +34,9 @@ La referencia conceptual es el lenguaje de dashboards operativos: jerarquía exp
 | `/dashboard/soportes/:id/edit` | 🟢 intervenida | Secciones cardificadas y tokens de campo con padding alto. | Tokens Field densos; tabs con menos aire; theme meta discreta; Guardar cambios como única CTA primaria. |
 | `/dashboard/soportes/:id/preview` | 🟢 intervenida | Acciones correctas pero con exceso de espacio y radios. | Header contextual y superficies compactas. |
 | `/dashboard/soportes/:id/reservation` | 🟢 intervenida | Acción de guardar correcta, pero composición demasiado cardificada. | Flujo compacto con Guardar período como acción primaria. |
-| `/dashboard/solicitudes` | 🟡 | Flujo comercial ya tiene acciones de estado; requiere revisión visual transversal. | Siguiente bloque: priorizar estado, cliente, fecha y acción siguiente. |
-| `/dashboard/mediakits` | 🟡 | Flujo existente; debe priorizar estado, cliente, soportes y acción siguiente. | Siguiente bloque: eliminar ornamentación secundaria y contextualizar acciones. |
-| `/dashboard/mediakits/nuevo` | 🟡 | Builder es funcional pero complejo. | Siguiente bloque: separar claramente configuración, preview y acción de generación/guardado. |
+| `/dashboard/solicitudes` | 🟢 revisada | Bandeja responsive con cliente, empresa, soportes, fecha, estado y acción contextual; panel lateral ordenado por cliente, oportunidad, actividad y Media Kit. | Mantener patrón actual; regresión visual/funcional aprobada en P1.3. |
+| `/dashboard/mediakits` | 🟢 revisada | Alias canónico hacia la bandeja comercial `/dashboard/solicitudes`; evita duplicar pantallas y estados. | Mantener redirección; sin crear un segundo inbox. |
+| `/dashboard/mediakits/nuevo` | 🟢 intervenida | Configuración por bloques a la izquierda, selección/resumen a la derecha y acciones de guardado/exportación en encabezado. | Añadido resumen vivo del cliente, inversión, período y soportes; validado con teclado, touch y Axe. |
 
 ## Implementación de acciones contextuales
 
