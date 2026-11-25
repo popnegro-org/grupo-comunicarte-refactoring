@@ -94,7 +94,7 @@ export function Navbar() {
 
             <Link
               to="/contacto"
-              className="flex h-11 items-center whitespace-nowrap rounded-lg bg-[#009966] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#007D54] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+              className="flex h-11 items-center whitespace-nowrap rounded-lg bg-[#007D54] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
             >
               Solicitar cotización
             </Link>

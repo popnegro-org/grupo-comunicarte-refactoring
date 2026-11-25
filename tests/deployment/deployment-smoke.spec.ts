@@ -171,7 +171,7 @@ test.describe('Preview deployment · PMV smoke', () => {
         throw new Error('El inicio de sesión no completó la redirección al dashboard dentro del plazo esperado.');
       }
 
-      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('heading', { level: 1, name: 'Panel de control' })).toBeVisible({ timeout: 20_000 });
 
       const adminStats = await page.evaluate(async () => {
         const response = await fetch('/api/admin/stats', { credentials: 'include' });

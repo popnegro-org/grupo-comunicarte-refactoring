@@ -124,7 +124,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
             <Link
               to="/contacto"
               onClick={onClose}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#009966] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#007D54] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#007D54] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
             >
               Solicitar cotización <Send className="h-4 w-4" aria-hidden="true" />
             </Link>
