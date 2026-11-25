@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { hasAdminAuthConfiguration } from './adminAuthConfig.ts';
 import { verifyAdminPassword } from './adminPassword';
 import { supports, supportPricing, supportMedia } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
@@ -34,16 +35,17 @@ const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 const ADMIN_SECRET = process.env.JWT_SECRET || process.env.ADMIN_SECRET;
 const MAX_FEATURED_SUPPORTS = 9;
 
-if (!ADMIN_USER || (!ADMIN_PASSWORD && !ADMIN_PASSWORD_HASH) || !ADMIN_SECRET) {
-  throw new Error(
-    'FATAL: ADMIN_USER, ADMIN_PASSWORD or ADMIN_PASSWORD_HASH, and JWT_SECRET (or legacy ADMIN_SECRET) environment variables are required.'
-  );
-}
-
 const adminUser = ADMIN_USER;
 const adminPassword = ADMIN_PASSWORD;
 const adminPasswordHash = ADMIN_PASSWORD_HASH;
 const adminSecret = ADMIN_SECRET;
+export const isAdminAuthConfigured = hasAdminAuthConfiguration({
+  ADMIN_USER,
+  ADMIN_PASSWORD,
+  ADMIN_PASSWORD_HASH,
+  JWT_SECRET: process.env.JWT_SECRET,
+  ADMIN_SECRET: process.env.ADMIN_SECRET,
+});
 
 function canonicalizeEditorMedia<T extends SupportWritePayload>(data: T): T {
   if (data.media !== undefined || !Array.isArray(data.imageUrls)) return data;
@@ -68,6 +70,9 @@ function canonicalizeEditorMedia<T extends SupportWritePayload>(data: T): T {
 }
 
 export function authenticateAdmin(username: string, password: string): { success: boolean; token?: string; message?: string } {
+  if (!isAdminAuthConfigured) {
+    return { success: false, message: 'El acceso administrativo no está configurado.' };
+  }
   const user = String(username ?? '').trim();
   const pass = String(password ?? '');
   if (user === adminUser && verifyAdminPassword(pass, adminPassword, adminPasswordHash)) {
@@ -81,7 +86,7 @@ export function authenticateAdmin(username: string, password: string): { success
 }
 
 export function verifyAdminToken(authHeader?: string): boolean {
-  if (!authHeader) return false;
+  if (!isAdminAuthConfigured || !authHeader) return false;
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') return false;
   try {
