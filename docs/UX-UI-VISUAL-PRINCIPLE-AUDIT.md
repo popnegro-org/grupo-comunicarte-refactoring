@@ -215,3 +215,29 @@ Este bloque no modifica `main` ni contratos backend. La validación final requie
 - Playwright `tests/visual/inventory.spec.ts`: 21 PASS y 3 omitidos por ser específicos de otro viewport (24 casos totales), en desktop/mobile. Se regeneraron snapshots afectados por la eliminación del encabezado y los contadores.
 - `npm run lint`: PASS; `npm run test:unit`: 84/84 PASS; `npm run build`: PASS.
 - La comprobación funcional de filtro verifica que `Pantallas LED` devuelve el registro LED tipificado y que `Pendiente de mapeo` ya no existe como opción pública.
+
+
+## P1.3 — Revalidación UX/UI y contenido (2026-11-25)
+
+### Interfaz pública
+- `/soportes` conserva el patrón editorial existente, con menor altura vertical en la lista de formatos y acciones próximas a cada tipo de soporte.
+- Se eliminaron CTA de cierre duplicados: el hero mantiene acceso al inventario y cada formato conserva su acción contextual.
+- Las afirmaciones técnicas genéricas de LED se sustituyeron por texto verificable; no se publican P4/P6 como atributo de todos los soportes ni actualización en tiempo real sin respaldo.
+- LED móvil presenta la configuración documentada de tres pantallas y sus especificaciones confirmadas.
+
+### Datos y presentación de fichas
+- La API utiliza `support_locations` para dirección y coordenadas y `support_technical` para especificaciones. Se sincronizaron los 18 registros de Mendoza para eliminar direcciones y coordenadas históricas que contradecían el inventario fuente.
+- Las especificaciones técnicas se alinearon con las características documentadas de los 28 soportes activos.
+- Las coordenadas ambiguas se dejan nulas: posiciones 06, 07, 11, 14 y 15 de Mendoza, y las dos pantallas LED. La ficha conserva dirección textual cuando está confirmada.
+- Se retiraron valores placeholder no respaldados en LED móvil (impactos mensuales 0 y máximo de anunciantes 8).
+
+### QA automatizada
+- Se agregó `tests/visual/support-content-accuracy.spec.ts` para verificar claims comerciales y responsive de Soportes.
+- La suite focalizada de estética pública, dashboard, bandeja comercial, entrega Media Kit y accesibilidad del constructor: 32/32 PASS (dos proyectos Playwright: desktop y mobile; sin skipped, flaky ni fallos).
+- `npm run lint`, `npm run test:unit`, `npm run build` y `npm audit --omit=dev --audit-level=high` finalizaron correctamente en el árbol candidato.
+- Preview API comprobada sobre deployment READY del código candidato: 28 soportes; 10 tradicionales de Mendoza con coordenadas y 5 sin punto individual; 2 LED sin coordenadas; LED móvil con 10 waypoints y especificaciones alineadas. Los 28 permanecen en catálogo y `mza-trad-16` sigue excluido.
+
+### Límites
+- Los datos fueron actualizados únicamente en Neon Preview. No se tocó Production, ownership, tenant, disponibilidad ni precios.
+- La resolución de `mza-led-02`, el año de disponibilidad de `bue-trad-04` y la descripción ampliada de `mza-trad-15` continúan pendientes de confirmación documental/comercial.
+- La inspección visual manual autenticada del dashboard no se declara aprobada; las pruebas de dashboard con APIs simuladas no sustituyen una sesión QA autenticada.
