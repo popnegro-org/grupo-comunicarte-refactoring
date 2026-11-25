@@ -135,10 +135,13 @@ test.describe('Coming Soon · contacto comercial', () => {
     }
   });
 
-  test('muestra el acceso alternativo a email y WhatsApp', async ({ page }) =>
+  test('muestra el acceso alternativo a email, WhatsApp y ubicación', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'comercial@grupocomunicarte.com.ar' }).first())
       .toHaveAttribute('href', 'mailto:comercial@grupocomunicarte.com.ar');
-    await expect(page.getByRole('link', { name: 'Contactar a Grupo Comunicarte por WhatsApp' }))
+    await expect(page.getByRole('link', { name: 'WhatsApp comercial' }))
       .toHaveAttribute('href', 'https://wa.me/542615830208');
+    await expect(page.getByRole('link', { name: 'Cómo llegar' }))
+      .toHaveAttribute('href', /google.com\/maps\/search/);
+    await expect(page.getByText('9 de Julio 891, M5501 Godoy Cruz, Mendoza, Argentina')).toBeVisible();
   });
 });
