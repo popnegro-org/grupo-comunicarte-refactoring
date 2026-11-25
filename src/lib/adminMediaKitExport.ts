@@ -1,4 +1,3 @@
-import pptxgen from 'pptxgenjs';
 export interface ExportSupport {
   canonical_id: string;
   name: string;
@@ -51,7 +50,8 @@ async function makePdf(lead:ExportLead,supports:ExportSupport[],requestId:string
 
 async function makePpt(lead:ExportLead,supports:ExportSupport[],requestId:string):Promise<Blob>{
   const {resolved,logo,supportRasters}=await loadAssets(supports);
-  const pptx = new pptxgen();
+  const { default: PptxGenJS } = await import('pptxgenjs');
+  const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'Grupo Comunicarte';
   pptx.company = 'Grupo Comunicarte';
