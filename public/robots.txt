@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://grupocomunicarte.com.ar/sitemap.xml
