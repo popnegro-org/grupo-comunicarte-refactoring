@@ -153,4 +153,28 @@ test.describe('Coming Soon · contacto comercial', () => {
       .toHaveAttribute('href', /google.com\/maps\/search/);
     await expect(page.getByText('9 de Julio 891, M5501 Godoy Cruz, Mendoza, Argentina')).toBeVisible();
   });
+  test('el enlace Saltar al contenido lleva el foco al contenido principal', async ({ page }) => {
+    await page.goto('/coming-soon');
+    const skipLink = page.getByRole('link', { name: 'Saltar al contenido' });
+    await skipLink.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#main-content')).toBeFocused();
+  });
+
+  test('captura la experiencia comercial en escritorio', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop', 'Snapshot exclusivo de escritorio.');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/coming-soon');
+    await expect(page.getByRole('heading', { name: 'Publicidad exterior en Mendoza y Buenos Aires' })).toBeVisible();
+    await expect(page).toHaveScreenshot('coming-soon-desktop.png', { fullPage: true });
+  });
+
+  test('captura la experiencia comercial en móvil', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-mobile', 'Snapshot exclusivo de móvil.');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/coming-soon');
+    await expect(page.getByRole('heading', { name: 'Publicidad exterior en Mendoza y Buenos Aires' })).toBeVisible();
+    await expect(page).toHaveScreenshot('coming-soon-mobile.png', { fullPage: true });
+  });
+
 });
