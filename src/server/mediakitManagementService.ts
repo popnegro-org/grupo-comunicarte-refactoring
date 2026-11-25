@@ -28,81 +28,51 @@ export interface MediaKitRecord extends SaveMediaKitInput {
   updatedAt: string;
 }
 
-let tableReady = false;
+let schemaReady = false;
+let schemaCheck: Promise<void> | null = null;
 
-async function ensureTables(): Promise<void> {
-  if (!isDatabaseConfigured || tableReady) return;
+async function ensureSchemaReady(): Promise<void> {
+  if (!isDatabaseConfigured || schemaReady) return;
 
-  // P1 persistence is initialized lazily on first management operation.
-  // This deliberately avoids adding DDL to the application cold-start path.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS mediakits (
-      id SERIAL PRIMARY KEY,
-      kit_id TEXT UNIQUE NOT NULL,
-      source_request_id TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      client_name TEXT NOT NULL,
-      client_email TEXT,
-      client_company TEXT,
-      client_phone TEXT,
-      support_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-      approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb,
-      total_amount NUMERIC,
-      currency TEXT NOT NULL DEFAULT 'ARS',
-      notes TEXT,
-      metadata JSONB,
-      pdf_url TEXT,
-      ppt_url TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS mediakit_items (
-      id SERIAL PRIMARY KEY,
-      kit_id TEXT NOT NULL,
-      support_id TEXT NOT NULL,
-      approved_price NUMERIC,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      metadata JSONB,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+  if (!schemaCheck) {
+    schemaCheck = (async () => {
+      const requiredColumns: Record<string, string[]> = {
+        mediakits: [
+          'id', 'kit_id', 'source_request_id', 'status', 'client_name', 'client_email',
+          'client_company', 'client_phone', 'support_ids', 'approved_prices', 'total_amount',
+          'currency', 'notes', 'metadata', 'pdf_url', 'ppt_url', 'created_at', 'updated_at',
+        ],
+        mediakit_items: [
+          'id', 'kit_id', 'support_id', 'approved_price', 'sort_order', 'metadata',
+          'created_at', 'updated_at',
+        ],
+      };
 
-    -- Existing databases may contain an older mediakits table created before
-    -- the management schema was introduced. Keep the runtime bootstrap
-    -- additive/idempotent so those databases are upgraded without dropping
-    -- existing data.
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS source_request_id TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_name TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_email TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_company TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS client_phone TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS support_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS approved_prices JSONB NOT NULL DEFAULT '{}'::jsonb;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS total_amount NUMERIC;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'ARS';
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS notes TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS pdf_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS ppt_url TEXT;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+      const result = await pool.query(
+        `SELECT table_name, column_name
+           FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = ANY($1::text[])`,
+        [Object.keys(requiredColumns)],
+      );
+      const available = new Set(result.rows.map((row: { table_name: string; column_name: string }) =>
+        `${row.table_name}.${row.column_name}`,
+      ));
+      const missing = Object.entries(requiredColumns).flatMap(([table, columns]) =>
+        columns.filter((column) => !available.has(`${table}.${column}`)).map((column) => `${table}.${column}`),
+      );
 
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS kit_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS support_id TEXT;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS approved_price NUMERIC;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS metadata JSONB;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    ALTER TABLE mediakit_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+      if (missing.length > 0) {
+        throw new Error(`Falta aplicar la migración de Media Kits: ${missing.join(', ')}. Consultá docs/pmv/migrations/20261125_mediakit_management_schema.sql.`);
+      }
+      schemaReady = true;
+    })().catch((error) => {
+      schemaCheck = null;
+      throw error;
+    });
+  }
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_mediakits_kit_id ON mediakits(kit_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_status ON mediakits(status);
-    CREATE INDEX IF NOT EXISTS idx_mediakits_source_request ON mediakits(source_request_id);
-    CREATE INDEX IF NOT EXISTS idx_mediakit_items_kit_id ON mediakit_items(kit_id);
-  `);
-  tableReady = true;
+  await schemaCheck;
 }
 
 function makeKitId(): string {
@@ -161,7 +131,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
   const kitId = input.kitId?.trim() || makeKitId();
   const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
 
-  await ensureTables();
+  await ensureSchemaReady();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -250,7 +220,7 @@ export async function saveMediaKit(input: SaveMediaKitInput): Promise<MediaKitRe
 
 export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null> {
   if (!isDatabaseConfigured) return null;
-  await ensureTables();
+  await ensureSchemaReady();
   const result = await pool.query(
     `SELECT kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
             support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
@@ -283,7 +253,7 @@ export async function getMediaKit(kitId: string): Promise<MediaKitRecord | null>
 
 export async function listMediaKits(): Promise<MediaKitRecord[]> {
   if (!isDatabaseConfigured) return [];
-  await ensureTables();
+  await ensureSchemaReady();
   const result = await pool.query(
     `SELECT kit_id, source_request_id, status, client_name, client_email, client_company, client_phone,
             support_ids, approved_prices, total_amount, currency, notes, metadata, pdf_url, ppt_url,
@@ -313,7 +283,7 @@ export async function listMediaKits(): Promise<MediaKitRecord[]> {
 
 export async function updateMediaKitStatus(kitId: string, status: MediaKitStatus): Promise<MediaKitRecord | null> {
   if (!isDatabaseConfigured) return null;
-  await ensureTables();
+  await ensureSchemaReady();
   if (!['draft', 'ready', 'sent', 'archived'].includes(status)) {
     throw new Error('Estado de Media Kit inválido.');
   }
