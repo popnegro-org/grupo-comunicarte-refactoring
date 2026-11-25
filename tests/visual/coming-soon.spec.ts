@@ -68,6 +68,44 @@ test.describe('Coming Soon · contacto comercial', () => {
     await expect(form.locator('[name="email"]')).toHaveValue('maria@example.com');
   });
 
+  test('publica metadatos, datos estructurados y archivos SEO locales', async ({ page, request }) => {
+    await expect(page).toHaveTitle('Publicidad exterior en Mendoza y Buenos Aires | Grupo Comunicarte');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://grupocomunicarte.com.ar/',
+    );
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+      'content',
+      /publicidad exterior OOH, DOOH y LED móvil en Mendoza y Buenos Aires/i,
+    );
+    await expect(page.locator('h1')).toHaveCount(1);
+
+    const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+    const structuredData = JSON.parse(jsonLd ?? '{}');
+    expect(structuredData['@graph']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          '@type': 'Organization',
+          name: 'Grupo Comunicarte',
+          email: 'comercial@grupocomunicarte.com.ar',
+          telephone: '+542615830208',
+        }),
+        expect.objectContaining({
+          '@type': 'Service',
+          name: 'Publicidad exterior OOH, DOOH y LED móvil',
+        }),
+      ]),
+    );
+
+    const robots = await request.get('/robots.txt');
+    expect(robots.ok()).toBeTruthy();
+    expect(await robots.text()).toContain('https://grupocomunicarte.com.ar/sitemap.xml');
+
+    const sitemap = await request.get('/sitemap.xml');
+    expect(sitemap.ok()).toBeTruthy();
+    expect(await sitemap.text()).toContain('<loc>https://grupocomunicarte.com.ar/</loc>');
+  });
+
   test('muestra el acceso alternativo a email y WhatsApp', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'comercial@grupocomunicarte.com.ar' }).first())
       .toHaveAttribute('href', 'mailto:comercial@grupocomunicarte.com.ar');
