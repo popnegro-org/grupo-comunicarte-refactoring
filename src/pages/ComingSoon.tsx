@@ -70,7 +70,6 @@ export default function ComingSoon() {
             <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-auto w-48 sm:w-56" />
           </a>
           <div className="flex items-center gap-3">
-            <span className="hidden border-l border-slate-300 pl-5 text-sm font-medium tracking-[0.16em] text-[#009966] sm:inline-flex">OOH</span>
             <span className="inline-flex items-center gap-2 rounded-full bg-[#009966] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white sm:px-6 sm:text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-white" />
               Próximamente
