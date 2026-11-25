@@ -54,6 +54,9 @@ export default function App() {
             <Route path="/dashboard/mediakits/nuevo" element={<ProtectedRoute><DashboardMediaKitBuilder /></ProtectedRoute>} />
             <Route path="/dashboard/mediakits" element={<Navigate to="/dashboard/solicitudes" replace />} />
 
+            {/* Explicit Preview route for validating the canonical Coming Soon experience. */}
+            <Route path="/coming-soon" element={<ComingSoon />} />
+
             <Route element={<PublicLayout />}>
               <Route path="/" element={<PageTransition><Home /></PageTransition>} />
               <Route path="/soportes" element={<PageTransition><Soportes /></PageTransition>} />
