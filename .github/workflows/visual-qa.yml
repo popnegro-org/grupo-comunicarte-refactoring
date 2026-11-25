@@ -7,7 +7,7 @@ on:
     branches: [main, pmv-validation-candidate, pmv-production-refinement]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: visual-qa-${{ github.event.pull_request.number || github.ref }}
@@ -113,6 +113,19 @@ jobs:
             echo "## Visual QA: reviewed baseline refresh"
             echo "Only changed snapshots were refreshed by an explicitly named visual-baseline commit."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit reviewed visual snapshots
+        if: github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate' && startsWith(github.event.head_commit.message, 'visual-baseline:')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/visual/__snapshots__
+          if git diff --cached --quiet; then
+            echo "No visual snapshot changes to commit."
+          else
+            git commit -m "test(visual): refresh reviewed dashboard snapshots"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
 
       - name: Compare against previous trusted baseline
         if: github.event_name == 'push' && github.ref_name != 'pmv-validation-candidate' && steps.baseline.outputs.cache-matched-key != '' && !startsWith(github.event.head_commit.message, 'visual-baseline:')
