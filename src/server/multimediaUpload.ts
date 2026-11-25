@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { addSupportMediaByAdmin, getSupportMediaByAdmin } from './adminService';
 import { ALLOWED_MEDIA_MIME_TYPES, createAssetKey, getStorageAdapter, MAX_UPLOAD_BYTES } from './r2StorageAdapter';
+import { matchesMediaSignature } from './mediaSignature';
 
 interface MultipartMedia { filename: string; contentType: string; data: Buffer; }
 
@@ -66,6 +67,7 @@ export async function handleMediaUpload(req: Request, res: Response) {
     if (!ALLOWED_MEDIA_MIME_TYPES.has(mimeType)) return res.status(415).json({ status: 'error', message: `MIME no permitido: ${mimeType}.` });
     if (media.data.length === 0) return res.status(400).json({ status: 'error', message: 'El archivo está vacío.' });
     if (media.data.length > MAX_UPLOAD_BYTES) return res.status(413).json({ status: 'error', message: 'El archivo excede el límite máximo permitido.' });
+    if (!matchesMediaSignature(media.data, mimeType)) return res.status(415).json({ status: 'error', message: 'El contenido del archivo no coincide con el MIME declarado.' });
 
     const existing = await getSupportMediaByAdmin(canonicalId);
     const sortOrder = existing.reduce((max: number, item: any) => Math.max(max, Number(item.sort_order ?? item.sortOrder ?? 0)), -1) + 1;
@@ -92,7 +94,7 @@ export async function handleMediaUpload(req: Request, res: Response) {
   } catch (error: any) {
     console.error('Error uploading support media:', error);
     const message = error?.message || 'Error interno al subir el recurso multimedia.';
-    const status = /no encontrado/i.test(message) ? 404 : /MIME|Multipart|archivo|canonical_id/i.test(message) ? 400 : 500;
+    const status = /MIME|contenido|firma/i.test(message) ? 415 : /no encontrado/i.test(message) ? 404 : /Multipart|archivo|canonical_id/i.test(message) ? 400 : 500;
     return res.status(status).json({ status: 'error', message });
   }
 }
