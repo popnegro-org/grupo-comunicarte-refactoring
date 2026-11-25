@@ -33,7 +33,7 @@ export default function ComingSoon() {
       <header className="relative z-10 border-b border-slate-100 bg-white">
         <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:px-12">
           <a href="/" aria-label="Grupo Comunicarte, inicio" className="inline-flex items-center">
-            <img src="/brand/brand-dark.svg" alt="Grupo Comunicarte" className="h-auto w-48 sm:w-56" />
+            <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-auto w-48 sm:w-56" />
           </a>
           <div className="flex items-center gap-3">
             <span className="hidden border-l border-slate-300 pl-5 text-sm font-medium tracking-[0.16em] text-[#009966] sm:inline-flex">OOH</span>
@@ -77,10 +77,6 @@ export default function ComingSoon() {
           <aside className="w-full rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7" aria-labelledby="inquiry-title">
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
-              <h2 id="inquiry-title" className="mt-2 text-3xl font-bold leading-[1.05] tracking-[-0.035em] sm:text-[2.15rem]">
-                Hablemos de tu próxima campaña
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">Dejanos tus datos. Estamos preparando este canal para recibir consultas.</p>
             </div>
 
             <div className="space-y-3.5" aria-label="Vista previa del formulario de consulta">
