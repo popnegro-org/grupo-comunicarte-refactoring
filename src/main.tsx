@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import {initClarity} from './lib/clarity';
 import { prefetchInventory } from './hooks/useInventory';
+import { initAnalytics } from './lib/analytics';
 
 if (window.location.pathname === '/inventario') {
   void prefetchInventory();
@@ -11,6 +12,7 @@ if (window.location.pathname === '/inventario') {
 }
 
 initClarity();
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
