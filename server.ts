@@ -84,14 +84,27 @@ export async function createApp() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const isAllowedOrigin = (origin?: string): boolean => {
+  const isAllowedOrigin = (origin?: string, req?: express.Request): boolean => {
     if (!origin) return true;
-    return allowedOrigins.includes(origin);
+    if (allowedOrigins.includes(origin)) return true;
+    if (!req) return false;
+
+    const forwardedHost = req.headers['x-forwarded-host'];
+    const host = (typeof forwardedHost === 'string' ? forwardedHost.split(',')[0].trim() : req.headers.host);
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protocol = (typeof forwardedProto === 'string' ? forwardedProto.split(',')[0].trim() : req.protocol);
+
+    if (!host || !protocol) return false;
+    try {
+      return new URL(origin).origin === `${protocol}://${host}`;
+    } catch {
+      return false;
+    }
   };
 
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
-    if (origin && isAllowedOrigin(origin)) {
+    if (origin && isAllowedOrigin(origin, req)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -100,7 +113,7 @@ export async function createApp() {
     }
 
     if (req.method === 'OPTIONS') {
-      if (isAllowedOrigin(origin)) {
+      if (isAllowedOrigin(origin, req)) {
         return res.sendStatus(204);
       }
       return res.sendStatus(403);
