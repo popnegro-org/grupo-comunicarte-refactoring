@@ -66,7 +66,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
 
   if (!open) return null;
   return (
-    <div id="mobile-navigation" className="xl:hidden fixed inset-0 z-[3000]">
+    <div id="mobile-navigation" className="xl:hidden fixed inset-x-0 top-20 bottom-0 z-[3000]">
       <button
         type="button"
         className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xs"
@@ -79,7 +79,7 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
         aria-modal="true"
         aria-label="Menú de navegación"
         tabIndex={-1}
-        className="absolute inset-x-0 top-20 bottom-0 overflow-y-auto overscroll-contain bg-white/95 backdrop-blur-xl"
+        className="absolute inset-x-0 top-0 bottom-0 overflow-y-auto overscroll-contain bg-white/95 backdrop-blur-xl"
       >
         <div className="mx-auto max-w-xl space-y-5 px-4 py-5 sm:px-6">
           <button
