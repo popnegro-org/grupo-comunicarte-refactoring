@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response as ExpressResponse } from 'express';
 
 const CONTACT_TO = 'comercial@grupocomunicarte.com.ar';
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
@@ -48,7 +48,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => entities[character] || character);
 }
 
-export async function handleContactSubmission(req: Request, res: Response) {
+export async function handleContactSubmission(req: Request, res: ExpressResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ status: 'error', message: 'Método no permitido.' });
   }
@@ -108,7 +108,7 @@ export async function handleContactSubmission(req: Request, res: Response) {
     `<p><strong>${escapeHtml(label)}:</strong><br />${escapeHtml(value).replace(/\n/g, '<br />')}</p>`,
   ).join('');
 
-  let response: Response;
+  let response: globalThis.Response;
   try {
     response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
