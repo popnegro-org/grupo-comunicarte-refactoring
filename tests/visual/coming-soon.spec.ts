@@ -89,6 +89,20 @@ test.describe('Coming Soon · contacto comercial', () => {
           name: 'Grupo Comunicarte',
           email: 'comercial@grupocomunicarte.com.ar',
           telephone: '+542615830208',
+          address: expect.objectContaining({
+            streetAddress: '9 de Julio 891',
+            addressLocality: 'Godoy Cruz',
+            postalCode: 'M5501',
+            addressCountry: 'AR',
+          }),
+          areaServed: expect.arrayContaining([
+            expect.objectContaining({ name: 'Ciudad Autónoma de Buenos Aires, Argentina' }),
+            expect.objectContaining({ name: 'Provincia de Buenos Aires, Argentina' }),
+          ]),
+        }),
+        expect.objectContaining({
+          '@type': 'AdvertisingAgency',
+          address: expect.objectContaining({ streetAddress: '9 de Julio 891' }),
         }),
         expect.objectContaining({
           '@type': 'Service',
@@ -106,7 +120,22 @@ test.describe('Coming Soon · contacto comercial', () => {
     expect(await sitemap.text()).toContain('<loc>https://grupocomunicarte.com.ar/</loc>');
   });
 
-  test('muestra el acceso alternativo a email y WhatsApp', async ({ page }) => {
+  test('mantiene el diseño sin desbordamiento horizontal en móvil y escritorio', async ({ page }) => {
+    for (const viewport of [{ width: 375, height: 812 }, { width: 768, height: 1024 }, { width: 1368, height: 770 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/');
+      await expect(page.locator('h1')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Enviar consulta' })).toBeVisible();
+      const dimensions = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+      }));
+      expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+      await expect(page.getByRole('heading', { name: 'Nuestra oficina en Mendoza' })).toBeAttached();
+    }
+  });
+
+  test('muestra el acceso alternativo a email y WhatsApp', async ({ page }) =>
     await expect(page.getByRole('link', { name: 'comercial@grupocomunicarte.com.ar' }).first())
       .toHaveAttribute('href', 'mailto:comercial@grupocomunicarte.com.ar');
     await expect(page.getByRole('link', { name: 'Contactar a Grupo Comunicarte por WhatsApp' }))
