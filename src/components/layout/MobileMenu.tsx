@@ -1,14 +1,14 @@
-import { ChevronRight, MapPin, Send, Sparkles, Tv, Users, Search, User } from 'lucide-react';
+import { Search, Send, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 interface MobileMenuProps { open: boolean; onClose: () => void; onSearch: () => void; }
 
 const links = [
-  { name: 'Inventario', path: '/inventario', icon: MapPin, sub: 'Explorá soportes disponibles' },
-  { name: 'Soportes', path: '/soportes', icon: Tv, sub: 'Tipos y formatos publicitarios' },
-  { name: 'Soluciones', path: '/soluciones', icon: Sparkles, sub: 'Propuestas para tu campaña' },
-  { name: 'Nosotros', path: '/nosotros', icon: Users, sub: 'La empresa y su experiencia' },
+  { name: 'Inventario', path: '/inventario' },
+  { name: 'Soportes', path: '/soportes' },
+  { name: 'Soluciones', path: '/soluciones' },
+  { name: 'Nosotros', path: '/nosotros' },
 ];
 
 export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
@@ -81,18 +81,18 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
         tabIndex={-1}
         className="absolute inset-x-0 top-20 bottom-0 overflow-y-auto overscroll-contain bg-white/95 backdrop-blur-xl"
       >
-        <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
+        <div className="mx-auto max-w-xl space-y-5 px-4 py-5 sm:px-6">
           <button
             type="button"
             onClick={onSearch}
-            className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-left transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+            className="flex min-h-11 w-full items-center gap-3 border-b border-zinc-200 pb-3 text-left text-sm font-medium text-zinc-700 transition-colors hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
           >
             <Search className="h-5 w-5 text-zinc-500" aria-hidden="true" />
-            <span><span className="block text-sm font-semibold text-zinc-900">Buscar soportes</span><span className="block text-xs text-zinc-500">Nombre, código, dirección o tipo</span></span>
+            <span>Buscar soportes</span>
           </button>
 
-          <nav aria-label="Navegación principal" className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-            {links.map(({ name, path, icon: Icon, sub }) => {
+          <nav aria-label="Navegación principal" className="flex flex-col">
+            {links.map(({ name, path }) => {
               const active = location.pathname === path;
               return (
                 <Link
@@ -100,11 +100,9 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
                   to={path}
                   onClick={onClose}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex min-h-[68px] items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-900 ${active ? 'bg-[#EAF7EF]' : ''}`}
+                  className={`flex min-h-12 items-center border-b border-zinc-100 py-2.5 text-[15px] font-medium transition-colors hover:text-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-900 ${active ? 'text-[#006B49]' : 'text-zinc-800'}`}
                 >
-                  <Icon className="h-5 w-5 shrink-0 text-zinc-500" aria-hidden="true" />
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-zinc-950">{name}</span><span className="block text-xs text-zinc-500">{sub}</span></span>
-                  <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+                  <span className="flex-1">{name}</span>
                 </Link>
               );
             })}
@@ -113,29 +111,20 @@ export function MobileMenu({ open, onClose, onSearch }: MobileMenuProps) {
           <Link
             to="/login"
             onClick={onClose}
-            className="flex min-h-12 items-center gap-3 rounded-xl border border-zinc-200 p-4 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+            className="flex min-h-11 items-center gap-2 border-t border-zinc-200 pt-3 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
           >
             <User className="h-5 w-5 text-zinc-500" aria-hidden="true" />
-            <span className="flex-1 text-sm font-semibold text-zinc-900">Iniciar sesión</span>
-            <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+            <span>Iniciar sesión</span>
           </Link>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="pt-1">
             <Link
               to="/contacto"
               onClick={onClose}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#007D54] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#007D54] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#006B49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
             >
               Solicitar cotización <Send className="h-4 w-4" aria-hidden="true" />
             </Link>
-            <a
-              href="https://wa.me/5492616706710"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
-            >
-              WhatsApp comercial
-            </a>
           </div>
         </div>
       </div>

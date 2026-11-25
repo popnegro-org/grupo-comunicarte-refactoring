@@ -54,11 +54,14 @@ test.describe('public header redesign', () => {
     await expect(navigation.getByRole('link', { name: 'Contacto' })).toHaveCount(0);
     await expect(dialog.getByRole('link', { name: 'Solicitar cotización' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Buscar soportes' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Iniciar sesión' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'WhatsApp comercial' })).toHaveCount(0);
+    await expect(dialog.getByText('Explorá soportes disponibles')).toHaveCount(0);
     const accessibility = await new AxeBuilder({ page }).include('#mobile-navigation').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     expect(accessibility.violations).toEqual([]);
     await expect(dialog.getByRole('button', { name: 'Buscar soportes' })).toBeFocused();
     await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('link', { name: 'WhatsApp comercial' })).toBeFocused();
+    await expect(dialog.getByRole('link', { name: 'Solicitar cotización' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(dialog.getByRole('button', { name: 'Buscar soportes' })).toBeFocused();
     await page.keyboard.press('Escape');
