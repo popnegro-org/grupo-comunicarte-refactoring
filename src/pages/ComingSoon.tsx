@@ -189,7 +189,6 @@ export default function ComingSoon() {
           <span>© {new Date().getFullYear()} Grupo Comunicarte · Mendoza, Argentina</span>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 break-all hover:text-white"><Mail aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />{CONTACT_EMAIL}</a>
-            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-white hover:text-emerald-300">WhatsApp comercial</a>
           </div>
         </div>
       </footer>
