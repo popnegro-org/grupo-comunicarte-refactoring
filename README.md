@@ -55,11 +55,12 @@ CONTACT_FROM=
 ```
 
 - `RESEND_API_KEY`: clave privada de Resend.
-- `CONTACT_FROM`: remitente perteneciente a un dominio verificado en Resend (por ejemplo, `Grupo Comunicarte <contacto@grupocomunicarte.com.ar>`).
+- `CONTACT_FROM`: remitente perteneciente al dominio verificado en Resend (por ejemplo, `Grupo Comunicarte <contacto@send.grupocomunicarte.com.ar>`). Se recomienda verificar `send.grupocomunicarte.com.ar` como subdominio dedicado al envío.
 - El destinatario está fijado en el servidor: `comercial@grupocomunicarte.com.ar`.
 - Las respuestas del correo se dirigen al email ingresado por el visitante (`Reply-To`).
 - El formulario usa `POST /api/contact`, validación server-side, honeypot y límite de 5 envíos por IP cada 15 minutos.
 - No se almacenan consultas en Neon.
+- Publicar en Cloudflare únicamente los registros DNS que Resend genere para `send.grupocomunicarte.com.ar`; no reemplazar los MX del dominio raíz, que gestionan el correo entrante existente.
 
 No publicar las claves en el repositorio ni en el frontend. Verificar el dominio y configurar el remitente en Resend antes de realizar pruebas de envío.
 
