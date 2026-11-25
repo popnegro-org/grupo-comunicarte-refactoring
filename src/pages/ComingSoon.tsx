@@ -55,14 +55,20 @@ export default function ComingSoon() {
   };
 
   return (
-    <main className="min-h-screen bg-white text-[#09284b]" aria-labelledby="coming-soon-title">
+    <a
+      href="#main-content"
+      className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#09284b] focus:shadow-lg"
+    >
+      Saltar al contenido
+    </a>
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-white text-[#09284b]" aria-labelledby="coming-soon-title">
       <header className="relative z-10 border-b border-slate-100 bg-white">
         <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:px-12">
           <a href="/" aria-label="Grupo Comunicarte, inicio" className="inline-flex items-center">
             <img src="/brand/brand-dark.webp" alt="Grupo Comunicarte" className="h-auto w-40 sm:w-56" />
           </a>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#009966] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white sm:px-6 sm:text-xs">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#007D54] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white sm:px-6 sm:text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-white" />
               Próximamente
             </span>
@@ -77,9 +83,9 @@ export default function ComingSoon() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#061f3b]/95 via-[#062747]/75 to-[#062747]/25" />
         <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-5 py-10 sm:px-8 sm:py-12 lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:items-center lg:gap-14 lg:px-12 lg:py-8">
           <div className="min-w-0 max-w-[660px] py-2 text-white lg:py-8">
-            <p className="mb-7 inline-flex flex-col gap-1 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
+            <p className="mb-7 inline-flex flex-col gap-1 rounded-md bg-[#007D54] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
               <span>Grupo Comunicarte</span>
-              <span className="text-[#12d49a]">OOH, DOOH y LED MÓVIL</span>
+              <span className="text-white/90">OOH, DOOH y LED MÓVIL</span>
             </p>
             <h1 id="coming-soon-title" className="max-w-[650px] break-words text-[clamp(2.75rem,6vw,5.75rem)] font-bold leading-[1.02] tracking-[-0.05em]">
               Publicidad exterior en Mendoza y Buenos Aires
@@ -94,29 +100,29 @@ export default function ComingSoon() {
 
           <aside className="min-w-0 w-full self-start rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7 lg:self-center" aria-label="Contacto comercial">
             <div className="mb-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#007D54]">Contacto comercial</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Nombre y apellido <span aria-hidden="true">*</span></span>
-                <input name="name" type="text" autoComplete="name" required minLength={2} maxLength={120} placeholder="Tu nombre y apellido" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+                <input name="name" type="text" autoComplete="name" required minLength={2} maxLength={120} placeholder="Tu nombre y apellido" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-500 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Empresa</span>
-                <input name="company" type="text" autoComplete="organization" maxLength={160} placeholder="Nombre de tu empresa" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+                <input name="company" type="text" autoComplete="organization" maxLength={160} placeholder="Nombre de tu empresa" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-500 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Email <span aria-hidden="true">*</span></span>
-                <input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="tu@email.com" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+                <input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="tu@email.com" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-500 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Teléfono</span>
-                <input name="phone" type="tel" autoComplete="tel" maxLength={50} placeholder="Tu teléfono" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+                <input name="phone" type="tel" autoComplete="tel" maxLength={50} placeholder="Tu teléfono" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-[#09284b] placeholder:text-slate-500 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Contanos sobre tu proyecto <span aria-hidden="true">*</span></span>
-                <textarea name="message" required minLength={10} maxLength={3000} rows={3} placeholder="Escribí un breve mensaje..." className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-[#09284b] placeholder:text-slate-400 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
+                <textarea name="message" required minLength={10} maxLength={3000} rows={3} placeholder="Escribí un breve mensaje..." className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-[#09284b] placeholder:text-slate-500 focus:border-[#009966] focus:outline-none focus:ring-2 focus:ring-[#009966]/15" />
               </label>
               <div className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
                 <label htmlFor="contact-website">No completar este campo</label>
@@ -127,7 +133,7 @@ export default function ComingSoon() {
                   {formMessage.text}
                 </p>
               )}
-              <button type="submit" disabled={isSubmitting} className="min-h-11 w-full rounded-lg bg-[#009966] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#007d57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#009966] disabled:cursor-wait disabled:opacity-60">
+              <button type="submit" disabled={isSubmitting} className="min-h-11 w-full rounded-lg bg-[#007D54] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#006B49] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#009966] disabled:cursor-wait disabled:opacity-60">
                 {isSubmitting ? 'Enviando consulta…' : 'Enviar consulta'}
               </button>
             </form>
@@ -200,7 +206,7 @@ export default function ComingSoon() {
           rel="noopener noreferrer"
           aria-label="Contactar a Grupo Comunicarte por WhatsApp"
           title="Contactanos por WhatsApp"
-          className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition duration-200 hover:scale-105 hover:bg-[#1fbd5b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#009966] sm:bottom-7 sm:right-7 sm:h-16 sm:w-16"
+          className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#007D54] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition duration-200 hover:scale-105 hover:bg-[#006B49] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#009966] sm:bottom-7 sm:right-7 sm:h-16 sm:w-16"
         >
           <MessageCircle aria-hidden="true" className="h-7 w-7 sm:h-8 sm:w-8" />
         </a>
