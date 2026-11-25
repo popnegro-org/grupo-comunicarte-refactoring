@@ -77,8 +77,10 @@ export async function createApp() {
     const protocol = (typeof forwardedProto === 'string' ? forwardedProto.split(',')[0].trim() : req.protocol);
 
     if (!host || !protocol) return false;
+    const normalizedProtocol = protocol.toLowerCase();
+    if (normalizedProtocol !== 'http' && normalizedProtocol !== 'https') return false;
     try {
-      return new URL(origin).origin === `${protocol}://${host}`;
+      return new URL(origin).origin === new URL(`${normalizedProtocol}://${host}`).origin;
     } catch {
       return false;
     }
