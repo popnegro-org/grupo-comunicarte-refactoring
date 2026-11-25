@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { ArrowUpRight, CheckCircle2, Mail, MapPin, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/5492616706710';
-const CONTACT_EMAIL = 'ventas@grupocomunicarte.com.ar';
+const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
 
 const inquiryFields = [
   { label: 'Nombre y apellido', placeholder: 'Tu nombre y apellido', type: 'text' },
@@ -86,16 +86,6 @@ export default function ComingSoon() {
                   <input type={field.type} placeholder={field.placeholder} disabled aria-label={field.label} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
                 </label>
               ))}
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">¿Qué estás buscando?</span>
-                <select disabled defaultValue="" aria-label="Tipo de consulta" className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 disabled:cursor-not-allowed">
-                  <option value="">Seleccioná una opción</option>
-                  <option>Publicidad tradicional</option>
-                  <option>Pantallas LED</option>
-                  <option>Planificación de campaña</option>
-                  <option>Otro proyecto</option>
-                </select>
-              </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-[#09284b]">Contanos sobre tu proyecto</span>
                 <textarea disabled rows={2} placeholder="Escribí un breve mensaje..." aria-label="Descripción del proyecto" className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-500 placeholder:text-slate-400 disabled:cursor-not-allowed" />
