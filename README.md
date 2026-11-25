@@ -60,7 +60,7 @@ CONTACT_FROM=
 - Las respuestas del correo se dirigen al email ingresado por el visitante (`Reply-To`).
 - El formulario usa `POST /api/contact`, validación server-side, honeypot y límite de 5 envíos por IP cada 15 minutos.
 - No se almacenan consultas en Neon.
-- Publicar en Cloudflare únicamente los registros DNS que Resend genere para `send.grupocomunicarte.com.ar`; no reemplazar los MX del dominio raíz, que gestionan el correo entrante existente.
+- Publicar en Cloudflare los registros exactos que Resend genere. Su return-path predeterminado usa el subdominio `send`; conservar sin cambios los MX existentes del dominio raíz y no borrar registros de correo que ya estén operativos.
 
 No publicar las claves en el repositorio ni en el frontend. Verificar el dominio y configurar el remitente en Resend antes de realizar pruebas de envío.
 
