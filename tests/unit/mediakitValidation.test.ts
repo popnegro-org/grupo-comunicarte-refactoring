@@ -19,12 +19,14 @@ test('accepts valid ARS totals and prices scoped to selected supports', () => {
 test('rejects negative, non-finite and unselected support prices', () => {
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], approvedPrices: { 'mza-01': -1 } }), /mayor o igual a cero/i);
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], approvedPrices: { 'mza-01': 'NaN' } }), /mayor o igual a cero/i);
+  assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], approvedPrices: { 'mza-01': false } as any }), /mayor o igual a cero/i);
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], approvedPrices: { 'bue-01': 100 } }), /no seleccionado/i);
 });
 
 test('rejects negative totals, unknown currencies and amounts with undefined currency', () => {
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], totalAmount: -1 }), /monto comercial global/i);
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], totalAmount: 'Infinity' }), /monto comercial global/i);
+  assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], totalAmount: false as any }), /monto comercial global/i);
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], currency: 'EUR' }), /moneda/i);
   assert.throws(() => validateMediaKitFinancials({ supportIds: ['mza-01'], currency: 'POR DEFINIR', totalAmount: 100 }), /Por definir/i);
 });
