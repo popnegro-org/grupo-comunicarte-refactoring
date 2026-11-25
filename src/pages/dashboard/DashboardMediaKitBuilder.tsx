@@ -133,6 +133,14 @@ export default function DashboardMediaKitBuilder() {
   const durationInvalid = !isProposalDurationValid(period);
   const proposalAmountInvalid = proposalCurrency !== 'Por definir' && Boolean(proposalAmount.trim()) &&
     (!Number.isFinite(Number(proposalAmount)) || Number(proposalAmount) < 0);
+  const formatPreviewDate = (value: string) => new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  }).format(new Date(`${value}T12:00:00`));
+  const proposalDateRange = [period.fechaInicio, period.fechaFin].filter(Boolean).map(formatPreviewDate).join(' – ');
+  const proposalPeriodLabel = [proposalDateRange, formatProposalDuration(period)].filter(Boolean).join(' · ') || 'Período por definir';
+  const proposalInvestmentLabel = proposalCurrency === 'Por definir' || !proposalAmount.trim()
+    ? 'Inversión sujeta a cotización'
+    : `${proposalCurrency} ${Number(proposalAmount).toLocaleString('es-AR')}`;
   const canExport = selected.length > 0 && client.name.trim().length > 0 && !periodInvalid && !durationInvalid && !proposalAmountInvalid;
   const toggle = (support: Support) => {
     if (support.disponibilidad !== 'disponible' && !selectedIds.includes(support.canonical_id)) {
@@ -352,6 +360,18 @@ export default function DashboardMediaKitBuilder() {
             </div>
 
             <div className="min-w-0 space-y-4">
+              <section aria-label="Resumen para el cliente" className="rounded-xl border border-gray-200 bg-slate-50 p-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Resumen para el cliente</h2>
+                <p data-testid="mediakit-preview-client" className="mt-3 text-sm font-semibold text-gray-950">{client.name.trim() || 'Cliente sin definir'}</p>
+                <p className="mt-0.5 text-xs text-gray-600">{client.company.trim() || 'Empresa no informada'}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-gray-200 pt-3 text-xs">
+                  <div><dt className="text-gray-500">Inversión global</dt><dd data-testid="mediakit-preview-investment" className="mt-0.5 font-semibold text-gray-900">{proposalInvestmentLabel}</dd></div>
+                  <div><dt className="text-gray-500">Período</dt><dd data-testid="mediakit-preview-period" className="mt-0.5 font-semibold text-gray-900">{proposalPeriodLabel}</dd></div>
+                  <div><dt className="text-gray-500">Soportes incluidos</dt><dd data-testid="mediakit-preview-support-count" className="mt-0.5 font-semibold text-gray-900">{selected.length}</dd></div>
+                  <div><dt className="text-gray-500">Documento</dt><dd className="mt-0.5 font-semibold text-gray-900">PDF / PPT</dd></div>
+                </dl>
+                <p className="mt-3 text-[10px] leading-4 text-gray-500">Resumen de los datos que se incorporarán al documento. Las tarifas base por soporte son internas.</p>
+              </section>
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Selección ({selected.length})</p>
