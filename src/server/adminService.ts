@@ -67,13 +67,6 @@ function canonicalizeEditorMedia<T extends SupportWritePayload>(data: T): T {
   };
 }
 
-function secureStringEquals(left: string, right: string): boolean {
-  const leftBytes = Buffer.from(left, 'utf8');
-  const rightBytes = Buffer.from(right, 'utf8');
-  if (leftBytes.length !== rightBytes.length) return false;
-  return crypto.timingSafeEqual(leftBytes, rightBytes);
-}
-
 export function authenticateAdmin(username: string, password: string): { success: boolean; token?: string; message?: string } {
   const user = String(username ?? '').trim();
   const pass = String(password ?? '');
