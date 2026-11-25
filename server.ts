@@ -13,6 +13,7 @@ import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRe
 import { MediaKitDomainError } from './src/server/mediakitErrors.ts';
 import {
   authenticateAdmin,
+  isAdminAuthConfigured,
   getPublicSupportMediaAsset,
   verifyAdminToken,
   getAdminStats,
@@ -211,6 +212,12 @@ export async function createApp() {
   });
 
   app.post('/api/admin/login', async (req, res) => {
+    if (!isAdminAuthConfigured) {
+      return res.status(503).json({
+        status: 'error',
+        message: 'El acceso administrativo no está configurado.',
+      });
+    }
     try {
       const allowed = await allowLoginAttempt(pool, clientIp(req), process.env.JWT_SECRET || process.env.ADMIN_SECRET || '');
       if (!allowed) {
