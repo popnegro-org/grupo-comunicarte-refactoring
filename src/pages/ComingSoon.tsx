@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowUpRight, Mail, MapPin, MessageCircle, Monitor, Users } from 'lucide-react';
+import { ArrowUpRight, Mail, MapPin, Monitor, Users } from 'lucide-react';
 
 const WHATSAPP_URL = 'https://wa.me/542615830208';
 const CONTACT_EMAIL = 'comercial@grupocomunicarte.com.ar';
@@ -62,18 +62,18 @@ export default function ComingSoon() {
         </div>
       </header>
 
-      <section className="relative isolate overflow-hidden bg-[#08294c]">
+      <section className="relative isolate bg-[#08294c]">
         <div className="absolute inset-0 -z-20">
           <img src="/images/home.webp" alt="" className="h-full w-full object-cover object-center" />
         </div>
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#061f3b]/95 via-[#062747]/75 to-[#062747]/25" />
-        <div className="mx-auto grid min-h-[760px] max-w-[1440px] items-center gap-10 px-5 py-12 sm:px-8 lg:min-h-[720px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:gap-14 lg:px-12 lg:py-10">
-          <div className="max-w-[660px] py-5 text-white lg:py-12">
+        <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-5 py-10 sm:px-8 sm:py-12 lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:items-center lg:gap-14 lg:px-12 lg:py-8">
+          <div className="min-w-0 max-w-[660px] py-2 text-white lg:py-8">
             <p className="mb-7 inline-flex flex-col gap-1 rounded-md bg-[#009966] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white sm:text-xs">
               <span>Grupo Comunicarte</span>
               <span className="text-[#12d49a]">OOH, DOOH y LED MÓVIL</span>
             </p>
-            <h1 id="coming-soon-title" className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
+            <h1 id="coming-soon-title" className="max-w-[650px] break-words text-[clamp(2.75rem,6vw,5.75rem)] font-bold leading-[1.02] tracking-[-0.05em]">
               Publicidad exterior en Mendoza y Buenos Aires
             </h1>
             <p className="mt-6 max-w-[590px] text-base leading-7 text-white/85 sm:text-lg">
@@ -84,7 +84,7 @@ export default function ComingSoon() {
             </a>
           </div>
 
-          <aside className="w-full rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7" aria-label="Contacto comercial">
+          <aside className="min-w-0 w-full self-start rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7 lg:self-center" aria-label="Contacto comercial">
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
             </div>
@@ -159,23 +159,32 @@ export default function ComingSoon() {
         </p>
       </section>
 
+      <section aria-labelledby="location-title" className="border-t border-slate-100 bg-slate-50 px-5 py-10 sm:px-8 lg:px-12">
+        <div className="mx-auto grid max-w-[1440px] gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="min-w-0">
+            <h2 id="location-title" className="text-lg font-bold text-[#09284b]">Nuestra oficina en Mendoza</h2>
+            <address className="mt-2 not-italic text-sm leading-6 text-slate-600">
+              9 de Julio 891, M5501 Godoy Cruz, Mendoza, Argentina
+            </address>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Recibimos visitas. Atención comercial para campañas en Mendoza, Ciudad Autónoma de Buenos Aires y provincia de Buenos Aires.
+            </p>
+          </div>
+          <a href="https://www.google.com/maps/search/?api=1&query=9+de+Julio+891+M5501+Godoy+Cruz+Mendoza+Argentina" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 w-fit max-w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-[#09284b] transition hover:border-[#009966] hover:text-[#007d57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#009966]">
+            <MapPin aria-hidden="true" className="h-4 w-4 shrink-0" /> Cómo llegar
+          </a>
+        </div>
+      </section>
+
       <footer className="bg-[#062747] px-5 py-6 text-white sm:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-3 text-xs text-white/75 sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} Grupo Comunicarte · Mendoza, Argentina</span>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 hover:text-white"><Mail aria-hidden="true" className="h-3.5 w-3.5" />{CONTACT_EMAIL}</a>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 break-all hover:text-white"><Mail aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />{CONTACT_EMAIL}</a>
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-white hover:text-emerald-300">WhatsApp comercial</a>
+          </div>
         </div>
       </footer>
-
-      <a
-        href={WHATSAPP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Contactar a Grupo Comunicarte por WhatsApp"
-        title="Contactanos por WhatsApp"
-        className="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition hover:scale-105 hover:bg-[#1fbd5b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#009966] sm:bottom-7 sm:right-7 sm:h-16 sm:w-16"
-      >
-        <MessageCircle aria-hidden="true" className="h-7 w-7 sm:h-8 sm:w-8" />
-      </a>
     </main>
   );
 }
