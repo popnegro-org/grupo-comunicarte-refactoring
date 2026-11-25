@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { verifyAdminPassword } from './adminPassword';
 import { supports, supportPricing, supportMedia } from '../db/schema.ts';
 import { getAllMediakitRequestsFromDB } from './mediakitService.ts';
 import {
@@ -29,17 +30,19 @@ import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 const ADMIN_SECRET = process.env.JWT_SECRET || process.env.ADMIN_SECRET;
 const MAX_FEATURED_SUPPORTS = 9;
 
-if (!ADMIN_USER || !ADMIN_PASSWORD || !ADMIN_SECRET) {
+if (!ADMIN_USER || (!ADMIN_PASSWORD && !ADMIN_PASSWORD_HASH) || !ADMIN_SECRET) {
   throw new Error(
-    'FATAL: ADMIN_USER, ADMIN_PASSWORD and JWT_SECRET (or legacy ADMIN_SECRET) environment variables are required.'
+    'FATAL: ADMIN_USER, ADMIN_PASSWORD or ADMIN_PASSWORD_HASH, and JWT_SECRET (or legacy ADMIN_SECRET) environment variables are required.'
   );
 }
 
 const adminUser = ADMIN_USER;
 const adminPassword = ADMIN_PASSWORD;
+const adminPasswordHash = ADMIN_PASSWORD_HASH;
 const adminSecret = ADMIN_SECRET;
 
 function canonicalizeEditorMedia<T extends SupportWritePayload>(data: T): T {
@@ -74,7 +77,7 @@ function secureStringEquals(left: string, right: string): boolean {
 export function authenticateAdmin(username: string, password: string): { success: boolean; token?: string; message?: string } {
   const user = String(username ?? '').trim();
   const pass = String(password ?? '');
-  if (user === adminUser && secureStringEquals(pass, adminPassword)) {
+  if (user === adminUser && verifyAdminPassword(pass, adminPassword, adminPasswordHash)) {
     const expiresAt = Date.now() + 8 * 3600 * 1000;
     const payload = `${user}:${expiresAt}`;
     const signature = crypto.createHmac('sha256', adminSecret).update(payload).digest('hex');
