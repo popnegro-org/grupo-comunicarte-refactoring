@@ -74,7 +74,7 @@ export default function ComingSoon() {
             </a>
           </div>
 
-          <aside className="w-full rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7" aria-labelledby="inquiry-title">
+          <aside className="w-full rounded-2xl border border-white/70 bg-white p-5 text-[#09284b] shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-7" aria-label="Contacto comercial">
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#009966]">Contacto comercial</p>
             </div>
