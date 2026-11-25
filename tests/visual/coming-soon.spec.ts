@@ -135,6 +135,16 @@ test.describe('Coming Soon · contacto comercial', () => {
     }
   });
 
+  test('muestra el widget flotante de WhatsApp después de hacer scroll vertical', async ({ page }) => {
+    const floatingWhatsApp = page.getByRole('link', { name: 'Contactar a Grupo Comunicarte por WhatsApp' });
+    await expect(floatingWhatsApp).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, window.innerHeight));
+    await expect(floatingWhatsApp).toBeVisible();
+    await expect(floatingWhatsApp).toHaveAttribute('href', 'https://wa.me/542615830208');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(floatingWhatsApp).toHaveCount(0);
+  });
+
   test('muestra el acceso alternativo a email, WhatsApp y ubicación', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'comercial@grupocomunicarte.com.ar' }).first())
       .toHaveAttribute('href', 'mailto:comercial@grupocomunicarte.com.ar');
