@@ -38,10 +38,9 @@ Los indicadores del dashboard se calculan sobre los registros persistidos en Neo
 
 ```bash
 DATABASE_URL=
-ADMIN_USER=
-ADMIN_PASSWORD=
-JWT_SECRET=
 ```
+
+Las variables `ADMIN_USER`, `ADMIN_PASSWORD` (o `ADMIN_PASSWORD_HASH`) y `JWT_SECRET` (o `ADMIN_SECRET`) son necesarias únicamente para habilitar el acceso administrativo. Sin ellas, las rutas públicas pueden iniciar y el login administrativo permanece deshabilitado con HTTP 503.
 
 Para multimedia, completar las variables R2 definidas por el adaptador del proyecto.
 
