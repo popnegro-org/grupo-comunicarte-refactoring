@@ -70,6 +70,7 @@ test.describe('Accesibilidad WCAG · rutas críticas', () => {
 
   for (const route of [
     { path: '/', heading: 'Tu marca, en los lugares que todos ven.' },
+    { path: '/coming-soon', heading: 'Publicidad exterior en Mendoza y Buenos Aires' },
     { path: '/soportes' },
     { path: '/inventario', heading: 'Inventario de soportes publicitarios' },
     { path: '/soluciones' },
