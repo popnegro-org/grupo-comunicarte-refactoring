@@ -7,6 +7,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
+import { handleContactSubmission } from './src/server/contact.ts';
 import {
   authenticateAdmin,
   verifyAdminToken,
@@ -157,6 +158,8 @@ export async function createApp() {
       res.status(500).json({ status: 'error', message: 'Error interno al obtener el soporte.' });
     }
   });
+
+  app.post('/api/contact', handleContactSubmission);
 
   app.post('/api/mediakit/request', async (req, res) => {
     try {
