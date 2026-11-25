@@ -8,6 +8,7 @@ import { getAllSupportsFromDB, getSupportByIdFromDB } from './src/server/support
 import { handleMediakitRequest, getAllMediakitRequestsFromDB } from './src/server/mediakitService.ts';
 import { saveMediaKit, getMediaKit, getMediaKitBySourceRequestId, listMediaKits, updateMediaKitStatus } from './src/server/mediakitManagementService.ts';
 import { handleMediaUpload } from './src/server/multimediaUpload.ts';
+import { handleContactSubmission } from './src/server/contact.ts';
 import { handleMediaKitExportDelete, handleMediaKitExportDownload, handleMediaKitExportUpload } from './src/server/mediakitExports.ts';
 import { adminAuthHeader, ADMIN_COOKIE, hasValidAdminMutationOrigin, isAllowedRequestOrigin } from './src/server/adminRequestSecurity.ts';
 import { MediaKitDomainError } from './src/server/mediakitErrors.ts';
@@ -176,6 +177,8 @@ export async function createApp() {
       res.status(503).json({ status: 'error', database: 'disconnected' });
     }
   });
+
+  app.post('/api/contact', handleContactSubmission);
 
   app.get('/api/supports', async (_req, res) => {
     try {
