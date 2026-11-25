@@ -57,7 +57,7 @@ export default function ComingSoon() {
               <br />
               <span className="text-[#12d49a]">OOH, DOOH y LED MÓVIL</span>
             </h1>
-            <h2 className="coming-soon-title">
+            <h2 className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
               Publicidad exterior en Mendoza y Buenos Aires
             </h2>
             <p className="mt-7 max-w-[540px] text-lg leading-8 text-white/90 sm:text-xl sm:leading-9">
