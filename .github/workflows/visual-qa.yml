@@ -73,8 +73,11 @@ jobs:
 
       - name: Validate bootstrapped baseline
         if: >
-          (github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == '') ||
-          (github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate')
+          (
+            (github.event_name == 'pull_request' && steps.baseline.outputs.cache-matched-key == '') ||
+            (github.event_name == 'push' && github.ref_name == 'pmv-validation-candidate')
+          ) &&
+          !(github.event_name == 'push' && startsWith(github.event.head_commit.message, 'visual-baseline:'))
         run: npx playwright test
 
       - name: Summarize baseline bootstrap
