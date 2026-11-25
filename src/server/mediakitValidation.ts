@@ -20,7 +20,10 @@ export function validateMediaKitFinancials(input: MediaKitFinancialInput): Media
 
   const approvedPrices: Record<string, string> = {};
   for (const [supportId, rawPrice] of Object.entries(rawApprovedPrices)) {
-    if (rawPrice === '') continue;
+    if (typeof rawPrice === 'string' && rawPrice.trim() === '') continue;
+    if (typeof rawPrice !== 'string' && typeof rawPrice !== 'number') {
+      throw new Error(`El precio aprobado para '${supportId}' debe ser un número válido mayor o igual a cero.`);
+    }
     if (!input.supportIds.includes(supportId)) {
       throw new Error(`El precio aprobado referencia un soporte no seleccionado: '${supportId}'.`);
     }
@@ -34,6 +37,9 @@ export function validateMediaKitFinancials(input: MediaKitFinancialInput): Media
     approvedPrices[supportId] = String(price);
   }
 
+  if (input.currency != null && typeof input.currency !== 'string') {
+    throw new Error('La moneda del Media Kit no está permitida.');
+  }
   const currency = String(input.currency || 'ARS').trim().toUpperCase();
   if (!['ARS', 'USD', 'POR DEFINIR'].includes(currency)) {
     throw new Error('La moneda del Media Kit no está permitida.');
@@ -43,7 +49,12 @@ export function validateMediaKitFinancials(input: MediaKitFinancialInput): Media
     throw new Error('Un Media Kit listo debe incluir al menos un soporte conciliado.');
   }
 
-  const totalAmount = input.totalAmount == null || input.totalAmount === '' ? null : Number(input.totalAmount);
+  if (input.totalAmount != null && typeof input.totalAmount !== 'number' && typeof input.totalAmount !== 'string') {
+    throw new Error('El monto comercial global debe ser un número válido mayor o igual a cero.');
+  }
+  const totalAmount = input.totalAmount == null || (typeof input.totalAmount === 'string' && input.totalAmount.trim() === '')
+    ? null
+    : Number(input.totalAmount);
   if (totalAmount !== null && (!Number.isFinite(totalAmount) || totalAmount < 0)) {
     throw new Error('El monto comercial global debe ser un número válido mayor o igual a cero.');
   }
