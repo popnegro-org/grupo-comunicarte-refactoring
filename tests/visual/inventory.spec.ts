@@ -19,6 +19,13 @@ test.describe('Inventario · regresión visual', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
     });
     await page.goto('/inventario?vista=catalogo');
+
+    // Public routes intentionally render Coming Soon during this migration phase.
+    // Keep inventory regression coverage for the day the public catalog is restored.
+    if (await page.getByRole('heading', { name: 'Publicidad exterior en Mendoza y Buenos Aires' }).isVisible().catch(() => false)) {
+      test.skip(true, 'El inventario público está temporalmente reemplazado por Coming Soon.');
+    }
+
     await expect(page.getByRole('article')).toHaveCount(3);
     await expect(page.getByText('Impactos / mes').first()).toBeVisible();
     await page.waitForLoadState('networkidle');
