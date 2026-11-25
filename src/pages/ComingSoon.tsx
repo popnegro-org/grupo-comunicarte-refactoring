@@ -60,9 +60,6 @@ export default function ComingSoon() {
             <h2 className="max-w-[650px] text-[clamp(3.2rem,7vw,6.5rem)] font-bold leading-[0.94] tracking-[-0.055em]">
               Publicidad exterior en Mendoza y Buenos Aires
             </h2>
-            <p className="mt-7 max-w-[540px] text-lg leading-8 text-white/90 sm:text-xl sm:leading-9">
-              Muy pronto vas a poder explorar nuestro inventario y planificar tu próxima campaña.
-            </p>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#08294c] transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
               Hablemos de tu campaña <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </a>
