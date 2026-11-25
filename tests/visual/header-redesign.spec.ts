@@ -48,10 +48,11 @@ test.describe('public header redesign', () => {
     const trigger = page.getByRole('button', { name: 'Abrir menú' });
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: 'Menú de navegación' });
+    const header = page.getByRole('banner');
     await expect(dialog).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Grupo Comunicarte, inicio' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cerrar menú' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cerrar menú' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(header.getByRole('link', { name: 'Grupo Comunicarte, inicio' })).toBeVisible();
+    await expect(header.getByRole('button', { name: 'Cerrar menú' })).toBeVisible();
+    await expect(header.getByRole('button', { name: 'Cerrar menú' })).toHaveAttribute('aria-expanded', 'true');
     const navigation = dialog.getByRole('navigation', { name: 'Navegación principal' });
     await expect(navigation.getByRole('link', { name: 'Inicio' })).toHaveCount(0);
     await expect(navigation.getByRole('link', { name: 'Contacto' })).toHaveCount(0);
