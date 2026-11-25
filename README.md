@@ -45,6 +45,16 @@ JWT_SECRET=
 
 Para multimedia, completar las variables R2 definidas por el adaptador del proyecto.
 
+### Contacto comercial y analítica
+
+- `RESEND_API_KEY` y `CONTACT_FROM` habilitan el envío de consultas desde `/coming-soon` a `comercial@grupocomunicarte.com.ar`.
+- Verificar el dominio remitente en Resend antes de habilitar el envío. No utilizar credenciales reales en archivos versionados.
+- `VITE_GA_MEASUREMENT_ID` es opcional. Si no existe o no tiene formato GA4 (`G-...`), Analytics no se inicializa.
+- La limitación de frecuencia del formulario es best-effort por instancia serverless; no equivale a un rate limit distribuido.
+- `/coming-soon` permite validar la experiencia comercial en Preview. Los dominios canónicos mantienen esa experiencia; los hostnames de Preview/QA conservan el PMV funcional.
+
+El acceso administrativo requiere `ADMIN_USER`, una fuente de contraseña (`ADMIN_PASSWORD` o `ADMIN_PASSWORD_HASH`) y `JWT_SECRET` o `ADMIN_SECRET`. La API pública puede iniciar sin esas credenciales; el login administrativo responde HTTP 503 cuando el acceso no está configurado.
+
 **Importante:** `DATABASE_URL` es obligatoria para ejecutar el backend. Si Neon no está disponible, la aplicación falla de forma explícita en lugar de presentar datos estáticos como si fueran datos operativos.
 
 ## Desarrollo
