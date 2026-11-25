@@ -51,16 +51,16 @@ Configurar en Vercel, tanto en Preview como en Production cuando se autorice su 
 
 ```bash
 RESEND_API_KEY=
-CONTACT_FROM=
+CONTACT_FROM="Grupo Comunicarte <contacto@grupocomunicarte.com.ar>"
 ```
 
 - `RESEND_API_KEY`: clave privada de Resend.
-- `CONTACT_FROM`: remitente perteneciente al dominio verificado en Resend (por ejemplo, `Grupo Comunicarte <contacto@send.grupocomunicarte.com.ar>`). Se recomienda verificar `send.grupocomunicarte.com.ar` como subdominio dedicado al envío.
+- `CONTACT_FROM`: remitente perteneciente al dominio verificado en Resend (por ejemplo, `Grupo Comunicarte <contacto@grupocomunicarte.com.ar>`). Verificar `grupocomunicarte.com.ar` en Resend antes de enviar.
 - El destinatario está fijado en el servidor: `comercial@grupocomunicarte.com.ar`.
 - Las respuestas del correo se dirigen al email ingresado por el visitante (`Reply-To`).
-- El formulario usa `POST /api/contact`, validación server-side, honeypot y límite de 5 envíos por IP cada 15 minutos.
+- El formulario usa `POST /api/contact`, validación server-side y honeypot. El límite de 5 envíos por IP cada 15 minutos es una protección best-effort por instancia serverless, no un rate limit distribuido.
 - No se almacenan consultas en Neon.
-- Publicar en Cloudflare los registros exactos que Resend genere. Su return-path predeterminado usa el subdominio `send`; conservar sin cambios los MX existentes del dominio raíz y no borrar registros de correo que ya estén operativos.
+- Publicar en Cloudflare los registros exactos que Resend genere para el dominio raíz y su return-path (`send.grupocomunicarte.com.ar`). No reemplazar ni borrar los MX actuales del dominio raíz: el correo entrante existente debe continuar funcionando.
 
 No publicar las claves en el repositorio ni en el frontend. Verificar el dominio y configurar el remitente en Resend antes de realizar pruebas de envío.
 
